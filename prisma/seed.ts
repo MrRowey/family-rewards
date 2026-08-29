@@ -8,8 +8,25 @@ async function main() {
     await prisma.task.deleteMany();
     await prisma.child.deleteMany();
 
-    const now = new Date();
+    await prisma.familyConfig.upsert({
+        where: { id: "default" },
+        update: {},
 
-    // Archie: Age 6
-    const archieDob = new Date();
-    
+        create: {
+            id: "default",
+            parentPin: "1234", // Default parent PIN
+        },
+    });
+
+    console.log("✅ Database initialized successfully with clean system configuration!");
+    console.log("👉 First boot complete: Please visit the Parent Portal (/parent) to add children and tasks.");
+}
+
+main()
+    .catch((e) => {
+        console.error(" Seed Failed: ", e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });
