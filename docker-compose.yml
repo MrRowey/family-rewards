@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  family-rewards:
+    image: ghcr.io/mrrowey/family-rewards:latest
+    container_name: family-rewards
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/prisma/data
+    environment:
+      - DATABASE_URL="file:/app/prisma/data/family.db"

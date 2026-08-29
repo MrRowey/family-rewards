@@ -1,0 +1,47 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = "file:./dev.db"
+}
+
+model Child {
+    id        String   @id @default(uuid())
+    name      String
+    dob       DateTime
+    avatar    String
+    stars     Int      @default(0)
+    completions Completion[]
+}
+
+model Task {
+    id          String   @id @default(uuid())
+    title       String
+    icon       String
+    starValue  Int  @default(1)
+    minAge     Int  @default(2)
+    maxAge     Int  @default(18)
+    assignedToId String?
+    subSteps    SubStep[]
+    completions Completion[]
+}
+
+model SubStep {
+    id          String   @id @default(uuid())
+    taskId      String
+    task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    title       String
+    order       Int
+}
+
+model Completion {
+    id          String   @id @default(uuid())
+    childId     String
+    child       Child    @relation(fields: [childId], references: [id])
+    taskId      String
+    task        Task     @relation(fields: [taskId], references: [id])
+    completedAt DateTime @default(now())
+    approved     Boolean  @default(false)
+}
