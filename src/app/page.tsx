@@ -13,6 +13,7 @@ export default function HomeKiosk() {
   const [config, setConfig] = useState<any>(null);
   const [activeChildId, setActiveChildId] = useState<string>("");
   const [completions, setCompletions] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Security PIN Modal State
@@ -55,13 +56,15 @@ export default function HomeKiosk() {
     }
   }, [router, activeChildId]);
 
-  const loadCompletions = useCallback(async () => {
+  const loadChildData = useCallback(async () => {
     if (!activeChildId) return;
-    const res = await fetch(`/api/completions?childId=${activeChildId}`);
-    if (res.ok) {
-      const data = await res.json();
-      setCompletions(data);
-    }
+    const [compRes, assignRes] = await Promise.all([
+      fetch(`/api/completions?childId=${activeChildId}`),
+      fetch(`/api/assignments?childId=${activeChildId}`),
+    ]);
+
+    if (compRes.ok) setCompletions(await compRes.json());
+    if (assignRes.ok) setAssignments(await assignRes.json());
   }, [activeChildId]);
 
   useEffect(() => {
@@ -69,11 +72,20 @@ export default function HomeKiosk() {
   }, [loadKioskData]);
 
   useEffect(() => {
-    loadCompletions();
-  }, [loadCompletions]);
+    loadChildData();
+  }, [loadChildData]);
 
   const activeChild = children.find((c) => c.id === activeChildId);
   const ageProfile = activeChild ? calculateAgeProfile(new Date(activeChild.dob)) : null;
+
+  // Filter tasks assigned to today's day of the week (0 = Sun, 1 = Mon, ..., 6 = Sat)
+  const todayDayOfWeek = new Date().getDay();
+  const todayAssignments = assignments.filter((a) => a.dayOfWeek === todayDayOfWeek);
+  
+  // If tasks are scheduled for today, show assigned tasks. If none scheduled yet, fallback to all vault tasks.
+  const todayTasks = todayAssignments.length > 0
+    ? tasks.filter((t) => todayAssignments.some((a) => a.taskId === t.id))
+    : tasks;
 
   const handleUnlockParent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +107,7 @@ export default function HomeKiosk() {
     });
 
     if (res.ok) {
-      loadCompletions();
+      loadChildData();
     }
   };
 
@@ -181,16 +193,15 @@ export default function HomeKiosk() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {tasks.length === 0 ? (
+              {todayTasks.length === 0 ? (
                 <div className="col-span-full bg-slate-900 border border-dashed border-slate-800 rounded-3xl p-10 text-center text-slate-500">
-                  No chores added to vault yet. Use the Parent Portal (Shield icon) to add tasks!
+                  No chores scheduled for today! Enjoy your free time.
                 </div>
               ) : (
-                tasks.map((task) => {
+                todayTasks.map((task) => {
                   const comp = completions.find((c) => c.taskId === task.id);
                   const isPending = comp?.status === "PENDING";
                   const isApproved = comp?.status === "APPROVED";
-                  // DECLINED tasks are treated like fresh, uncompleted tasks
 
                   return (
                     <div
