@@ -15,15 +15,16 @@ model FamilyConfig {
 }
 
 model Child {
-  id          String             @id @default(uuid())
-  name        String
-  dob         DateTime
-  avatar      String             @default(":emoji:lion_face:")
-  stars       Int                @default(0)
-  createdAt   DateTime           @default(now())
-  completions Completion[]
-  redemptions RewardRedemption[]
-  assignments TaskAssignment[]
+  id                String             @id @default(uuid())
+  name              String
+  dob               DateTime
+  avatar            String             @default(":emoji:lion_face:")
+  stars             Int                @default(0)
+  createdAt         DateTime           @default(now())
+  completions       Completion[]
+  redemptions       RewardRedemption[]
+  assignments       TaskAssignment[]
+  rewardAssignments RewardAssignment[]
 }
 
 model Task {
@@ -60,11 +61,14 @@ model Reward {
   id           String             @id @default(uuid())
   title        String
   icon         String             @default("🎁")
-  description  String
   starCost     Int                @default(5)
   monthlyStock Int                @default(4) // E.g, 4 = 4 times per month, 0 = unlimited
   currentStock Int                @default(4) // Decrements when redeemed
+  minAge       Int                @default(2)
+  maxAge       Int                @default(18)
+  createdAt    DateTime           @default(now())
   redemptions  RewardRedemption[]
+  assignments  RewardAssignment[]
 }
 
 model RewardRedemption {
@@ -84,4 +88,12 @@ model TaskAssignment {
   taskId    String
   task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
   dayOfWeek Int // 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
+}
+
+model RewardAssignment {
+  id       String @id @default(uuid())
+  childId  String
+  child    Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  rewardId String
+  reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
 }

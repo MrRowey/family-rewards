@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lock, ShoppingBag, Sparkles, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, Lock, ShoppingBag, Sparkles, Clock } from "lucide-react";
+import { calculateAgeProfile } from "@/lib/ageRules";
 
 export default function RewardShop() {
   const [rewards, setRewards] = useState<any[]>([]);
@@ -42,6 +43,23 @@ export default function RewardShop() {
   }, [loadShopData]);
 
   const activeChild = children.find((c) => c.id === selectedChildId);
+  const activeChildAge = activeChild ? calculateAgeProfile(new Date(activeChild.dob)).ageYears : 0;
+
+  // Age bracket & Per-Child Assignment Filter
+  const visibleRewards = rewards.filter((reward) => {
+    // 1. Stock check (Meltdown guard: Hide out of stock)
+    if (reward.currentStock <= 0) return false;
+
+    // 2. Age bracket check
+    if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
+
+    // 3. Specific child assignment check
+    if (reward.assignments && reward.assignments.length > 0) {
+      return reward.assignments.some((a: any) => a.childId === selectedChildId);
+    }
+
+    return true;
+  });
 
   const handleClaimReward = async (rewardId: string) => {
     if (!selectedChildId) return;
@@ -100,82 +118,77 @@ export default function RewardShop() {
       </header>
 
       {/* Rewards Grid */}
-      {rewards.filter((r) => r.currentStock > 0).length === 0 ? (
+      {visibleRewards.length === 0 ? (
         <div className="bg-slate-900 border border-dashed border-slate-800 rounded-3xl p-16 text-center text-slate-500">
-          🎁 No rewards added to the shop yet. Use the Parent Portal (Shield icon) to create shop prizes!
+          🎁 No rewards available for {activeChild?.name || "this child"} yet. Use the Parent Portal (Shield icon) to add age-appropriate rewards!
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rewards
-            // MELTDOWN GUARD: Out of stock items completely disappear from view
-            .filter((reward) => reward.currentStock > 0)
-            .map((reward) => {
-              const childStars = activeChild?.stars || 0;
-              const hasEnoughStars = childStars >= reward.starCost;
+          {visibleRewards.map((reward) => {
+            const childStars = activeChild?.stars || 0;
+            const hasEnoughStars = childStars >= reward.starCost;
 
-              // Check if reward claim is pending approval
-              const isPending = pendingRedemptions.some(
-                (pr) => pr.childId === selectedChildId && pr.rewardId === reward.id
-              );
+            const isPending = pendingRedemptions.some(
+              (pr) => pr.childId === selectedChildId && pr.rewardId === reward.id
+            );
 
-              return (
-                <div
-                  key={reward.id}
-                  className={`bg-slate-900 border rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between transition-all ${
-                    isPending
-                      ? "border-amber-500/40 bg-amber-950/10"
-                      : hasEnoughStars
-                      ? "border-amber-500/30 hover:border-amber-500/60"
-                      : "border-slate-800/80 opacity-60 grayscale" // Locked / Insufficient Stars state
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-start justify-between mb-4">
-                      <span className="text-5xl">{reward.icon}</span>
-                      <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3.5 py-1 rounded-full font-black text-sm">
-                        ⭐ {reward.starCost} Stars
-                      </span>
-                    </div>
-
-                    <h3 className="text-xl font-bold mb-1">{reward.title}</h3>
-                    <p className="text-xs text-slate-400 mb-6">
-                      Stock remaining: <strong className="text-slate-200">{reward.currentStock} left</strong> this month
-                    </p>
+            return (
+              <div
+                key={reward.id}
+                className={`bg-slate-900 border rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between transition-all ${
+                  isPending
+                    ? "border-amber-500/40 bg-amber-950/10"
+                    : hasEnoughStars
+                    ? "border-amber-500/30 hover:border-amber-500/60"
+                    : "border-slate-800/80 opacity-60 grayscale"
+                }`}
+              >
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <span className="text-5xl">{reward.icon}</span>
+                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3.5 py-1 rounded-full font-black text-sm">
+                      ⭐ {reward.starCost} Stars
+                    </span>
                   </div>
 
-                  <div>
-                    {isPending ? (
-                      <div className="w-full bg-amber-500/20 text-amber-400 border border-amber-500/30 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2">
-                        <Clock className="w-4 h-4" /> Pending Parent Approval
-                      </div>
-                    ) : hasEnoughStars ? (
-                      <button
-                        onClick={() => handleClaimReward(reward.id)}
-                        className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition active:scale-95"
-                      >
-                        <Sparkles className="w-5 h-5" /> Redeem Reward
-                      </button>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
-                          <span className="flex items-center gap-1">
-                            <Lock className="w-3.5 h-3.5" /> Locked
-                          </span>
-                          <span>Need {reward.starCost - childStars} more ⭐</span>
-                        </div>
-                        {/* Star Progress Bar */}
-                        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                          <div
-                            className="bg-amber-500 h-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, (childStars / reward.starCost) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <h3 className="text-xl font-bold mb-1">{reward.title}</h3>
+                  <p className="text-xs text-slate-400 mb-6">
+                    Stock remaining: <strong className="text-slate-200">{reward.currentStock} left</strong> this month
+                  </p>
                 </div>
-              );
-            })}
+
+                <div>
+                  {isPending ? (
+                    <div className="w-full bg-amber-500/20 text-amber-400 border border-amber-500/30 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2">
+                      <Clock className="w-4 h-4" /> Pending Parent Approval
+                    </div>
+                  ) : hasEnoughStars ? (
+                    <button
+                      onClick={() => handleClaimReward(reward.id)}
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition active:scale-95"
+                    >
+                      <Sparkles className="w-5 h-5" /> Redeem Reward
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                        <span className="flex items-center gap-1">
+                          <Lock className="w-3.5 h-3.5" /> Locked
+                        </span>
+                        <span>Need {reward.starCost - childStars} more ⭐</span>
+                      </div>
+                      <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-amber-500 h-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, (childStars / reward.starCost) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </main>
