@@ -2,10 +2,21 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Shield, Check, X, Plus, Sparkles, UserPlus, Trash2, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Shield, Check, X, Plus, Sparkles, UserPlus, Trash2, ShoppingBag, Calendar, CheckCircle2 } from "lucide-react";
+import { calculateAgeProfile } from "@/lib/ageRules";
+
+const DAYS_OF_WEEK = [
+  { id: 1, label: "Mon", full: "Monday" },
+  { id: 2, label: "Tue", full: "Tuesday" },
+  { id: 3, label: "Wed", full: "Wednesday" },
+  { id: 4, label: "Thu", full: "Thursday" },
+  { id: 5, label: "Fri", full: "Friday" },
+  { id: 6, label: "Sat", full: "Saturday" },
+  { id: 0, label: "Sun", full: "Sunday" },
+];
 
 export default function ParentDashboard() {
-  const [activeTab, setActiveTab] = useState<"approvals" | "vault" | "shop" | "children">("approvals");
+  const [activeTab, setActiveTab] = useState<"approvals" | "planner" | "vault" | "shop" | "children">("approvals");
 
   const [approvals, setApprovals] = useState<{ pendingTasks: any[]; pendingRewards: any[] }>({
     pendingTasks: [],
@@ -15,20 +26,21 @@ export default function ParentDashboard() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [rewards, setRewards] = useState<any[]>([]);
 
-  // Task Vault Form State
+  // Weekly Planner State
+  const [selectedChildId, setSelectedChildId] = useState<string>("");
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [addingDayId, setAddingDayId] = useState<number | null>(null); // Controls "+ Add Task" modal for a specific day
+
+  // Forms State
   const [taskTitle, setTaskTitle] = useState("");
   const [taskStars, setTaskStars] = useState(2);
   const [taskIcon, setTaskIcon] = useState("⭐");
-  const [minAge] = useState(2);
-  const [maxAge] = useState(12);
 
-  // Shop Form State
   const [rewardTitle, setRewardTitle] = useState("");
   const [rewardCost, setRewardCost] = useState(5);
   const [rewardIcon, setRewardIcon] = useState("🎁");
   const [rewardStock, setRewardStock] = useState(4);
 
-  // Child Form State
   const [childName, setChildName] = useState("");
   const [childDob, setChildDob] = useState("");
   const [childAvatar, setChildAvatar] = useState("🦁");
@@ -42,14 +54,50 @@ export default function ParentDashboard() {
     ]);
 
     if (appRes.ok) setApprovals(await appRes.json());
-    if (childRes.ok) setChildren(await childRes.json());
+    if (childRes.ok) {
+      const chData = await childRes.json();
+      setChildren(chData);
+      if (chData.length > 0 && !selectedChildId) {
+        setSelectedChildId(chData[0].id);
+      }
+    }
     if (taskRes.ok) setTasks(await taskRes.json());
     if (shopRes.ok) setRewards(await shopRes.json());
-  }, []);
+  }, [selectedChildId]);
+
+  const loadAssignments = useCallback(async () => {
+    if (!selectedChildId) return;
+    const res = await fetch(`/api/assignments?childId=${selectedChildId}`);
+    if (res.ok) {
+      const data = await res.json();
+      setAssignments(data);
+    }
+  }, [selectedChildId]);
 
   useEffect(() => {
     loadAllData();
   }, [loadAllData]);
+
+  useEffect(() => {
+    loadAssignments();
+  }, [loadAssignments]);
+
+  const activeChild = children.find((c) => c.id === selectedChildId);
+  const ageProfile = activeChild ? calculateAgeProfile(new Date(activeChild.dob)) : null;
+
+  const handleToggleAssignment = async (taskId: string, dayOfWeek: number) => {
+    if (!selectedChildId) return;
+
+    const res = await fetch("/api/assignments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ childId: selectedChildId, taskId, dayOfWeek }),
+    });
+
+    if (res.ok) {
+      loadAssignments();
+    }
+  };
 
   const handleProcessApproval = async (id: string, type: "TASK" | "REWARD", action: "APPROVE" | "DECLINE") => {
     const res = await fetch("/api/approvals", {
@@ -62,14 +110,9 @@ export default function ParentDashboard() {
   };
 
   const handleDeleteChild = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to remove ${name}? This will delete all their task completions.`)) {
-      return;
-    }
-
+    if (!confirm(`Are you sure you want to remove ${name}? This will delete all their task completions.`)) return;
     const res = await fetch(`/api/children?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      loadAllData();
-    }
+    if (res.ok) loadAllData();
   };
 
   const handleCreateTask = async (e: React.FormEvent) => {
@@ -79,7 +122,7 @@ export default function ParentDashboard() {
     await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: taskTitle, starValue: taskStars, icon: taskIcon, minAge, maxAge }),
+      body: JSON.stringify({ title: taskTitle, starValue: taskStars, icon: taskIcon, minAge: 2, maxAge: 18 }),
     });
 
     setTaskTitle("");
@@ -115,8 +158,11 @@ export default function ParentDashboard() {
     loadAllData();
   };
 
+  const selectedDayObj = DAYS_OF_WEEK.find((d) => d.id === addingDayId);
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans select-none">
+      {/* Navigation Header */}
       <header className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
         <div className="flex items-center gap-4">
           <Link href="/" className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl transition">
@@ -143,6 +189,14 @@ export default function ParentDashboard() {
                 {approvals.pendingTasks.length + approvals.pendingRewards.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab("planner")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              activeTab === "planner" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Calendar className="w-4 h-4" /> Weekly Planner
           </button>
           <button
             onClick={() => setActiveTab("vault")}
@@ -199,14 +253,12 @@ export default function ParentDashboard() {
                     <button
                       onClick={() => handleProcessApproval(app.id, "TASK", "DECLINE")}
                       className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-2xl transition"
-                      title="Decline (Returns to Kid's Checklist)"
                     >
                       <X className="w-6 h-6" />
                     </button>
                     <button
                       onClick={() => handleProcessApproval(app.id, "TASK", "APPROVE")}
                       className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-2xl transition"
-                      title="Approve & Award Stars"
                     >
                       <Check className="w-6 h-6" />
                     </button>
@@ -248,7 +300,184 @@ export default function ParentDashboard() {
         </div>
       )}
 
-      {/* TAB 2: TASK VAULT */}
+      {/* TAB 2: WEEKLY CHORE PLANNER MATRIX WITH PER-DAY '+' BUTTONS */}
+      {activeTab === "planner" && (
+        <div className="space-y-6">
+          {/* Child Selector Tabs */}
+          <div className="flex items-center justify-between bg-slate-900 p-4 rounded-3xl border border-slate-800">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Child:</span>
+              <div className="flex gap-2">
+                {children.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedChildId(c.id)}
+                    className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 ${
+                      selectedChildId === c.id ? "bg-indigo-600 text-white shadow-lg" : "bg-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <span>{c.avatar}</span> {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {activeChild && ageProfile && (
+              <div className="text-right">
+                <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+                  {ageProfile.stageName} ({ageProfile.ageYears} yrs)
+                </span>
+                <p className="text-[11px] text-slate-400 mt-1">Recommended Limit: Up to {ageProfile.maxDailyTasks} tasks/day</p>
+              </div>
+            )}
+          </div>
+
+          {/* 7-Day Interactive Columns */}
+          {tasks.length === 0 ? (
+            <div className="bg-slate-900 border border-dashed border-slate-800 rounded-3xl p-12 text-center text-slate-500">
+              Your Task Vault is empty. Add chores to the Task Vault tab before building the weekly plan!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+              {DAYS_OF_WEEK.map((day) => {
+                const dayAssignments = assignments.filter((a) => a.dayOfWeek === day.id);
+                const isLimitExceeded = ageProfile ? dayAssignments.length > ageProfile.maxDailyTasks : false;
+
+                return (
+                  <div key={day.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between shadow-lg">
+                    <div>
+                      {/* Day Header */}
+                      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
+                        <span className="font-bold text-sm text-slate-200">{day.label}</span>
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                            isLimitExceeded ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-slate-800 text-slate-400"
+                          }`}
+                        >
+                          {dayAssignments.length} / {ageProfile?.maxDailyTasks || 5}
+                        </span>
+                      </div>
+
+                      {/* Assigned Tasks for this day */}
+                      <div className="space-y-2 min-h-[140px]">
+                        {dayAssignments.length === 0 ? (
+                          <span className="text-[10px] text-slate-600 block text-center py-6">No tasks set</span>
+                        ) : (
+                          dayAssignments.map((a) => (
+                            <div
+                              key={a.id}
+                              className="bg-slate-800/80 border border-slate-700/80 p-2 rounded-xl flex items-center justify-between text-xs"
+                            >
+                              <span className="flex items-center gap-1.5 truncate">
+                                <span>{a.task.icon}</span> <strong className="truncate text-slate-200">{a.task.title}</strong>
+                              </span>
+                              <button
+                                onClick={() => handleToggleAssignment(a.taskId, day.id)}
+                                className="text-slate-500 hover:text-red-400 transition ml-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Per-Day '+' Add Task Button */}
+                    <button
+                      onClick={() => setAddingDayId(day.id)}
+                      className="w-full mt-3 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 transition active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" /> Add Task
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* POPUP MODAL: Add Task to Specific Day */}
+      {addingDayId !== null && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <span>📅</span> Add Tasks for {DAYS_OF_WEEK.find((d) => d.id === addingDayId)?.full}
+                </h3>
+                <p className="text-xs text-slate-400">Select chores from your Task Vault for {activeChild?.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddingDayId(null)}
+                className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Task Vault Selection List */}
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {tasks.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">No tasks in vault. Create tasks in the Task Vault tab first!</p>
+              ) : (
+                tasks.map((task) => {
+                  const isAssigned = assignments.some(
+                    (a) => a.taskId === task.id && a.dayOfWeek === addingDayId
+                  );
+                  return (
+                    <button
+                      key={task.id}
+                      type="button"
+                      onClick={async () => {
+                        const targetDay = addingDayId;
+                        await handleToggleAssignment(task.id, targetDay);
+                      }}
+                      className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition ${
+                        isAssigned
+                          ? "bg-indigo-600/30 border-indigo-500 text-white"
+                          : "bg-slate-800/50 border-slate-700/70 text-slate-300 hover:bg-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{task.icon}</span>
+                        <div>
+                          <h4 className="font-bold text-sm">{task.title}</h4>
+                          <span className="text-[10px] text-amber-400 font-bold">⭐ {task.starValue} Stars</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isAssigned ? (
+                          <span className="text-xs font-bold bg-indigo-500 text-white px-2.5 py-1 rounded-lg flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Added
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                            <Plus className="w-3.5 h-3.5" /> Add
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAddingDayId(null)}
+              className="w-full mt-5 bg-indigo-600 hover:bg-indigo-500 font-bold py-3 rounded-2xl text-xs transition"
+            >
+              Done Managing Day
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: TASK VAULT */}
       {activeTab === "vault" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl h-fit">
@@ -320,7 +549,7 @@ export default function ParentDashboard() {
         </div>
       )}
 
-      {/* TAB 3: REWARD SHOP MANAGER */}
+      {/* TAB 4: REWARD SHOP MANAGER */}
       {activeTab === "shop" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl h-fit">
@@ -403,7 +632,7 @@ export default function ParentDashboard() {
         </div>
       )}
 
-      {/* TAB 4: CHILDREN MANAGER */}
+      {/* TAB 5: CHILDREN MANAGER */}
       {activeTab === "children" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl h-fit">
@@ -476,7 +705,6 @@ export default function ParentDashboard() {
                     <button
                       onClick={() => handleDeleteChild(child.id, child.name)}
                       className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl transition"
-                      title="Remove Child Profile"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
