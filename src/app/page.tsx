@@ -78,14 +78,12 @@ export default function HomeKiosk() {
   const activeChild = children.find((c) => c.id === activeChildId);
   const ageProfile = activeChild ? calculateAgeProfile(new Date(activeChild.dob)) : null;
 
-  // Filter tasks assigned to today's day of the week (0 = Sun, 1 = Mon, ..., 6 = Sat)
+  // Day mapping: 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
   const todayDayOfWeek = new Date().getDay();
+
+  // STRICT SYNC: Only include tasks explicitly scheduled for today in the Weekly Planner
   const todayAssignments = assignments.filter((a) => a.dayOfWeek === todayDayOfWeek);
-  
-  // If tasks are scheduled for today, show assigned tasks. If none scheduled yet, fallback to all vault tasks.
-  const todayTasks = todayAssignments.length > 0
-    ? tasks.filter((t) => todayAssignments.some((a) => a.taskId === t.id))
-    : tasks;
+  const todayTasks = tasks.filter((t) => todayAssignments.some((a) => a.taskId === t.id));
 
   const handleUnlockParent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,7 +193,7 @@ export default function HomeKiosk() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {todayTasks.length === 0 ? (
                 <div className="col-span-full bg-slate-900 border border-dashed border-slate-800 rounded-3xl p-10 text-center text-slate-500">
-                  No chores scheduled for today! Enjoy your free time.
+                  🎉 No chores scheduled for today in the Weekly Planner! Enjoy your day.
                 </div>
               ) : (
                 todayTasks.map((task) => {

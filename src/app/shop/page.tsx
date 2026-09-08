@@ -10,6 +10,7 @@ export default function RewardShop() {
   const [children, setChildren] = useState<any[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>("");
   const [pendingRedemptions, setPendingRedemptions] = useState<any[]>([]);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   const loadShopData = useCallback(async () => {
     try {
@@ -20,7 +21,7 @@ export default function RewardShop() {
       ]);
 
       if (rwRes.ok) setRewards(await rwRes.json());
-      
+
       if (chRes.ok) {
         const chData = await chRes.json();
         setChildren(chData);
@@ -45,36 +46,42 @@ export default function RewardShop() {
   const activeChild = children.find((c) => c.id === selectedChildId);
   const activeChildAge = activeChild ? calculateAgeProfile(new Date(activeChild.dob)).ageYears : 0;
 
-  // Age bracket & Per-Child Assignment Filter
   const visibleRewards = rewards.filter((reward) => {
-    // 1. Stock check (Meltdown guard: Hide out of stock)
     if (reward.currentStock <= 0) return false;
-
-    // 2. Age bracket check
     if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
-
-    // 3. Specific child assignment check
     if (reward.assignments && reward.assignments.length > 0) {
       return reward.assignments.some((a: any) => a.childId === selectedChildId);
     }
-
     return true;
   });
 
-  const handleClaimReward = async (rewardId: string) => {
+  const handleClaimReward = async (e: React.MouseEvent, rewardId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!selectedChildId) return;
 
-    const res = await fetch("/api/rewards/claim", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ childId: selectedChildId, rewardId }),
-    });
+    setSubmittingId(rewardId);
 
-    if (res.ok) {
-      loadShopData();
-    } else {
-      const err = await res.json();
-      alert(err.error || "Failed to claim reward.");
+    try {
+      const res = await fetch("/api/rewards/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId: selectedChildId, rewardId }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        await loadShopData();
+      } else {
+        alert(data.error || "Could not claim reward.");
+      }
+    } catch (err) {
+      console.error("Claim error:", err);
+      alert("Network error processing claim.");
+    } finally {
+      setSubmittingId(null);
     }
   };
 
@@ -95,12 +102,13 @@ export default function RewardShop() {
         </div>
 
         {/* Child Selector Tabs */}
-        <div className="flex bg-slate-800 p-1.5 rounded-2xl gap-1.5">
+        <div className="flex bg-slate-800 p-1.5 rounded-2xl gap-1.5 overflow-x-auto">
           {children.map((c) => {
             const isActive = selectedChildId === c.id;
             return (
               <button
                 key={c.id}
+                type="button"
                 onClick={() => setSelectedChildId(c.id)}
                 className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
                   isActive ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
@@ -131,6 +139,8 @@ export default function RewardShop() {
             const isPending = pendingRedemptions.some(
               (pr) => pr.childId === selectedChildId && pr.rewardId === reward.id
             );
+
+            const isSubmitting = submittingId === reward.id;
 
             return (
               <div
@@ -164,10 +174,13 @@ export default function RewardShop() {
                     </div>
                   ) : hasEnoughStars ? (
                     <button
-                      onClick={() => handleClaimReward(reward.id)}
-                      className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition active:scale-95"
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={(e) => handleClaimReward(e, reward.id)}
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer disabled:opacity-50"
                     >
-                      <Sparkles className="w-5 h-5" /> Redeem Reward
+                      <Sparkles className="w-5 h-5" />
+                      {isSubmitting ? "Submitting..." : "Redeem Reward"}
                     </button>
                   ) : (
                     <div className="space-y-2">

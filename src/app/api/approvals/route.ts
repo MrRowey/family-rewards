@@ -1,31 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/approvals -> Fetch pending task completions and reward redemptions
+// GET /api/approvals -> Fetch pending chores AND pending reward redemptions
 export async function GET() {
   try {
     const pendingTasks = await prisma.completion.findMany({
       where: { status: "PENDING" },
-      include: { 
-        child: true, 
-        task: true 
+      include: {
+        child: true,
+        task: true,
       },
       orderBy: { completedAt: "asc" },
     });
 
-    let pendingRewards: any[] = [];
-    try {
-      pendingRewards = await prisma.rewardRedemption.findMany({
-        where: { status: "PENDING" },
-        include: { child: true, reward: true },
-        orderBy: { requestedAt: "asc" },
-      });
-    } catch {
-      pendingRewards = [];
-    }
+    const pendingRewards = await prisma.rewardRedemption.findMany({
+      where: { status: "PENDING" },
+      include: {
+        child: true,
+        reward: true,
+      },
+      orderBy: { requestedAt: "asc" },
+    });
 
     return NextResponse.json({ pendingTasks, pendingRewards });
-  } catch (error) {
+  } catch (error: any) {
     console.error("GET Approvals Error:", error);
     return NextResponse.json({ pendingTasks: [], pendingRewards: [] }, { status: 200 });
   }
@@ -76,7 +74,7 @@ export async function POST(request: Request) {
 
       if (action === "APPROVE") {
         if (redemption.child.stars < redemption.reward.starCost) {
-          return NextResponse.json({ error: "Insufficient stars" }, { status: 400 });
+          return NextResponse.json({ error: "Insufficient stars balance" }, { status: 400 });
         }
 
         await prisma.$transaction([
@@ -102,7 +100,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST Approvals Error:", error);
     return NextResponse.json({ error: "Failed to process approval" }, { status: 500 });
   }
