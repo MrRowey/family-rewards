@@ -1,13 +1,40 @@
 version: '3.8'
 
 services:
-  family-rewards:
-    image: ghcr.io/mrrowey/family-rewards:latest
-    container_name: family-rewards
-    restart: unless-stopped
+  # PostgreSQL Database Container
+  postgres:
+    image: postgres:16-alpine
+    container_name: family_rewards_db
+    restart: always
+    environment:
+      POSTGRES_USER: family_user
+      POSTGRES_PASSWORD: family_password
+      POSTGRES_DB: family_rewards
+    ports:
+      - "5432:5432" # Allows direct DB GUI access (e.g., DBeaver or pgAdmin)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U family_user -d family_rewards"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Family Rewards Web Application Container
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: family_rewards_app
+    restart: always
     ports:
       - "3000:3000"
-    volumes:
-      - ./data:/app/prisma/data
     environment:
-      - DATABASE_URL="file:/app/prisma/data/family.db"
+      - DATABASE_URL=postgresql://family_user:family_password@postgres:5432/family_rewards?schema=public
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

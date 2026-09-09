@@ -85,6 +85,9 @@ export default function HomeKiosk() {
   const todayAssignments = assignments.filter((a) => a.dayOfWeek === todayDayOfWeek);
   const todayTasks = tasks.filter((t) => todayAssignments.some((a) => a.taskId === t.id));
 
+  // Configured PIN length (defaults to 4 if unspecified)
+  const pinLength = config?.parentPin?.length || 4;
+
   const handleUnlockParent = (e: React.FormEvent) => {
     e.preventDefault();
     if (enteredPin === config?.parentPin) {
@@ -143,7 +146,11 @@ export default function HomeKiosk() {
             </Link>
 
             <button
-              onClick={() => setShowPinModal(true)}
+              onClick={() => {
+                setShowPinModal(true);
+                setEnteredPin("");
+                setPinError(false);
+              }}
               className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-2xl border border-slate-700 transition"
               title="Unlock Parent Dashboard"
             >
@@ -261,27 +268,32 @@ export default function HomeKiosk() {
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl">
             <Lock className="w-10 h-10 text-indigo-400 mx-auto mb-2" />
             <h3 className="text-xl font-bold mb-1">Parent Verification</h3>
-            <p className="text-xs text-slate-400 mb-4">Enter 4-digit PIN to open Parent Portal</p>
+            <p className="text-xs text-slate-400 mb-4">Enter {pinLength}-digit security PIN</p>
 
             <form onSubmit={handleUnlockParent} className="space-y-4">
               <input
                 type="password"
-                maxLength={4}
+                inputMode="numeric"
+                maxLength={pinLength}
                 autoFocus
                 value={enteredPin}
                 onChange={(e) => {
-                  setEnteredPin(e.target.value);
+                  setEnteredPin(e.target.value.replace(/\D/g, ""));
                   setPinError(false);
                 }}
-                className={`w-full bg-slate-800 border text-center text-3xl font-mono tracking-widest py-2 rounded-xl focus:outline-none ${
-                  pinError ? "border-red-500 text-red-400" : "border-slate-700"
+                placeholder={"•".repeat(pinLength)}
+                className={`w-full bg-slate-800 border text-center text-2xl font-mono tracking-widest py-2.5 rounded-xl focus:outline-none ${
+                  pinError ? "border-red-500 text-red-400" : "border-slate-700 text-indigo-300"
                 }`}
               />
               {pinError && <p className="text-xs text-red-400 font-semibold">Incorrect PIN</p>}
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowPinModal(false)}
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setEnteredPin("");
+                  }}
                   className="w-1/2 bg-slate-800 hover:bg-slate-700 font-bold py-2.5 rounded-xl text-xs"
                 >
                   Cancel

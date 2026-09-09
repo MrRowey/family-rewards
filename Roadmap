@@ -1,0 +1,75 @@
+# Family Rewards Kiosk - Release Roadmap
+
+---
+
+## 🚀 Version 1.0.0 — Functional Baseline & Core Kiosk (Current Release)
+> **Focus:** Absolute stability, basic security, and daily usability for the household touchscreen terminal connected to PostgreSQL.
+
+- [ ] **PostgreSQL & Prisma Migration** (Containerized DB schema & connection fixes)
+- [ ] **Dynamic Parent PIN Security & Length Slider** (Configurable 4–8 digit PIN in `/setup`)
+- [ ] **Family Overview Splash Screen & Inactivity Reset** (Resets back to main avatar screen after 45s of no taps)
+- [ ] **Dynamic Age-Adaptive UI Rendering** (Chunky cards for Toddlers, Arcade views for Kids, sleek rows for Teens)
+- [ ] **Weekly Task Scheduling & Kiosk Checklist** (Strict day-of-week filtering for daily chores)
+- [ ] **Reward Shop & Redemption Workflow** (Claiming rewards logs to DB as pending approval)
+- [ ] **Touchscreen Double-Tap Debouncing** (1-second action locking to prevent accidental double taps or double spending)
+
+---
+
+## 🌟 Version 1.1.0 — Tactile Feedback & Quick Parent Workflow
+> **Target:** Make the kiosk rewarding for kids to tap and fast for parents to manage.
+
+1. **Interactive Touchscreen Feedback (Sound FX & Visuals)**
+   - *Details:* Add cheerful audio cues (`Howler.js`) and confetti explosions (`canvas-confetti`) when tasks are completed or rewards claimed.
+2. **Bulk Parent Approvals ("Approve All") & Manual Star Adjustments**
+   - *Details:* Add an "Approve All Pending Tasks" button in `/parent/approvals` along with direct `+` / `-` star adjustment buttons on child profiles.
+
+---
+
+## 🔥 Version 1.2.0 — Daily Engagement & Goal Saving
+> **Target:** Encourage daily habit building and teach delayed gratification.
+
+1. **Chore Streaks & Daily Multiplier Bonuses**
+   - *Details:* Track consecutive days of completing all chores, showing a 🔥 flame icon with milestone star bonuses (3-day / 7-day).
+2. **Goal Saver / Wishlist Progress Bar**
+   - *Details:* Allow kids to pick a target shop reward as their "Wishlist Goal", rendering a progress bar directly on their dashboard.
+
+---
+
+## 🛡️ Version 1.3.0 — Household Safety & Fair Play
+> **Target:** Prevent sibling tampering and handle real-world exceptions gracefully.
+
+1. **Sibling Impersonation Protection (Child Passcodes)**
+   - *Details:* Optional 2-digit PIN or 2-emoji picture passcode required when opening an individual child's profile from the splash screen.
+2. **Sick Day / Vacation Freeze Mode**
+   - *Details:* Parent toggle to freeze daily schedules and preserve active chore streaks during illness or family holidays.
+
+---
+
+## 📸 Version 1.4.0 — Teen Autonomy & Evidence Verification
+> **Target:** Establish accountability for older children (Ages 11+) without frustrating them.
+
+1. **Teen Mobile Companion App & Remote Evidence Sync (Ages 11+)**
+   - *Details:* Dedicated mobile PWA view allowing older kids to view schedules on their phone, claim bonus tasks, and capture/upload photo or video proof directly from their phone camera.
+2. **Automatic Photo/Video Compression & 30-Day Storage Pruner**
+   - *Details:* Auto-compress uploaded media (WebP/MP4) and delete media files older than 30 days after review to preserve server disk space.
+
+---
+
+## 🌐 Version 1.5.0 — Secure Remote Access & Gateway
+> **Target:** Allow parents to receive notifications and approve chores while away from home.
+
+1. **Parent Security Infrastructure: Two-Factor Authentication (2FA / TOTP) [PRECURSOR]**
+   - *Details:* Implement TOTP authenticator app support (Google Authenticator, Authy) for parent accounts before opening external access.
+2. **Remote Companion App & Secure Container Gateway Sync**
+   - *Details:* Cloudflare Tunnel / Tailscale sidecar container inside Docker Compose to safely expose the app for remote push notifications and parent approvals away from home.
+
+---
+
+## 🏆 Future Backlog (v2.0+ Candidates)
+- [ ] Child Leveling System & Lifetime XP Progression
+- [ ] Recurring Task Frequencies (Every Weekday, Custom Days)
+- [ ] Task Sub-Steps / Mini Checklist Modals
+- [ ] Group Family Goals & Shared Star Jars
+- [ ] Star Economy Balance Calculator & Pricing Safeguards
+- [ ] Offline Action Queue & Auto-Resync (Service Worker)
+- [ ] Ambient/Night Screen Saver Mode (8:00 PM – 6:30 AM)

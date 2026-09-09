@@ -1,14 +1,14 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
-
 model FamilyConfig {
-  id           String   @id @default("default")
+  id           String   @id @default(uuid())
   parentPin    String   @default("1234")
   isConfigured Boolean  @default(false)
   updatedAt    DateTime @updatedAt
@@ -18,7 +18,7 @@ model Child {
   id                String             @id @default(uuid())
   name              String
   dob               DateTime
-  avatar            String             @default(":emoji:lion_face:")
+  avatar            String             @default("🦁")
   stars             Int                @default(0)
   createdAt         DateTime           @default(now())
   completions       Completion[]
@@ -34,51 +34,18 @@ model Task {
   starValue   Int              @default(1)
   minAge      Int              @default(2)
   maxAge      Int              @default(18)
+  createdAt   DateTime         @default(now())
   subSteps    SubStep[]
   completions Completion[]
   assignments TaskAssignment[]
 }
 
 model SubStep {
-  id     String @id @default(uuid())
-  taskId String
-  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  title  String
-  order  Int
-}
-
-model Completion {
-  id          String   @id @default(uuid())
-  childId     String
-  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  taskId      String
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  completedAt DateTime @default(now())
-  status      String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
-}
-
-model Reward {
-  id           String             @id @default(uuid())
-  title        String
-  icon         String             @default("🎁")
-  starCost     Int                @default(5)
-  monthlyStock Int                @default(4) // E.g, 4 = 4 times per month, 0 = unlimited
-  currentStock Int                @default(4) // Decrements when redeemed
-  minAge       Int                @default(2)
-  maxAge       Int                @default(18)
-  createdAt    DateTime           @default(now())
-  redemptions  RewardRedemption[]
-  assignments  RewardAssignment[]
-}
-
-model RewardRedemption {
-  id         String   @id @default(uuid())
-  childId    String
-  child      Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  rewardId   String
-  reward     Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  redeemedAt DateTime @default(now())
-  status     String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"    
+  id        String  @id @default(uuid())
+  taskId    String
+  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  completed Boolean @default(false)
 }
 
 model TaskAssignment {
@@ -87,7 +54,31 @@ model TaskAssignment {
   child     Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
   taskId    String
   task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  dayOfWeek Int // 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
+  dayOfWeek Int
+}
+
+model Completion {
+  id          String   @id @default(uuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
+  completedAt DateTime @default(now())
+}
+
+model Reward {
+  id           String             @id @default(uuid())
+  title        String
+  icon         String             @default("🎁")
+  starCost     Int                @default(5)
+  monthlyStock Int                @default(1)
+  currentStock Int                @default(1)
+  minAge       Int                @default(2)
+  maxAge       Int                @default(18)
+  createdAt    DateTime           @default(now())
+  redemptions  RewardRedemption[]
+  assignments  RewardAssignment[]
 }
 
 model RewardAssignment {
@@ -96,4 +87,14 @@ model RewardAssignment {
   child    Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
   rewardId String
   reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+}
+
+model RewardRedemption {
+  id          String   @id @default(uuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  rewardId    String
+  reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
+  requestedAt DateTime @default(now())
 }
