@@ -48,3 +48,5 @@ prisma/data/
 *.db-shm
 *.db-wal
 .env
+
+/.vscode
