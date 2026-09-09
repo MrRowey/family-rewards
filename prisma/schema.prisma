@@ -9,8 +9,9 @@ generator client {
 
 model FamilyConfig {
   id           String   @id @default(uuid())
-  parentPin    String   @default("1234")
+  parentPin    String?   
   isConfigured Boolean  @default(false)
+  maxDailyTasks Int @default(5)
   updatedAt    DateTime @updatedAt
 }
 
@@ -43,9 +44,9 @@ model Task {
 model SubStep {
   id        String  @id @default(uuid())
   taskId    String
-  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   title     String
-  completed Boolean @default(false)
+  order     Int     @default(0)
+  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model TaskAssignment {

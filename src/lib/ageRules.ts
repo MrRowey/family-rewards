@@ -8,72 +8,29 @@ export interface AgeProfile {
 }
 
 
-export function calculateAgeProfile(dob: Date): AgeProfile {
-    const now = new Date();
-    const difftime = Math.abs(now.getTime() - dob.getTime());
-    const diffDays = Math.ceil(difftime / (1000 * 60 * 60 * 24));
-    const ageYears = Math.floor(diffDays / 365.25);
-    const ageMonths = Math.floor((diffDays % 365.25) / 30.44);
+export function calculateAgeProfile(dob: Date) {
+  const today = new Date();
+  let ageYears = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
 
-    // 0 - 23 Months: Infant Stage
-    if (ageYears < 2) {
-        return {
-            ageYears,
-            ageMonths,
-            stageName: "Infant Stage",
-            isUnlocked: false,
-            maxDailyTasks: 0,
-            defaultSubstepLimit: 0,
-        };
-    }
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    ageYears--;
+  }
 
-    // Age 2 - 4: Toddler Stage
-    if (ageYears >= 2 && ageYears <= 4) {
-        return {
-            ageYears,
-            ageMonths,
-            stageName: "Toddler Stage",
-            isUnlocked: true,
-            maxDailyTasks: 3,
-            defaultSubstepLimit: 2,
-        };
-    }
+  if (ageYears < 6) {
+    return { ageYears, tier: "toddler", stageName: "Early Years", maxDailyTasks: 3 };
+  }
+  if (ageYears < 12) {
+    return { ageYears, tier: "primary", stageName: "Primary School", maxDailyTasks: 5 };
+  }
 
-    // Age 5 - 7: KS1 Stage
-    if (ageYears >= 5 && ageYears <= 7) {
-        return {
-            ageYears,
-            ageMonths,
-            stageName: "KS1 Stage",
-            isUnlocked: true,
-            maxDailyTasks: 5,
-            defaultSubstepLimit: 3,
-        };
-    }
-
-    // Age 8 - 11: KS2 Stage
-    if (ageYears >= 8 && ageYears <= 11) {
-        return {
-            ageYears,
-            ageMonths,
-            stageName: "KS2 Stage",
-            isUnlocked: true,
-            maxDailyTasks: 7,
-            defaultSubstepLimit: 4,
-        };
-    }
-
-    // Age 12 - 14: KS3 Stage
-    if (ageYears >= 12 && ageYears <= 14) {
-        return {
-            ageYears,
-            ageMonths,
-            stageName: "KS3 Stage",
-            isUnlocked: true,
-            maxDailyTasks: 10,
-            defaultSubstepLimit: 5,
-        };
-    }
+  // Fallback for teens (Ages 12-18+)
+  return {
+    ageYears,
+    tier: "teen",
+    stageName: "Secondary / Teen",
+    maxDailyTasks: 8,
+  };
 }
 
 /**

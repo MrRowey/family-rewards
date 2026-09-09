@@ -1,60 +1,59 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
-// GET /api/config -> Fetch configuration
 export async function GET() {
   try {
-    let config = await prisma.familyConfig.findFirst();
+    const config = await prisma.familyConfig.findFirst();
     if (!config) {
-      config = await prisma.familyConfig.create({
-        data: {
-          id: "default",
-          parentPin: "1234",
-          isConfigured: false,
-          maxDailyTasks: 5,
-        },
-      });
+      return NextResponse.json({ isConfigured: false });
     }
-    return NextResponse.json(config);
+
+    // Strip parentPin from GET response so it never reaches browser network logs
+    const { parentPin, ...safeConfig } = config;
+    return NextResponse.json({
+      ...safeConfig,
+      isConfigured: true,
+      hasPin: Boolean(parentPin),
+    });
   } catch (error) {
-    console.error("GET Config Error:", error);
     return NextResponse.json({ error: "Failed to fetch config" }, { status: 500 });
   }
 }
 
-// POST /api/config -> Save PIN and mark setup complete
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { parentPin, isConfigured, maxDailyTasks } = body;
+    const body = await req.json();
+    const { parentPin, ...otherSettings } = body;
 
-    // Check if default config exists
-    const existing = await prisma.familyConfig.findFirst();
-
-    let updated;
-    if (existing) {
-      updated = await prisma.familyConfig.update({
-        where: { id: existing.id },
-        data: {
-          parentPin: parentPin || existing.parentPin,
-          isConfigured: isConfigured !== undefined ? Boolean(isConfigured) : existing.isConfigured,
-          maxDailyTasks: maxDailyTasks ? Number(maxDailyTasks) : existing.maxDailyTasks,
-        },
-      });
-    } else {
-      updated = await prisma.familyConfig.create({
-        data: {
-          id: "default",
-          parentPin: parentPin || "1234",
-          isConfigured: isConfigured !== undefined ? Boolean(isConfigured) : true,
-          maxDailyTasks: maxDailyTasks ? Number(maxDailyTasks) : 5,
-        },
-      });
+    let hashedPin: string | undefined = undefined;
+    if (parentPin) {
+      hashedPin = await bcrypt.hash(parentPin, 10);
     }
 
-    return NextResponse.json(updated);
+    const existing = await prisma.familyConfig.findFirst();
+
+    if (existing) {
+      const updated = await prisma.familyConfig.update({
+        where: { id: existing.id },
+        data: {
+          ...otherSettings,
+          ...(hashedPin && { parentPin: hashedPin }),
+        },
+      });
+      const { parentPin: _, ...safeUpdated } = updated;
+      return NextResponse.json(safeUpdated);
+    }
+
+    const created = await prisma.familyConfig.create({
+      data: {
+        ...otherSettings,
+        parentPin: hashedPin,
+      },
+    });
+    const { parentPin: _, ...safeCreated } = created;
+    return NextResponse.json(safeCreated);
   } catch (error) {
-    console.error("POST Config Error:", error);
     return NextResponse.json({ error: "Failed to update config" }, { status: 500 });
   }
 }
