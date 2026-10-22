@@ -8,30 +8,32 @@ generator client {
 }
 
 model FamilyConfig {
-  id           String   @id @default(uuid())
-  parentPin    String?   
-  isConfigured Boolean  @default(false)
-  maxDailyTasks Int @default(5)
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(uuid())
+  parentPin     String?   
+  isConfigured  Boolean   @default(false)
+  maxDailyTasks Int       @default(5)
+  updatedAt     DateTime  @updatedAt
 }
 
 model Child {
   id                String             @id @default(uuid())
   name              String
   dob               DateTime
-  avatar            String             @default("🦁")
+  avatar            String             @default("🦁")// Stores emoji or image URL/path (e.g, "/uploads/avatars/...")
   stars             Int                @default(0)
   createdAt         DateTime           @default(now())
   completions       Completion[]
   redemptions       RewardRedemption[]
   assignments       TaskAssignment[]
   rewardAssignments RewardAssignment[]
+  groupPledges      GroupRewardPledge[] 
 }
 
 model Task {
   id          String           @id @default(uuid())
   title       String
   icon        String           @default("⭐")
+  imageURL    String?          // Custom Uploaded Photo
   starValue   Int              @default(1)
   minAge      Int              @default(2)
   maxAge      Int              @default(18)
@@ -71,15 +73,31 @@ model Completion {
 model Reward {
   id           String             @id @default(uuid())
   title        String
+  description  String?
   icon         String             @default("🎁")
+  imageURL     String?            // Custom uploaded reward photo
   starCost     Int                @default(5)
   monthlyStock Int                @default(1)
   currentStock Int                @default(1)
   minAge       Int                @default(2)
   maxAge       Int                @default(18)
+  isVisible    Boolean            @default(true) // Parent Visibility toggle for monthly roatation
+  isGroup      Boolean            @default(false) // Flage for Group Goal Rewards
+  targetMonth  Int?               // Optional month filter ( 1 = Jan. 12 = Dec)
   createdAt    DateTime           @default(now())
   redemptions  RewardRedemption[]
   assignments  RewardAssignment[]
+  groupPledges GroupRewardPledge[]
+}
+
+model GroupRewardPledge {
+  id        String    @id @default(uuid())
+  rewardId  String
+  reward    Reward    @relation(fields: [rewardId], references: [id],onDelete: Cascade )
+  childId   String
+  child     Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  stars     Int
+  createdAt DateTime  @default(now())
 }
 
 model RewardAssignment {
@@ -88,6 +106,8 @@ model RewardAssignment {
   child    Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
   rewardId String
   reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, rewardId])
 }
 
 model RewardRedemption {
@@ -98,4 +118,13 @@ model RewardRedemption {
   reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
   requestedAt DateTime @default(now())
+}
+
+model AuditLog {
+  id    String @id @default(uuid())
+  actor String // E.G. "parent" or Child
+  actorType String // "PARENT" | "CHILD"
+  action String // "COMPLETED_TASK", "APPROVED_TASK", "REDEMED_REWARD", "REFUNDED_REWARD", etc.
+  details String
+  createdAt DateTime @default(now())
 }

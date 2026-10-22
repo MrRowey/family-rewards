@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/assignments?childId=XYZ -> Fetch all scheduled tasks for a child
+// GET /api/assignments?childId=XYZ&day=today -> Fetch tasks scheduled for today
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const childId = searchParams.get("childId");
+    const dayParam = searchParams.get("day");
+
+    // Calculate numeric day of week (0 = Sun, 1 = Mon, ..., 6 = Sat)
+    let dayOfWeek: number | undefined;
+    if (dayParam === "today") {
+      dayOfWeek = new Date().getDay();
+    } else if (dayParam !== null && !isNaN(Number(dayParam))) {
+      dayOfWeek = Number(dayParam);
+    }
 
     const assignments = await prisma.taskAssignment.findMany({
       where: {
         ...(childId && { childId }),
+        ...(dayOfWeek !== undefined && { dayOfWeek }),
       },
       include: { task: true },
     });
