@@ -1,4 +1,13 @@
-export const DEFAULT_TASK_VAULT = [
+export interface DefaultTask {
+  title: string;
+  icon: string;
+  starValue: number;
+  minAge: number;
+  maxAge: number;
+  subSteps: string[];
+}
+
+export const DEFAULT_TASK_VAULT: DefaultTask[] = [
   // Toddler Stage (Age 2 - 4)
   {
     title: "Put Toys in Bin",
@@ -16,7 +25,6 @@ export const DEFAULT_TASK_VAULT = [
     maxAge: 4,
     subSteps: ["Find your shoes", "Put by front door"],
   },
-
   // Early Primary (Age 5 - 8)
   {
     title: "Morning Routine",
@@ -39,20 +47,6 @@ export const DEFAULT_TASK_VAULT = [
     maxAge: 8,
     subSteps: ["Pick up dirty clothes", "Put books on shelf"],
   },
-  {
-    title: "Bedtime Routine",
-    icon: "🌙",
-    starValue: 3,
-    minAge: 5,
-    maxAge: 8,
-    subSteps: [
-      "Put on pajamas",
-      "Brush teeth",
-      "Pick out book",
-      "In bed by bedtime",
-    ],
-  },
-
   // Upper Primary (Age 9 - 12)
   {
     title: "Unpack School Bag & Homework",

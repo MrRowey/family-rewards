@@ -1,24 +1,43 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 export function useInactivityReset(onInactive: () => void, timeoutMs: number = 45000) {
+  const onInactiveRef = useRef(onInactive);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const resetTimer = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(onInactive, timeoutMs);
-  };
+  useEffect(() => {
+    onInactiveRef.current = onInactive;
+  }, [onInactive]);
+
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      onInactiveRef.current();
+    }, timeoutMs);
+  }, [timeoutMs]);
 
   useEffect(() => {
-    const events = ["pointerdown", "pointermove", "keydown", "touchstart", "click"];
-
-    events.forEach((event) => window.addEventListener(event, resetTimer));
     resetTimer();
+
+    let lastEventTime = 0;
+    const handleActivity = () => {
+      const now = Date.now();
+      // Throttle event resets to at most once per second
+      if (now - lastEventTime > 1000) {
+        lastEventTime = now;
+        resetTimer();
+      }
+    };
+
+    const events = ["pointerdown", "keydown", "touchstart"];
+    events.forEach((evt) => window.addEventListener(evt, handleActivity));
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      events.forEach((event) => window.removeEventListener(event, resetTimer));
+      events.forEach((evt) => window.removeEventListener(evt, handleActivity));
     };
-  }, [onInactive, timeoutMs]);
+  }, [resetTimer]);
 }

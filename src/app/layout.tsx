@@ -3,14 +3,23 @@
 import React, { useState, useEffect } from "react";
 import "./globals.css";
 
+interface HealthCheckResponse {
+  status: string;
+  error?: string;
+  checks?: {
+    database?: { latencyMs: number };
+    config?: { isConfigured: boolean };
+  };
+}
+
 function DevDiagnosticOverlay() {
-  const [health, setHealth] = useState<any>(null);
+  const [health, setHealth] = useState<HealthCheckResponse | null>(null);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     fetch("/api/health")
       .then((res) => res.json())
-      .then((data) => setHealth(data))
+      .then((data: HealthCheckResponse) => setHealth(data))
       .catch((err) =>
         setHealth({ status: "CRITICAL_ERROR", error: err.message })
       );

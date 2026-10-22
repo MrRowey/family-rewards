@@ -1,30 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PinPadModal from "@/components/ui/PinPadModal";
+import { Child } from "@/types";
 
 export default function HomePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [children, setChildren] = useState<any[]>([]);
-
-  useEffect(() => {
-    // 1. Check if kiosk configuration exists
-    fetch("/api/config")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.isConfigured) {
-          // If not configured, immediately send to setup wizard
-          router.push("/setup");
-        } else {
-          loadData();
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch config:", err);
-        setLoading(false);
-      });
-  }, [router]);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [showPinModal, setShowPinModal] = useState(false);
 
   const loadData = async () => {
     try {
@@ -39,6 +24,22 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.isConfigured) {
+          router.push("/setup");
+        } else {
+          loadData();
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch config:", err);
+        setLoading(false);
+      });
+  }, [router]);
 
   if (loading) {
     return (
@@ -57,8 +58,8 @@ export default function HomePage() {
           <p className="text-slate-400 text-sm mt-1">Tap your profile to view chores & rewards</p>
         </div>
         <button
-          onClick={() => router.push("/parent")}
-          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold px-5 py-3 rounded-2xl transition"
+          onClick={() => setShowPinModal(true)}
+          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold px-5 py-3 rounded-2xl transition active:scale-95 min-h-12"
         >
           🔒 Parent Mode
         </button>
@@ -72,8 +73,8 @@ export default function HomePage() {
             No child profiles added yet. Head over to Parent Mode to create your first child profile!
           </p>
           <button
-            onClick={() => router.push("/parent")}
-            className="bg-indigo-600 hover:bg-indigo-500 font-black px-6 py-4 rounded-2xl text-white shadow-lg transition active:scale-95"
+            onClick={() => setShowPinModal(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 font-black px-6 py-4 rounded-2xl text-white shadow-lg transition active:scale-95 min-h-12"
           >
             Go to Parent Dashboard 🚀
           </button>
@@ -83,7 +84,7 @@ export default function HomePage() {
           {children.map((child) => (
             <div
               key={child.id}
-              onClick={() => router.push(`/?childId=${child.id}`)}
+              onClick={() => router.push(`/kid/${child.id}`)}
               className="bg-slate-900 hover:bg-slate-850 border border-slate-800 p-6 rounded-3xl cursor-pointer transition transform hover:-translate-y-1 active:scale-95 shadow-xl"
             >
               <div className="text-5xl mb-4">{child.avatar || "👤"}</div>
@@ -92,6 +93,16 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+      )}
+
+      {showPinModal && (
+        <PinPadModal
+          onSuccess={() => {
+            setShowPinModal(false);
+            router.push("/parent");
+          }}
+          onClose={() => setShowPinModal(false)}
+        />
       )}
     </main>
   );

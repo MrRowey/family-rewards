@@ -7,7 +7,6 @@ export interface AgeProfile {
     defaultSubstepLimit: number;
 }
 
-
 export function calculateAgeProfile(dob: Date) {
   const today = new Date();
   let ageYears = today.getFullYear() - dob.getFullYear();

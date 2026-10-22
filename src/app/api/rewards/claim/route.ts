@@ -46,10 +46,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(redemption, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("CRITICAL: POST Reward Claim Error ->", error);
+    const message = error instanceof Error ? error.message : "Failed to submit reward claim";
     return NextResponse.json(
-      { error: error?.message || "Failed to submit reward claim" },
+      { error: message },
       { status: 500 }
     );
   }

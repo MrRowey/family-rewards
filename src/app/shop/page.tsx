@@ -4,12 +4,13 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, Lock, ShoppingBag, Sparkles, Clock } from "lucide-react";
 import { calculateAgeProfile } from "@/lib/ageRules";
+import { Child, Reward, RewardAssignment, PendingApproval } from "@/types";
 
 export default function RewardShop() {
-  const [rewards, setRewards] = useState<any[]>([]);
-  const [children, setChildren] = useState<any[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>("");
-  const [pendingRedemptions, setPendingRedemptions] = useState<any[]>([]);
+  const [pendingRedemptions, setPendingRedemptions] = useState<PendingApproval[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   const loadShopData = useCallback(async () => {
@@ -23,11 +24,9 @@ export default function RewardShop() {
       if (rwRes.ok) setRewards(await rwRes.json());
 
       if (chRes.ok) {
-        const chData = await chRes.json();
+        const chData: Child[] = await chRes.json();
         setChildren(chData);
-        if (chData.length > 0 && !selectedChildId) {
-          setSelectedChildId(chData[0].id);
-        }
+        setSelectedChildId((prev) => (prev ? prev : chData[0]?.id || ""));
       }
 
       if (appRes.ok) {
@@ -37,20 +36,34 @@ export default function RewardShop() {
     } catch (err) {
       console.error("Failed to load shop data:", err);
     }
-  }, [selectedChildId]);
+  }, []);
 
   useEffect(() => {
-    loadShopData();
+    let isSubscribed = true;
+
+    async function fetchData() {
+      if (isSubscribed) {
+        await loadShopData();
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [loadShopData]);
 
   const activeChild = children.find((c) => c.id === selectedChildId);
-  const activeChildAge = activeChild ? calculateAgeProfile(new Date(activeChild.dob)).ageYears : 0;
+  const activeChildAge = activeChild?.dob
+    ? calculateAgeProfile(new Date(activeChild.dob)).ageYears
+    : 0;
 
   const visibleRewards = rewards.filter((reward) => {
     if (reward.currentStock <= 0) return false;
     if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
     if (reward.assignments && reward.assignments.length > 0) {
-      return reward.assignments.some((a: any) => a.childId === selectedChildId);
+      return reward.assignments.some((a: RewardAssignment) => a.childId === selectedChildId);
     }
     return true;
   });
@@ -90,7 +103,10 @@ export default function RewardShop() {
       {/* Header */}
       <header className="flex justify-between items-center bg-slate-900/90 backdrop-blur-md p-4 rounded-3xl border border-slate-800 mb-8 shadow-2xl">
         <div className="flex items-center gap-4">
-          <Link href="/" className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl transition">
+          <Link
+            href="/"
+            className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl transition min-h-12 min-w-12 flex items-center justify-center"
+          >
             <ArrowLeft className="w-6 h-6 text-slate-300" />
           </Link>
           <div>
@@ -110,7 +126,7 @@ export default function RewardShop() {
                 key={c.id}
                 type="button"
                 onClick={() => setSelectedChildId(c.id)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 min-h-12 ${
                   isActive ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -137,7 +153,7 @@ export default function RewardShop() {
             const hasEnoughStars = childStars >= reward.starCost;
 
             const isPending = pendingRedemptions.some(
-              (pr) => pr.childId === selectedChildId && pr.rewardId === reward.id
+              (pr) => pr.child?.id === selectedChildId && pr.reward?.id === reward.id
             );
 
             const isSubmitting = submittingId === reward.id;
@@ -177,7 +193,7 @@ export default function RewardShop() {
                       type="button"
                       disabled={isSubmitting}
                       onClick={(e) => handleClaimReward(e, reward.id)}
-                      className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer disabled:opacity-50"
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer disabled:opacity-50 min-h-12"
                     >
                       <Sparkles className="w-5 h-5" />
                       {isSubmitting ? "Submitting..." : "Redeem Reward"}

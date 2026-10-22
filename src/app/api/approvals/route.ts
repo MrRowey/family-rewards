@@ -23,7 +23,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ pendingTasks, pendingRewards });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("GET Approvals Error:", error);
     return NextResponse.json({ pendingTasks: [], pendingRewards: [] }, { status: 200 });
   }
@@ -100,8 +100,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("POST Approvals Error:", error);
-    return NextResponse.json({ error: "Failed to process approval" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to process approval";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

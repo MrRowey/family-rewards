@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ action: "added", assignment }, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to toggle assignment" }, { status: 500 });
   }
 }

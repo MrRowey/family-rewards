@@ -3,40 +3,50 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const startTime = Date.now();
-  const checks: Record<string, any> = {
-    timestamp: new Date().toISOString(),
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      DATABASE_URL_SET: !!process.env.DATABASE_URL,
-      JWT_SECRET_SET: !!process.env.JWT_SECRET,
-    },
-    database: { status: "unknown", latencyMs: 0 },
-    config: { status: "unknown", isConfigured: false },
-  };
 
   try {
     const dbStart = Date.now();
     await prisma.$queryRaw`SELECT 1`;
-    checks.database.latencyMs = Date.now() - dbStart;
-    checks.database.status = "connected";
+    const latencyMs = Date.now() - dbStart;
 
+    // Production response: Clean & secure
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ status: "ok" }, { status: 200 });
+    }
+
+    // Development / Diagnostic response
     const config = await prisma.familyConfig.findFirst();
-    checks.config.status = "ok";
-    checks.config.isConfigured = config?.isConfigured ?? false;
-  } catch (error: any) {
-    checks.database.status = "error";
-    checks.database.error = error?.message || String(error);
+
+    return NextResponse.json({
+      status: "OK",
+      totalLatencyMs: Date.now() - startTime,
+      checks: {
+        timestamp: new Date().toISOString(),
+        env: {
+          NODE_ENV: process.env.NODE_ENV,
+          DATABASE_URL_SET: !!process.env.DATABASE_URL,
+          JWT_SECRET_SET: !!process.env.JWT_SECRET,
+        },
+        database: { status: "connected", latencyMs },
+        config: { status: "ok", isConfigured: config?.isConfigured ?? false },
+      },
+    });
+  } catch (error: unknown) {
+    console.error("Health Check Error:", error);
+
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ status: "error" }, { status: 500 });
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+
+    return NextResponse.json(
+      {
+        status: "ERROR",
+        totalLatencyMs: Date.now() - startTime,
+        error: message,
+      },
+      { status: 500 }
+    );
   }
-
-  const totalDuration = Date.now() - startTime;
-  const isHealthy = checks.database.status === "connected";
-
-  return NextResponse.json(
-    {
-      status: isHealthy ? "OK" : "ERROR",
-      totalLatencyMs: totalDuration,
-      checks,
-    },
-    { status: isHealthy ? 200 : 500 }
-  );
 }

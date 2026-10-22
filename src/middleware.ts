@@ -1,28 +1,42 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-home-kiosk-secret-key-change-me"
-);
+import { verifyParentToken } from "@/lib/auth";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method;
 
-  const isParentPage = pathname.startsWith("/parent");
-  const isProtectedApi =
-    (pathname.startsWith("/api/approvals") ||
-      pathname.startsWith("/api/config") ||
-      pathname.startsWith("/api/tasks") ||
-      pathname.startsWith("/api/rewards")) &&
-    ["POST", "PUT", "DELETE", "PATCH"].includes(method);
-
-  if (pathname.startsWith("/setup") || pathname.startsWith("/api/auth/verify-pin")) {
+  // Exclude public static/page routes that don't need auth checks
+  if (
+    pathname.startsWith("/setup") ||
+    pathname === "/" ||
+    pathname.startsWith("/shop") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico")
+  ) {
     return NextResponse.next();
   }
 
-  if (isParentPage || isProtectedApi) {
+  const isParentPage = pathname.startsWith("/parent");
+  const isApiRoute = pathname.startsWith("/api");
+
+  // Deny-by-default auth logic for not-GET API Requests
+  let requiresAuth = isParentPage;
+
+  if (isApiRoute && ["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
+    // Explicit public API mutation allow-list:
+    const isPublicApiMutation =
+      pathname === "/api/auth/verify-pin" ||
+      pathname === "/api/completions" ||
+      pathname === "/api/rewards/claim" ||
+      pathname === "/api/setup"; // Setup checks FamilyConfig.isConfigured directly in route handler
+
+    if (!isPublicApiMutation) {
+      requiresAuth = true;
+    }
+  }
+
+  if (requiresAuth) {
     const token = req.cookies.get("parent_session")?.value;
 
     if (!token) {
@@ -31,9 +45,9 @@ export async function middleware(req: NextRequest) {
     }
 
     try {
-      await jwtVerify(token, JWT_SECRET);
+      await verifyParentToken(token);
       return NextResponse.next();
-    } catch (err) {
+    } catch {
       if (isParentPage) return NextResponse.redirect(new URL("/", req.url));
       return NextResponse.json({ error: "Session expired or invalid" }, { status: 401 });
     }

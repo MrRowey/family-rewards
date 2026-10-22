@@ -4,9 +4,19 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { pin } = await req.json();
+    const existingConfig = await prisma.familyConfig.findFirst();
 
-    if (!pin || pin.length < 4 || pin.length > 8) {
+    if (existingConfig?.isConfigured) {
+      return NextResponse.json(
+        { error: "System is already configured. Access forbidden." },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const { pin } = body;
+
+    if (typeof pin !== "string" || !/^\d{4,8}\$/.test(pin)) {
       return NextResponse.json(
         { error: "PIN must be between 4 and 8 digits." },
         { status: 400 }
@@ -14,7 +24,6 @@ export async function POST(req: Request) {
     }
 
     const hashedPin = await bcrypt.hash(pin, 10);
-    const existingConfig = await prisma.familyConfig.findFirst();
 
     if (existingConfig) {
       await prisma.familyConfig.update({

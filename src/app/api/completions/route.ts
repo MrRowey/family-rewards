@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(completions);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch completions" }, { status: 500 });
   }
 }

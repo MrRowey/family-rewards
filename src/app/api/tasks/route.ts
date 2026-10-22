@@ -9,7 +9,7 @@ export async function GET() {
             orderBy: { minAge: "asc"},
         });
         return NextResponse.json(tasks);
-    }    catch (error) {
+    }    catch {
         return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
     }
 }
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json(newTask);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
     }
 }
