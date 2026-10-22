@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma skills sync || exit 0"
+    "postinstall": "prisma skills sync || exit 0",
+    "kiosk:up": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
+    "kiosk:down": "docker compose down"
+
+
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
