@@ -6,11 +6,12 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method;
 
-  // Exclude public static/page routes that don't need auth checks
+  // Exclude static assets and public kiosk page routes
   if (
     pathname.startsWith("/setup") ||
     pathname === "/" ||
     pathname.startsWith("/shop") ||
+    pathname.startsWith("/kid") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico")
   ) {
@@ -18,18 +19,18 @@ export async function middleware(req: NextRequest) {
   }
 
   const isParentPage = pathname.startsWith("/parent");
+  const isParentApi = pathname.startsWith("/api/parent");
   const isApiRoute = pathname.startsWith("/api");
 
-  // Deny-by-default auth logic for not-GET API Requests
-  let requiresAuth = isParentPage;
+  let requiresAuth = isParentPage || isParentApi;
 
-  if (isApiRoute && ["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
-    // Explicit public API mutation allow-list:
+  // Additional mutation check for generic API routes
+  if (isApiRoute && !isParentApi && ["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
     const isPublicApiMutation =
       pathname === "/api/auth/verify-pin" ||
       pathname === "/api/completions" ||
       pathname === "/api/rewards/claim" ||
-      pathname === "/api/setup"; // Setup checks FamilyConfig.isConfigured directly in route handler
+      pathname === "/api/setup";
 
     if (!isPublicApiMutation) {
       requiresAuth = true;

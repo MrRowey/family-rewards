@@ -5,17 +5,30 @@ services:
     container_name: family_rewards_db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_}
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-family_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CreateYourOwnStrongPasswordHere!}
+      POSTGRES_DB: ${POSTGRES_DB:-family_rewards}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-family_admin} -d ${POSTGRES_DB:-family_rewards}"]
       interval: 3s
       timeout: 3s
       retries: 5
+
+  # Migration runner to apply schema changes before starting the main app
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    container_name: family_rewards_migrate
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-family_admin}:${POSTGRES_PASSWORD:-CreateYourOwnStrongPasswordHere!}@postgres:5432/${POSTGRES_DB:-family_rewards}?schema=public
+    command: ["npx", "prisma", "db", "push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # Next.js Family Rewards Web Application Container
   app:
@@ -27,18 +40,20 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
-      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-family_admin}:${POSTGRES_PASSWORD:-CreateYourOwnStrongPasswordHere!}@postgres:5432/${POSTGRES_DB:-family_rewards}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-super-secret-random-32-character-kiosk-string}
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - NODE_ENV=production
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 3000 || exit 1"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 3
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:

@@ -10,10 +10,10 @@ import {
 
 export async function POST(req: Request) {
   try {
-    const ipKey = req.headers.get("x-forwarded-for") || "global-rate-limit-key";
+    // Key rate limiter by IP header or global fallback key
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "global-client-key";
 
-    // Rate limiting check
-    const rateLimit = checkPinRateLimit(ipKey);
+    const rateLimit = checkPinRateLimit(clientIp);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: `Too many failed attempts. Try again in ${rateLimit.retryAfterSec} seconds.` },
@@ -34,17 +34,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Parent PIN not configured" }, { status: 400 });
     }
 
-    // Secure timing delay simulation to mitigate side-channel timing attacks
+    // Side-channel timing defense delay
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const isValid = await bcrypt.compare(pin, config.parentPin);
 
     if (!isValid) {
-      recordPinAttempt(ipKey, false);
+      recordPinAttempt(clientIp, false);
       return NextResponse.json({ error: "Invalid PIN" }, { status: 401 });
     }
 
-    recordPinAttempt(ipKey, true);
+    recordPinAttempt(clientIp, true);
 
     const token = await signParentToken();
     const cookieOptions = getParentCookieOptions();

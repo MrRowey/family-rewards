@@ -52,20 +52,18 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
     };
   }, [resetTimer]);
 
-  // Inside app/kid/[childId]/page.tsx useEffect
   useEffect(() => {
     async function loadData() {
       try {
         const [childRes, taskRes, compRes] = await Promise.all([
           fetch("/api/children"),
           fetch(`/api/assignments?childId=${childId}&day=today`),
-          fetch(`/api/completions?childId=${childId}`),
+          fetch(`/api/completions?childId=${childId}&date=today`),
         ]);
 
         let completedOrPendingTaskIds: string[] = [];
         if (compRes.ok) {
           const completions = await compRes.json();
-          // Hide tasks that are PENDING approval OR already APPROVED today
           completedOrPendingTaskIds = completions
             .filter((c: { status: string }) => c.status === "PENDING" || c.status === "APPROVED")
             .map((c: { taskId: string }) => c.taskId);
@@ -87,7 +85,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         }
       } catch (err) {
         console.error("Failed to load kiosk data", err);
-      } finally {
+      } fontally {
         setLoading(false);
       }
     }
@@ -108,7 +106,6 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       });
 
       if (res.ok) {
-        // Instantly disappear task card from child dashboard
         setTasks((prev) => prev.filter((t) => t.id !== taskId));
       }
     } catch {

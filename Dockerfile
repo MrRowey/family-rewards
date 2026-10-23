@@ -22,8 +22,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
 RUN npm run build
 
-# Step 3: Zero-CVE Distroless Production Runner
-FROM gcr.io/distroless/nodejs22-debian12 AS runner
+# Step 3: Zero-CVE Distroless Production Runner (Non-Root)
+FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -31,8 +31,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Distroless runs as a non-root user by default (uid: 10002)
-# Copy build artifacts with appropriate ownership
+# Copy build artifacts
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
@@ -40,5 +39,4 @@ COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
 
-# Distroless directly calls node with the target script
 CMD ["server.js"]

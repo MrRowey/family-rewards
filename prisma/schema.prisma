@@ -67,7 +67,10 @@ model Completion {
   taskId      String
   task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
+  forDate     DateTime @db.Date
   completedAt DateTime @default(now())
+
+  @@unique([childId, taskId, forDate])
 }
 
 model Reward {

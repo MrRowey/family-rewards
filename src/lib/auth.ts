@@ -1,27 +1,27 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const JWT_SECRET_VAL = process.env.JWT_SECRET;
-
-if (!JWT_SECRET_VAL || JWT_SECRET_VAL.length < 32) {
-  throw new Error(
-    "FATAL: JWT_SECRET environment variable must be set and be at least 32 characters long."
-  );
+export function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "FATAL: JWT_SECRET environment variable must be set and be at least 32 characters long."
+    );
+  }
+  return new TextEncoder().encode(secret);
 }
-
-export const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_VAL);
 
 // Session duration: 4 hours
 export const SESSION_MAX_AGE = 4 * 60 * 60;
 
 export async function signParentToken(): Promise<string> {
-    return new SignJWT({ role: "parent"})
-        .setProtectedHeader({ alg: "HS256"})
-        .setExpirationTime(`${SESSION_MAX_AGE}s`)
-        .sign(JWT_SECRET);
+  return new SignJWT({ role: "parent" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime(`${SESSION_MAX_AGE}s`)
+    .sign(getJwtSecret());
 }
 
 export async function verifyParentToken(token: string) {
-  return await jwtVerify(token, JWT_SECRET);
+  return await jwtVerify(token, getJwtSecret());
 }
 
 export function getParentCookieOptions() {
@@ -60,7 +60,6 @@ export function checkPinRateLimit(ipKey: string): { allowed: boolean; retryAfter
   }
 
   if (record.lockoutUntil <= now && record.attempts >= MAX_ATTEMPTS) {
-    // Lockout expired, reset attempts
     pinAttemptsMap.delete(ipKey);
     return { allowed: true };
   }

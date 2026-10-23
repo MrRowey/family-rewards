@@ -16,7 +16,6 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { pin } = body;
 
-    // Fixed: Changed /^\d{4,8}\$/ to /^\d{4,8}$/
     if (typeof pin !== "string" || !/^\d{4,8}$/.test(pin)) {
       return NextResponse.json(
         { error: "PIN must be between 4 and 8 digits." },
