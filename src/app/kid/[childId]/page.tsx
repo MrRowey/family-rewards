@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, use, useCallback } from "react";
+import { useState, useEffect, use, useCallback } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
+import confetti from "canvas-confetti";
+import { sounds } from "@/lib/sound";
 
 interface SubStep {
   id: string;
@@ -85,7 +88,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         }
       } catch (err) {
         console.error("Failed to load kiosk data", err);
-      } fontally {
+      } finally {
         setLoading(false);
       }
     }
@@ -94,6 +97,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   }, [childId]);
 
   const toggleSubstep = (substepId: string) => {
+    sounds.playPop();
     setCheckedSubsteps((prev) => ({ ...prev, [substepId]: !prev[substepId] }));
   };
 
@@ -106,6 +110,12 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       });
 
       if (res.ok) {
+        sounds.playSuccessChime();
+        confetti({
+          particleCount: 60,
+          spread: 70,
+          origin: { y: 0.7 },
+        });
         setTasks((prev) => prev.filter((t) => t.id !== taskId));
       }
     } catch {
@@ -123,21 +133,25 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none">
+    <main className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
       <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800/80 bg-slate-900/40 p-6 rounded-3xl backdrop-blur-md">
         <div className="flex items-center gap-5">
           <button
             onClick={() => router.push("/")}
-            className="p-4 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-2xl transition flex items-center justify-center border border-slate-700/50 shadow-lg"
+            className="p-4 min-h-24 min-w-24 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-2xl transition flex items-center justify-center border border-slate-700/50 shadow-lg"
+            aria-label="Back to home"
           >
             <ArrowLeft className="w-7 h-7 text-slate-200" />
           </button>
 
           <div className="relative">
             {child.avatar.startsWith("/") ? (
-              <img
+              <Image
                 src={child.avatar}
                 alt={child.name}
+                width={64}
+                height={64}
+                unoptimized
                 className="w-16 h-16 rounded-2xl object-cover ring-4 ring-indigo-500/30 shadow-xl"
               />
             ) : (
@@ -158,7 +172,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </div>
           <button
             onClick={() => router.push("/shop")}
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
+            className="min-h-24 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
           >
             <ShoppingBag className="w-6 h-6" /> Reward Shop
           </button>
@@ -196,9 +210,12 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
                       {task.imageUrl ? (
-                        <img
+                        <Image
                           src={task.imageUrl}
                           alt={task.title}
+                          width={64}
+                          height={64}
+                          unoptimized
                           className="w-16 h-16 rounded-2xl object-cover ring-2 ring-slate-700"
                         />
                       ) : (
@@ -223,8 +240,9 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                         return (
                           <button
                             key={sub.id}
+                            type="button"
                             onClick={() => toggleSubstep(sub.id)}
-                            className={`w-full flex items-center justify-between p-3 rounded-xl border text-left text-sm font-semibold transition ${
+                            className={`w-full min-h-24 flex items-center justify-between p-3 rounded-xl border text-left text-sm font-semibold transition ${
                               isChecked
                                 ? "bg-indigo-950/50 border-indigo-500/50 text-indigo-200"
                                 : "bg-slate-950/50 border-slate-800/80 text-slate-300 hover:bg-slate-800/50"
@@ -250,9 +268,9 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                     <button
                       onClick={() => handleCompleteChore(task.id)}
                       disabled={!allSubstepsDone}
-                      className={`w-full font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
+                      className={`w-full min-h-24 font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
                         allSubstepsDone
-                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer"
+                          ? "bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer"
                           : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
                       }`}
                     >

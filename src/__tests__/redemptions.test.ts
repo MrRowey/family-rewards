@@ -57,6 +57,26 @@ describe("Redemption Domain Service", () => {
     await expect(claimReward("c1", "r1")).rejects.toThrow("INSUFFICIENT_STARS");
   });
 
+  it("should decrement stock and mark approved", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      id: "red1",
+      status: "PENDING",
+      rewardId: "r1",
+      childId: "c1",
+      reward: { title: "Toy", starCost: 5 },
+      child: { name: "Alex" },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await approveReward("red1");
+
+    expect(prismaMock.reward.update).toHaveBeenCalledWith({
+      where: { id: "r1" },
+      data: { currentStock: { decrement: 1 } },
+    });
+    expect(result).toEqual({ success: true });
+  });
+
   it("should refund stars on decline", async () => {
     prismaMock.rewardRedemption.findUnique.mockResolvedValue({
       id: "red1",

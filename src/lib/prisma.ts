@@ -1,22 +1,25 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const connectionString = process.env.DATABASE_URL;
 
-export const prisma = globalForPrisma.prisma || new PrismaClient({
-  log:
-    process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-});
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+const globalForPrisma = global as unknown as {
+  prisma: PrismaClient | undefined;
+  pgPool: Pool | undefined;
+};
 
-// Self-executing server check on ininal load
+const pool = globalForPrisma.pgPool ?? new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 
-if (typeof window == "undefined") {
-  prisma
-    .$connect()
-    .then(() => {
-      console.log("✅ [DIAGNOSTICS] PostgreSQL Database Connected Successfully!");
-    })
-    .catch((err) => {
-      console.error("❌ [DIAGNOSTICS] PostgreSQL Connection Error:", err.message);
-    });
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+  globalForPrisma.pgPool = pool;
 }

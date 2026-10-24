@@ -1,5 +1,5 @@
 # Base stage for building dependencies and Next.js app
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 
 # Step 1: Install dependencies
 FROM base AS deps
@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
 RUN npm ci
 
@@ -23,7 +24,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Step 3: Zero-CVE Distroless Production Runner (Non-Root)
-FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runner
+FROM gcr.io/distroless/nodejs24-debian12:nonroot AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

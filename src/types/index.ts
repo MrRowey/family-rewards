@@ -37,12 +37,18 @@ export interface RewardAssignment {
 export interface Reward {
   id: string;
   title: string;
+  description?: string | null;
   icon: string;
+  imageURL?: string | null;
+  imageUrl?: string | null;
   starCost: number;
   monthlyStock: number;
   currentStock: number;
   minAge: number;
   maxAge: number;
+  isVisible: boolean;
+  isGroup?: boolean;
+  targetMonth?: number | null;
   assignments?: RewardAssignment[];
 }
 

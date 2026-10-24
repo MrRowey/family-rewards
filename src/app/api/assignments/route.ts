@@ -1,69 +1,99 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/assignments?childId=XYZ&day=today -> Fetch tasks scheduled for today
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const childId = searchParams.get("childId");
-    const dayParam = searchParams.get("day");
-
-    // Calculate numeric day of week (0 = Sun, 1 = Mon, ..., 6 = Sat)
-    let dayOfWeek: number | undefined;
-    if (dayParam === "today") {
-      dayOfWeek = new Date().getDay();
-    } else if (dayParam !== null && !isNaN(Number(dayParam))) {
-      dayOfWeek = Number(dayParam);
-    }
 
     const assignments = await prisma.taskAssignment.findMany({
-      where: {
-        ...(childId && { childId }),
-        ...(dayOfWeek !== undefined && { dayOfWeek }),
+      where: childId ? { childId } : undefined,
+      include: {
+        task: {
+          include: {
+            subSteps: {
+              orderBy: { order: "asc" },
+            },
+          },
+        },
+        child: true,
       },
-      include: { task: true },
+      orderBy: { dayOfWeek: "asc" },
     });
 
     return NextResponse.json(assignments);
-  } catch {
+  } catch (error) {
+    console.error("Failed to fetch assignments:", error);
     return NextResponse.json({ error: "Failed to fetch assignments" }, { status: 500 });
   }
 }
 
-// POST /api/assignments -> Assign or Toggle a task to a specific day of the week
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { childId, taskId, dayOfWeek } = body;
+    const body = await req.json();
+    const { childId, taskId, dayOfWeek, repeatInterval, startDate, endDate } = body;
 
-    if (childId === undefined || !taskId || dayOfWeek === undefined) {
+    if (!childId || !taskId || dayOfWeek === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Check if task is already assigned to this day
-    const existing = await prisma.taskAssignment.findFirst({
-      where: { childId, taskId, dayOfWeek: Number(dayOfWeek) },
-    });
-
-    if (existing) {
-      // Toggle off: Remove assignment
-      await prisma.taskAssignment.delete({ where: { id: existing.id } });
-      return NextResponse.json({ action: "removed", id: existing.id });
-    }
-
-    // Assign task to day
     const assignment = await prisma.taskAssignment.create({
       data: {
         childId,
         taskId,
         dayOfWeek: Number(dayOfWeek),
+        repeatInterval: repeatInterval ? Number(repeatInterval) : 1,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : null,
       },
-      include: { task: true },
+      include: {
+        task: true,
+        child: true,
+      },
     });
 
-    return NextResponse.json({ action: "added", assignment }, { status: 201 });
+    await prisma.auditLog.create({
+      data: {
+        actor: "Parent",
+        actorType: "PARENT",
+        action: "SCHEDULED_TASK",
+        details: `Assigned task "${assignment.task.title}" to ${assignment.child.name} on day ${dayOfWeek} (every ${repeatInterval || 1} wk)`,
+      },
+    });
+
+    return NextResponse.json(assignment);
   } catch (error) {
-    console.error("Assignment POST error:", error);
-    return NextResponse.json({ error: "Failed to save assignment" }, { status: 500 });
+    console.error("Failed to create assignment:", error);
+    return NextResponse.json({ error: "Failed to create assignment" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing assignment ID" }, { status: 400 });
+    }
+
+    const deleted = await prisma.taskAssignment.delete({
+      where: { id },
+      include: { task: true, child: true },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actor: "Parent",
+        actorType: "PARENT",
+        action: "UNSCHEDULED_TASK",
+        details: `Removed assignment for "${deleted.task.title}" from ${deleted.child.name}`,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete assignment:", error);
+    return NextResponse.json({ error: "Failed to delete assignment" }, { status: 500 });
   }
 }

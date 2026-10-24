@@ -1,6 +1,5 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -8,32 +7,60 @@ generator client {
 }
 
 model FamilyConfig {
-  id            String    @id @default(uuid())
-  parentPin     String?   
-  isConfigured  Boolean   @default(false)
-  maxDailyTasks Int       @default(5)
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  parentPin       String?   
+  isConfigured    Boolean   @default(false)
+  maxDailyTasks   Int       @default(5)
+  idleTimeoutSec  Int       @default(45)   // Kiosk auto-return timeout (seconds)
+  soundEffects    Boolean   @default(true) // Global kiosk SFX toggle
+  updatedAt       DateTime  @updatedAt
 }
 
 model Child {
   id                String             @id @default(uuid())
   name              String
-  dob               DateTime
-  avatar            String             @default("🦁")// Stores emoji or image URL/path (e.g, "/uploads/avatars/...")
+  avatar            String             @default("🦁") // Emoji or image URL/path
+  avatarTheme       String?            @default("bottts")
+  avatarConfig      String?            // Json String for DiceBear Options
   stars             Int                @default(0)
+  dob               DateTime
   createdAt         DateTime           @default(now())
+  assignments       TaskAssignment[]
   completions       Completion[]
   redemptions       RewardRedemption[]
-  assignments       TaskAssignment[]
   rewardAssignments RewardAssignment[]
-  groupPledges      GroupRewardPledge[] 
+  groupPledges      GroupRewardPledge[]
+  badges            ChildBadge[]
+}
+
+model Badge {
+  id           String       @id @default(uuid())
+  title        String
+  description  String
+  icon         String       // e.g. "🤖", "⭐", "🏆"
+  ruleType     String       // "TOTAL_TASKS" | "STREAK_DAYS"
+  threshold    Int          @default(5)
+  unlockedItem String?
+  childBadges  ChildBadge[]
+  createdAt    DateTime     @default(now())
+}
+
+model ChildBadge {
+  id        String   @id @default(uuid())
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  awardedAt DateTime @default(now())
+
+  @@unique([childId, badgeId])
 }
 
 model Task {
   id          String           @id @default(uuid())
   title       String
   icon        String           @default("⭐")
-  imageURL    String?          // Custom Uploaded Photo
+  imageURL    String?          
   starValue   Int              @default(1)
   minAge      Int              @default(2)
   maxAge      Int              @default(18)
@@ -52,12 +79,15 @@ model SubStep {
 }
 
 model TaskAssignment {
-  id        String @id @default(uuid())
-  childId   String
-  child     Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
-  taskId    String
-  task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  dayOfWeek Int
+  id              String    @id @default(uuid())
+  childId         String
+  child           Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  taskId          String
+  task            Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  dayOfWeek       Int       // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  repeatInterval  Int       @default(1)     // 1 = every week, 2 = every 2 weeks, etc.
+  startDate       DateTime  @default(now()) @db.Date // Cadence baseline
+  endDate         DateTime? @db.Date        // Optional expiration date
 }
 
 model Completion {
@@ -78,15 +108,15 @@ model Reward {
   title        String
   description  String?
   icon         String             @default("🎁")
-  imageURL     String?            // Custom uploaded reward photo
+  imageURL     String?            
   starCost     Int                @default(5)
   monthlyStock Int                @default(1)
   currentStock Int                @default(1)
   minAge       Int                @default(2)
   maxAge       Int                @default(18)
-  isVisible    Boolean            @default(true) // Parent Visibility toggle for monthly roatation
-  isGroup      Boolean            @default(false) // Flage for Group Goal Rewards
-  targetMonth  Int?               // Optional month filter ( 1 = Jan. 12 = Dec)
+  isVisible    Boolean            @default(true)
+  isGroup      Boolean            @default(false) 
+  targetMonth  Int?               
   createdAt    DateTime           @default(now())
   redemptions  RewardRedemption[]
   assignments  RewardAssignment[]
@@ -96,7 +126,7 @@ model Reward {
 model GroupRewardPledge {
   id        String    @id @default(uuid())
   rewardId  String
-  reward    Reward    @relation(fields: [rewardId], references: [id],onDelete: Cascade )
+  reward    Reward    @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   childId   String
   child     Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
   stars     Int
@@ -124,10 +154,10 @@ model RewardRedemption {
 }
 
 model AuditLog {
-  id    String @id @default(uuid())
-  actor String // E.G. "parent" or Child
-  actorType String // "PARENT" | "CHILD"
-  action String // "COMPLETED_TASK", "APPROVED_TASK", "REDEMED_REWARD", "REFUNDED_REWARD", etc.
-  details String
+  id        String   @id @default(uuid())
+  actor     String   
+  actorType String   // "PARENT" | "CHILD"
+  action    String   
+  details   String
   createdAt DateTime @default(now())
 }

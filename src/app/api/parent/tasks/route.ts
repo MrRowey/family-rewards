@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       data: {
         title: validated.title,
         icon: validated.icon,
-        imageUrl: validated.imageUrl || null,
+        imageURL: validated.imageUrl || null,
         starValue: validated.starValue,
         minAge: validated.minAge,
         maxAge: validated.maxAge,
