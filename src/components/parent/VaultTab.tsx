@@ -32,8 +32,8 @@ export function VaultTab({ tasks, onCreateTask }: VaultTabProps) {
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Chore Title</label>
-            <input
+            <label htmlFor="a11y-parent-VaultTab-tsx-1" className="block text-xs font-semibold text-slate-400 mb-1">Chore Title</label>
+            <input id="a11y-parent-VaultTab-tsx-1"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -45,8 +45,8 @@ export function VaultTab({ tasks, onCreateTask }: VaultTabProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Icon Emoji</label>
-              <input
+              <label htmlFor="a11y-parent-VaultTab-tsx-2" className="block text-xs font-semibold text-slate-400 mb-1">Icon Emoji</label>
+              <input id="a11y-parent-VaultTab-tsx-2"
                 type="text"
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
@@ -54,8 +54,8 @@ export function VaultTab({ tasks, onCreateTask }: VaultTabProps) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Star Reward</label>
-              <input
+              <label htmlFor="a11y-parent-VaultTab-tsx-3" className="block text-xs font-semibold text-slate-400 mb-1">Star Reward</label>
+              <input id="a11y-parent-VaultTab-tsx-3"
                 type="number"
                 value={stars}
                 onChange={(e) => setStars(Number(e.target.value))}
