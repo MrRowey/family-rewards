@@ -1,108 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { approveCompletion, declineCompletion } from "@/lib/domain/completions";
+import { approveReward, declineReward } from "@/lib/domain/redemptions";
 
-// GET /api/approvals -> Fetch pending chores AND pending reward redemptions
 export async function GET() {
   try {
-    const pendingTasks = await prisma.completion.findMany({
-      where: { status: "PENDING" },
-      include: {
-        child: true,
-        task: true,
-      },
-      orderBy: { completedAt: "asc" },
-    });
-
-    const pendingRewards = await prisma.rewardRedemption.findMany({
-      where: { status: "PENDING" },
-      include: {
-        child: true,
-        reward: true,
-      },
-      orderBy: { requestedAt: "asc" },
-    });
-
+    const [pendingTasks, pendingRewards] = await Promise.all([
+      prisma.completion.findMany({ where: { status: "PENDING" }, include: { child: true, task: true }, orderBy: { completedAt: "asc" } }),
+      prisma.rewardRedemption.findMany({ where: { status: "PENDING" }, include: { child: true, reward: true }, orderBy: { requestedAt: "asc" } }),
+    ]);
     return NextResponse.json({ pendingTasks, pendingRewards });
-  } catch (error: unknown) {
-    console.error("GET Approvals Error:", error);
-    return NextResponse.json({ pendingTasks: [], pendingRewards: [] }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "Failed to load approvals" }, { status: 500 });
   }
 }
 
-// POST /api/approvals -> Process APPROVE or DECLINE
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { id, type, action } = body;
-
-    if (type === "TASK") {
-      const completion = await prisma.completion.findUnique({
-        where: { id },
-        include: { task: true },
-      });
-
-      if (!completion) {
-        return NextResponse.json({ error: "Completion record not found" }, { status: 404 });
-      }
-
-      if (action === "APPROVE") {
-        await prisma.$transaction([
-          prisma.completion.update({
-            where: { id },
-            data: { status: "APPROVED" },
-          }),
-          prisma.child.update({
-            where: { id: completion.childId },
-            data: { stars: { increment: completion.task.starValue } },
-          }),
-        ]);
-      } else {
-        await prisma.completion.update({
-          where: { id },
-          data: { status: "DECLINED" },
-        });
-      }
-    } else if (type === "REWARD") {
-      const redemption = await prisma.rewardRedemption.findUnique({
-        where: { id },
-        include: { reward: true, child: true },
-      });
-
-      if (!redemption) {
-        return NextResponse.json({ error: "Redemption record not found" }, { status: 404 });
-      }
-
-      if (action === "APPROVE") {
-        if (redemption.child.stars < redemption.reward.starCost) {
-          return NextResponse.json({ error: "Insufficient stars balance" }, { status: 400 });
-        }
-
-        await prisma.$transaction([
-          prisma.rewardRedemption.update({
-            where: { id },
-            data: { status: "APPROVED" },
-          }),
-          prisma.child.update({
-            where: { id: redemption.childId },
-            data: { stars: { decrement: redemption.reward.starCost } },
-          }),
-          prisma.reward.update({
-            where: { id: redemption.rewardId },
-            data: { currentStock: { decrement: 1 } },
-          }),
-        ]);
-      } else {
-        await prisma.rewardRedemption.update({
-          where: { id },
-          data: { status: "DECLINED" },
-        });
-      }
+    const { id, type, action } = await request.json();
+    if (typeof id !== "string" || !["TASK", "REWARD"].includes(type) || !["APPROVE", "DECLINE"].includes(action)) {
+      return NextResponse.json({ error: "Invalid approval request" }, { status: 400 });
     }
-
+    if (type === "TASK") {
+      if (action === "APPROVE") await approveCompletion(id);
+      else await declineCompletion(id);
+    } else {
+      if (action === "APPROVE") await approveReward(id);
+      else await declineReward(id);
+    }
     return NextResponse.json({ success: true });
-  } catch (error: unknown) {
-    console.error("POST Approvals Error:", error);
-    const message = error instanceof Error ? error.message : "Failed to process approval";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Approval failed";
+    const status = message.startsWith("NOT_FOUND") ? 404 : /^(INVALID_STATE|CONCURRENCY_ERROR|OUT_OF_STOCK)/.test(message) ? 409 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
