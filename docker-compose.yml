@@ -30,6 +30,15 @@ services:
       postgres:
         condition: service_healthy
 
+  # Ensure existing named volumes are writable by the distroless non-root app user.
+  # This also fixes permissions for volumes created by older releases.
+  uploads_permissions:
+    image: busybox:1.37
+    user: "0:0"
+    command: ["chown", "-R", "65532:65532", "/app/uploads"]
+    volumes:
+      - uploads_data:/app/uploads
+
   # Next.js Family Rewards Web Application Container
   app:
     build:
@@ -57,6 +66,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      uploads_permissions:
         condition: service_completed_successfully
 
 volumes:
