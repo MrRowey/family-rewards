@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { compare } from "bcryptjs";
 import {
   signParentToken,
   getParentCookieOptions,
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     // Side-channel timing defense delay
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    const isValid = await bcrypt.compare(pin, config.parentPin);
+    const isValid = await compare(pin, config.parentPin);
 
     if (!isValid) {
       recordPinAttempt(clientIp, false);
