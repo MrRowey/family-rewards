@@ -7,14 +7,14 @@ export async function GET() {
     if (!config) {
       config = await prisma.familyConfig.create({
         data: {
-          isConfigured: true,
+          isConfigured: false,
           idleTimeoutSec: 45,
           soundEffects: true,
           maxDailyTasks: 5,
         },
       });
     }
-    return NextResponse.json(config);
+    return NextResponse.json({ idleTimeoutSec: config.idleTimeoutSec, soundEffects: config.soundEffects, maxDailyTasks: config.maxDailyTasks });
   } catch (error) {
     console.error("Failed to load kiosk config:", error);
     return NextResponse.json({ error: "Failed to load config" }, { status: 500 });
