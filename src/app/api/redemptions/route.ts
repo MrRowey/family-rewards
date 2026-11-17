@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json(redemption, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to request reward";
-    const status = message.startsWith("NOT_FOUND") ? 404 : /^(INSUFFICIENT_STARS|OUT_OF_STOCK)/.test(message) ? 400 : 500;
+    const status = message.startsWith("NOT_FOUND") ? 404 : /^(INSUFFICIENT_STARS|OUT_OF_STOCK|NOT_ELIGIBLE)/.test(message) ? 400 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
