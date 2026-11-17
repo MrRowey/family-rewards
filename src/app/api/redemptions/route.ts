@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { claimReward } from "@/lib/domain/redemptions";
 
 // GET /api/redemptions -> Fetch reward redemptions
 export async function GET(request: Request) {
@@ -27,51 +28,18 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/redemptions -> Child requests a reward in the shop
+// Legacy endpoint uses the same transactional service as /api/rewards/claim.
 export async function POST(request: Request) {
   try {
     const { childId, rewardId } = await request.json();
-
-    if (!childId || !rewardId) {
+    if (typeof childId !== "string" || typeof rewardId !== "string" || !childId || !rewardId) {
       return NextResponse.json({ error: "Child ID and Reward ID are required" }, { status: 400 });
     }
-
-    const [child, reward] = await Promise.all([
-      prisma.child.findUnique({ where: { id: childId } }),
-      prisma.reward.findUnique({ where: { id: rewardId } }),
-    ]);
-
-    if (!child || !reward) {
-      return NextResponse.json({ error: "Child or Reward not found" }, { status: 404 });
-    }
-
-    if (child.stars < reward.starCost) {
-      return NextResponse.json({ error: "Not enough stars" }, { status: 400 });
-    }
-
-    // Deduct stars, record redemption, and log action
-    const [redemption] = await prisma.$transaction([
-      prisma.rewardRedemption.create({
-        data: { childId, rewardId, status: "PENDING" },
-        include: { reward: true, child: true },
-      }),
-      prisma.child.update({
-        where: { id: childId },
-        data: { stars: { decrement: reward.starCost } },
-      }),
-      prisma.auditLog.create({
-        data: {
-          actor: child.name,
-          actorType: "CHILD",
-          action: "REDEEMED_REWARD",
-          details: `Requested reward "${reward.title}" for ${reward.starCost} stars.`,
-        },
-      }),
-    ]);
-
+    const redemption = await claimReward(childId, rewardId);
     return NextResponse.json(redemption, { status: 201 });
   } catch (error) {
-    console.error("POST Redemption Error:", error);
-    return NextResponse.json({ error: "Failed to request reward" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to request reward";
+    const status = message.startsWith("NOT_FOUND") ? 404 : /^(INSUFFICIENT_STARS|OUT_OF_STOCK)/.test(message) ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
