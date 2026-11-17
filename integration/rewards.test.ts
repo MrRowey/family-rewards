@@ -62,6 +62,24 @@ describe("PostgreSQL reward integrity", () => {
     expect((await prisma.reward.findUniqueOrThrow({ where: { id: item.id } })).currentStock).toBe(1);
   });
 
+  it("refunds the claim-time cost after the reward price changes", async () => {
+    const [a, item] = await Promise.all([child(), reward()]);
+    const claim = await claimReward(a.id, item.id);
+    expect((await prisma.rewardRedemption.findUniqueOrThrow({ where: { id: claim.id } })).starCostAtClaim).toBe(5);
+    await prisma.reward.update({ where: { id: item.id }, data: { starCost: 12 } });
+    await declineReward(claim.id);
+    expect((await prisma.child.findUniqueOrThrow({ where: { id: a.id } })).stars).toBe(20);
+  });
+
+  it("refunds an approved claim at the original price", async () => {
+    const [a, item] = await Promise.all([child(), reward()]);
+    const claim = await claimReward(a.id, item.id);
+    await approveReward(claim.id);
+    await prisma.reward.update({ where: { id: item.id }, data: { starCost: 12 } });
+    await refundReward(claim.id);
+    expect((await prisma.child.findUniqueOrThrow({ where: { id: a.id } })).stars).toBe(20);
+  });
+
   it("approves an old unreserved claim without double-counting stock", async () => {
     const [a, item] = await Promise.all([child(15), reward()]);
     const legacy = await prisma.rewardRedemption.create({
