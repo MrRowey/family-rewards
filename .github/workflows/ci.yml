@@ -3,11 +3,12 @@ name: CI — lint, tests and build
 on:
   push:
     branches:
-      - master
-      - fix/security-and-stability
+      - main
+      - develop
   pull_request:
     branches:
-      - master
+      - main
+      - develop
   workflow_dispatch:
 
 permissions:
