@@ -9,6 +9,7 @@ const prismaMock = {
   reward: {
     findUnique: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
   rewardRedemption: {
     findFirst: vi.fn(),
@@ -67,11 +68,12 @@ describe("Redemption Domain Service", () => {
       child: { name: "Alex" },
     });
     prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.reward.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await approveReward("red1");
 
-    expect(prismaMock.reward.update).toHaveBeenCalledWith({
-      where: { id: "r1" },
+    expect(prismaMock.reward.updateMany).toHaveBeenCalledWith({
+      where: { id: "r1", currentStock: { gt: 0 } },
       data: { currentStock: { decrement: 1 } },
     });
     expect(result).toEqual({ success: true });
