@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Gift, RotateCcw, Eye, EyeOff, Users2 } from "lucide-react";
+  Gift, RotateCcw, X, Eye, EyeOff, Users2 } from "lucide-react";
 
 import { fetchParentPortalData } from "@/features/admin/api";
 import { ParentSidebar } from "@/features/admin/ParentSidebar";
