@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
+import { apiError, parseJson } from "@/lib/api";
 import { CreateTaskSchema } from "@/lib/validation/schemas";
 import { createTask, listTasks } from "@/features/tasks/service";
 
 export async function GET() {
   try { return NextResponse.json(await listTasks()); }
-  catch { return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 }); }
+  catch (error) { return apiError(error, "Failed to fetch tasks"); }
 }
 
 export async function POST(request: Request) {
   try {
-    const task = await createTask(CreateTaskSchema.parse(await request.json()));
+    const task = await createTask(await parseJson(request, CreateTaskSchema));
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
-    return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+    return apiError(error, "Failed to create task");
   }
 }
