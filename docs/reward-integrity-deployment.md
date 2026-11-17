@@ -19,9 +19,10 @@ The deployment currently runs `npx prisma db push` via the Docker Compose `migra
 
 ```prisma
 stockReserved Boolean @default(false)
+starCostAtClaim Int?
 ```
 
-Prisma adds the non-null column with a default of `false`, preserving existing redemption rows as **legacy/unreserved** claims. New claims explicitly set `stockReserved: true`. This change is additive; no backfill of old pending claims is required or appropriate.
+Prisma adds the non-null column with a default of `false`, preserving existing redemption rows as **legacy/unreserved** claims. New claims explicitly set `stockReserved: true` and snapshot `starCostAtClaim`. Existing rows have a null snapshot. This change is additive; no backfill of old pending claims is required or appropriate.
 
 - New claim: atomically reserve one stock unit and charge stars.
 - New approval: does not decrement stock again.
@@ -46,6 +47,6 @@ For a full rollback, stop writes and restore a **consistent database backup from
 
 ## Known follow-ups
 
-- Star refunds currently use the reward's **current** `starCost`, not a price snapshot at claim time. Changing a reward price while claims are pending can result in incorrect refunds. Avoid editing prices for rewards with outstanding claims until this is fixed.
+- New claims refund the stored claim-time price, even if the reward price changes. Legacy claims lack snapshots and fall back to the current price; avoid price edits while old claims are refundable.
 - PostgreSQL concurrency integration tests run in CI. A passing test suite is not a substitute for a verified backup and a deployment rehearsal.
 - `prisma db push` is not a versioned migration system. Converting to `prisma migrate deploy` requires reconciling the existing baseline with deployed databases; handle that as a separate migration project rather than swapping commands without verification.
