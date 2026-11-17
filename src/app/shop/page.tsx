@@ -30,7 +30,7 @@ export default function RewardShop() {
       const [rwRes, chRes, appRes] = await Promise.all([
         fetch("/api/rewards"),
         fetch("/api/children"),
-        fetch("/api/redemptions?childId=none"),
+        fetch("/api/kiosk/pending-rewards"),
       ]);
 
       if (rwRes.ok) setRewards(await rwRes.json());
