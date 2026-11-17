@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function claimReward(childId: string, rewardId: string) {
   return await prisma.$transaction(async (tx) => {
@@ -9,22 +10,14 @@ export async function claimReward(childId: string, rewardId: string) {
       throw new Error("NOT_FOUND: Child or Reward record not found");
     }
 
-    if (reward.currentStock <= 0) {
-      throw new Error("OUT_OF_STOCK: Reward is out of stock");
-    }
-
-    if (child.stars < reward.starCost) {
-      throw new Error("INSUFFICIENT_STARS: Child does not have enough stars");
-    }
-
-    // Check for existing pending redemption
+    // Return the existing claim without charging twice or consuming another stock unit.
     const existingPending = await tx.rewardRedemption.findFirst({
       where: { childId, rewardId, status: "PENDING" },
     });
+    if (existingPending) return existingPending;
 
-    if (existingPending) {
-      return existingPending;
-    }
+    if (reward.currentStock <= 0) throw new Error("OUT_OF_STOCK: Reward is out of stock");
+    if (child.stars < reward.starCost) throw new Error("INSUFFICIENT_STARS: Child does not have enough stars");
 
     // Atomically deduct stars from child
     const updatedChild = await tx.child.updateMany({
@@ -35,6 +28,13 @@ export async function claimReward(childId: string, rewardId: string) {
     if (updatedChild.count === 0) {
       throw new Error("INSUFFICIENT_STARS: Concurrent star balance update failed");
     }
+
+    // Reserve one unit at claim time, preventing pending claims from overselling.
+    const reserved = await tx.reward.updateMany({
+      where: { id: rewardId, currentStock: { gt: 0 } },
+      data: { currentStock: { decrement: 1 } },
+    });
+    if (reserved.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
 
     // Create pending redemption
     const redemption = await tx.rewardRedemption.create({
@@ -55,7 +55,7 @@ export async function claimReward(childId: string, rewardId: string) {
     });
 
     return redemption;
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function approveReward(redemptionId: string) {
@@ -83,13 +83,7 @@ export async function approveReward(redemptionId: string) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
     }
 
-    // Decrement stock
-    const stockUpdate = await tx.reward.updateMany({
-      where: { id: redemption.rewardId, currentStock: { gt: 0 } },
-      data: { currentStock: { decrement: 1 } },
-    });
-    if (stockUpdate.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
-
+    // Stock was reserved when the claim was created.
     await tx.auditLog.create({
       data: {
         actor: "Parent",
@@ -127,6 +121,12 @@ export async function declineReward(redemptionId: string) {
     if (updatedRedemption.count === 0) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
     }
+
+    // Release the reserved stock on decline.
+    await tx.reward.update({
+      where: { id: redemption.rewardId },
+      data: { currentStock: { increment: 1 } },
+    });
 
     // Refund reserved stars back to child
     await tx.child.update({
