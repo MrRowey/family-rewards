@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       },
       include: {
         reward: true,
-        child: true,
+        child: { select: { id: true, name: true, avatar: true, stars: true } },
       },
       orderBy: { requestedAt: "desc" },
     });
