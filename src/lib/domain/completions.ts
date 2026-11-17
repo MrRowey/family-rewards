@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getTodayDate } from "./dates";
+import { isAssignmentDue } from "./schedule";
 
 export async function submitCompletion(childId: string, taskId: string, forDateInput?: Date) {
   const forDate = forDateInput || getTodayDate();
@@ -10,6 +11,11 @@ export async function submitCompletion(childId: string, taskId: string, forDateI
 
     if (!child || !task) {
       throw new Error("NOT_FOUND: Child or Task record not found");
+    }
+
+    const assignments = await tx.taskAssignment.findMany({ where: { childId, taskId } });
+    if (!assignments.some((assignment) => isAssignmentDue(assignment, forDate))) {
+      throw new Error("NOT_ASSIGNED: Task is not scheduled for this child today");
     }
 
     const existing = await tx.completion.findUnique({
