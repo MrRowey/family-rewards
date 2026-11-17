@@ -56,7 +56,7 @@ describe("Redemption Domain Service", () => {
       where: { id: "r1", currentStock: { gt: 0 } },
       data: { currentStock: { decrement: 1 } },
     });
-    expect(prismaMock.rewardRedemption.create).toHaveBeenCalledWith({ data: { childId: "c1", rewardId: "r1", status: "PENDING", stockReserved: true } });
+    expect(prismaMock.rewardRedemption.create).toHaveBeenCalledWith({ data: { childId: "c1", rewardId: "r1", status: "PENDING", stockReserved: true, starCostAtClaim: 5 } });
     expect(result).toEqual({ id: "red1", status: "PENDING" });
   });
 
@@ -133,6 +133,30 @@ describe("Redemption Domain Service", () => {
       data: { currentStock: { increment: 1 } },
     });
     expect(result).toEqual({ success: true });
+  });
+
+  it("decline refunds the original claim price after a price increase", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      id: "red1", status: "PENDING", stockReserved: true, starCostAtClaim: 5,
+      childId: "c1", rewardId: "r1", reward: { title: "Toy", starCost: 12 }, child: { name: "Alex" },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    await declineReward("red1");
+    expect(prismaMock.child.update).toHaveBeenCalledWith({
+      where: { id: "c1" }, data: { stars: { increment: 5 } },
+    });
+  });
+
+  it("approved refund uses original claim price after a price decrease", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      id: "red1", status: "APPROVED", stockReserved: true, starCostAtClaim: 9,
+      childId: "c1", rewardId: "r1", reward: { title: "Toy", starCost: 2 }, child: { name: "Alex" },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    await refundReward("red1");
+    expect(prismaMock.child.update).toHaveBeenCalledWith({
+      where: { id: "c1" }, data: { stars: { increment: 9 } },
+    });
   });
 
   it("does not charge or reserve stock again for an existing pending claim", async () => {
