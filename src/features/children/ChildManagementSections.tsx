@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { Plus, X } from "lucide-react";
+
 import type { NavigationMenu, ChildProfile } from "@/features/admin/types";
 
 interface ChildManagementSectionsProps {
