@@ -11,7 +11,7 @@ import {
 export async function POST(req: Request) {
   try {
     // Key rate limiter by IP header or global fallback key
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "global-client-key";
+    const clientIp = "parent-pin-global"; // Do not trust caller-controlled forwarded headers.
 
     const rateLimit = checkPinRateLimit(clientIp);
     if (!rateLimit.allowed) {
