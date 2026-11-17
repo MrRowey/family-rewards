@@ -5,6 +5,7 @@ on:
     branches:
       - dependabot/npm_and_yarn/production-dependencies-55f57f6564
     paths:
+      - .github/workflows/refresh-dicebear-lock.yml
       - package.json
       - src/components/AvatarDisplay.tsx
   workflow_dispatch:
