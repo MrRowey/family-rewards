@@ -1,0 +1,20 @@
+import { NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import path from "path";
+
+const CONTENT_TYPES: Record<string, string> = { png: "image/png", jpg: "image/jpeg", webp: "image/webp" };
+
+export async function GET(_request: Request, { params }: { params: Promise<{ filename: string }> }) {
+  const { filename } = await params;
+  if (!/^[a-f0-9]{32}\\.(png|jpg|webp)$/.test(filename)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const extension = filename.split(".").at(-1) || "";
+  try {
+    const directory = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
+    const bytes = await readFile(path.join(directory, filename));
+    return new NextResponse(new Uint8Array(bytes), {
+      headers: { "Content-Type": CONTENT_TYPES[extension], "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=31536000, immutable" },
+    });
+  } catch {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+}
