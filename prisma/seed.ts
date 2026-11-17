@@ -1,26 +1,23 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import { hash } from "bcryptjs";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const defaultHashedPin = await hash("1234", 10);
-
   await prisma.familyConfig.upsert({
     where: { id: "default" },
     update: {},
     create: {
       id: "default",
-      parentPin: defaultHashedPin,
+      parentPin: null,
       isConfigured: false,
     },
   });
 
-  console.log("✅ Seed complete: Default configuration initialized safely.");
+  console.log("✅ Seed complete: Unconfigured family initialized; parent PIN must be set during setup.");
 }
 
 main()
