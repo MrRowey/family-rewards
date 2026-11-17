@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Users, Gift, RotateCcw, Check, X, Eye, EyeOff, Calendar, Plus, Database, Users2, AlertCircle } from "lucide-react";
+  Gift, RotateCcw, Check, X, Eye, EyeOff, Calendar, Plus, Database, Users2, AlertCircle } from "lucide-react";
 
 import { fetchParentPortalData } from "@/features/admin/api";
 import { ParentSidebar } from "@/features/admin/ParentSidebar";
