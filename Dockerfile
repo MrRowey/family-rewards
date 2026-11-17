@@ -34,6 +34,7 @@ ENV HOSTNAME="0.0.0.0"
 
 # Copy build artifacts
 COPY --from=builder /app/public ./public
+COPY --chown=65532:65532 --from=builder /app/public/uploads ./uploads
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
