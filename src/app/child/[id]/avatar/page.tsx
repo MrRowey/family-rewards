@@ -161,6 +161,9 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
               {BOT_PARTS.colors.map((hex) => (
                 <button
                   key={hex}
+                  type="button"
+                  aria-label={`Select colour #${hex}`}
+                  aria-pressed={selectedColor === hex}
                   onClick={() => {
                     playSfx("click");
                     setSelectedColor(hex);
