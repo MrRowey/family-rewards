@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     await prisma.familyConfig.update({
       where: { id: config.id },
-      data: { parentPin: await bcrypt.hash(newPin, 12) },
+      data: { parentPin: await hash(newPin, 12) },
     });
 
     await prisma.auditLog.create({
