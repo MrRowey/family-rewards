@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { Gift, RotateCcw, Eye, EyeOff, Users2, Plus, X } from "lucide-react";
+import { Gift, RotateCcw, Eye, EyeOff, Users2 } from "lucide-react";
 import type { NavigationMenu, ChildProfile, RewardItem, TaskAssignmentItem, RewardRedemptionRecord } from "@/features/admin/types";
 
 interface ShopManagementSectionsProps {
