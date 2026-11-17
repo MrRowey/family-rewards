@@ -84,10 +84,11 @@ export async function approveReward(redemptionId: string) {
     }
 
     // Decrement stock
-    await tx.reward.update({
-      where: { id: redemption.rewardId },
+    const stockUpdate = await tx.reward.updateMany({
+      where: { id: redemption.rewardId, currentStock: { gt: 0 } },
       data: { currentStock: { decrement: 1 } },
     });
+    if (stockUpdate.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
 
     await tx.auditLog.create({
       data: {

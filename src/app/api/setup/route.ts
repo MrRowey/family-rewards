@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     const existingConfig = await prisma.familyConfig.findFirst();
 
-    if (existingConfig?.isConfigured) {
+    if (existingConfig?.isConfigured || existingConfig?.parentPin) {
       return NextResponse.json(
         { error: "System is already configured. Access forbidden." },
         { status: 403 }
@@ -26,13 +26,11 @@ export async function POST(req: Request) {
     const hashedPin = await bcrypt.hash(pin, 10);
 
     if (existingConfig) {
-      await prisma.familyConfig.update({
-        where: { id: existingConfig.id },
-        data: {
-          parentPin: hashedPin,
-          isConfigured: true,
-        },
+      const result = await prisma.familyConfig.updateMany({
+        where: { id: existingConfig.id, isConfigured: false, parentPin: null },
+        data: { parentPin: hashedPin, isConfigured: true },
       });
+      if (result.count !== 1) return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
     } else {
       await prisma.familyConfig.create({
         data: {

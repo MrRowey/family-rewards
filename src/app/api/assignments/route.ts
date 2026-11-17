@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTodayDate } from "@/lib/domain/dates";
+import { isAssignmentDue } from "@/lib/domain/schedule";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const childId = searchParams.get("childId");
+    const todayOnly = searchParams.get("day") === "today";
 
     const assignments = await prisma.taskAssignment.findMany({
       where: childId ? { childId } : undefined,
@@ -21,7 +24,8 @@ export async function GET(req: Request) {
       orderBy: { dayOfWeek: "asc" },
     });
 
-    return NextResponse.json(assignments);
+    const due = todayOnly ? assignments.filter((assignment) => isAssignmentDue(assignment, getTodayDate())) : assignments;
+    return NextResponse.json(due);
   } catch (error) {
     console.error("Failed to fetch assignments:", error);
     return NextResponse.json({ error: "Failed to fetch assignments" }, { status: 500 });

@@ -49,6 +49,9 @@ export async function POST(request: Request) {
     if (message.startsWith("NOT_FOUND")) {
       return NextResponse.json({ error: message }, { status: 404 });
     }
+    if (message.startsWith("NOT_ASSIGNED")) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to submit completion" }, { status: 500 });
   }
 }

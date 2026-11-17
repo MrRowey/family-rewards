@@ -3,18 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    let config = await prisma.familyConfig.findFirst();
-    if (!config) {
-      config = await prisma.familyConfig.create({
-        data: {
-          isConfigured: true,
-          idleTimeoutSec: 45,
-          soundEffects: true,
-          maxDailyTasks: 5,
-        },
-      });
-    }
-    return NextResponse.json(config);
+    const config = await prisma.familyConfig.findFirst();
+    return NextResponse.json({ idleTimeoutSec: config?.idleTimeoutSec ?? 45, soundEffects: config?.soundEffects ?? true, maxDailyTasks: config?.maxDailyTasks ?? 5 });
   } catch (error) {
     console.error("Failed to load kiosk config:", error);
     return NextResponse.json({ error: "Failed to load config" }, { status: 500 });
@@ -47,7 +37,7 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json({ idleTimeoutSec: updated.idleTimeoutSec, soundEffects: updated.soundEffects, maxDailyTasks: updated.maxDailyTasks });
   } catch (error) {
     console.error("Failed to update config:", error);
     return NextResponse.json({ error: "Failed to update config" }, { status: 500 });

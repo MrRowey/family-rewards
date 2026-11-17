@@ -24,9 +24,10 @@ export async function proxy(req: NextRequest) {
 
   const isParentPage = pathname.startsWith("/parent");
   const isParentApi = pathname.startsWith("/api/parent");
+  const isSensitiveRead = method === "GET" && (pathname.startsWith("/api/admin/") || pathname === "/api/approvals" || pathname === "/api/audit-logs" || (pathname === "/api/redemptions" && !req.nextUrl.searchParams.has("childId")) || (pathname === "/api/completions" && !req.nextUrl.searchParams.has("childId")));
   const isApiRoute = pathname.startsWith("/api");
 
-  let requiresAuth = isParentPage || isParentApi;
+  let requiresAuth = isParentPage || isParentApi || isSensitiveRead;
 
   // Protect any non-whitelisted API mutations
   if (isApiRoute && !isParentApi && MUTATION_METHODS.has(method)) {

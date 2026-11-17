@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { getTodayDate } from "@/lib/domain/dates";
 
 const prismaMock = {
   child: {
@@ -8,6 +9,7 @@ const prismaMock = {
   task: {
     findUnique: vi.fn(),
   },
+  taskAssignment: { findMany: vi.fn() },
   completion: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -35,6 +37,7 @@ describe("Completion Domain Service", () => {
   it("should create a new completion for today", async () => {
     prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex" });
     prismaMock.task.findUnique.mockResolvedValue({ id: "t1", title: "Clean Room" });
+    prismaMock.taskAssignment.findMany.mockResolvedValue([{ dayOfWeek: getTodayDate().getUTCDay(), repeatInterval: 1, startDate: new Date("2020-01-01"), endDate: null }]);
     prismaMock.completion.findUnique.mockResolvedValue(null);
     prismaMock.completion.create.mockResolvedValue({ id: "comp1", status: "PENDING" });
 
