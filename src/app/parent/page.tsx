@@ -8,6 +8,7 @@ import {
 import { fetchParentPortalData } from "@/features/admin/api";
 import { ParentSidebar } from "@/features/admin/ParentSidebar";
 import { AdminInfoSections } from "@/features/admin/AdminInfoSections";
+import { AdminSettingsSections } from "@/features/admin/AdminSettingsSections";
 import type { NavigationMenu, SidebarCategory, ChildProfile, TaskItem, TaskAssignmentItem, RewardItem, TaskCompletionRecord, RewardRedemptionRecord, AuditLogRecord, KioskConfig } from "@/features/admin/types";
 
 export default function ParentDashboard() {
@@ -972,94 +973,7 @@ export default function ParentDashboard() {
             </div>
           )}
 
-          {/* 11. PIN RESET */}
-          {activeMenu === "user_pin" && (
-            <div className="max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
-              <div>
-                <h3 className="font-black text-xl text-white">Reset Parent PIN</h3>
-                <p className="text-xs text-slate-400 mt-1">Set a new 4–6 digit PIN for kiosk mode unlocking</p>
-              </div>
-
-              <form onSubmit={handleResetPin} className="space-y-4 text-xs">
-                <div>
-                  <label htmlFor="a11y-parent-page-tsx-22" className="block text-slate-400 font-bold mb-1">New PIN</label>
-                  <input id="a11y-parent-page-tsx-22"
-                    type="password"
-                    maxLength={6}
-                    value={newPin}
-                    onChange={(e) => setNewPin(e.target.value)}
-                    required
-                    placeholder="****"
-                    className="w-full bg-slate-950/80 border border-white/10 p-3.5 rounded-2xl text-white text-center text-xl tracking-widest"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="a11y-parent-page-tsx-23" className="block text-slate-400 font-bold mb-1">Confirm New PIN</label>
-                  <input id="a11y-parent-page-tsx-23"
-                    type="password"
-                    maxLength={6}
-                    value={confirmPin}
-                    onChange={(e) => setConfirmPin(e.target.value)}
-                    required
-                    placeholder="****"
-                    className="w-full bg-slate-950/80 border border-white/10 p-3.5 rounded-2xl text-white text-center text-xl tracking-widest"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-4 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 font-black rounded-2xl text-white shadow-lg shadow-indigo-600/30 transition min-h-[48px]"
-                >
-                  Update Security PIN
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* 12. KIOSK DISPLAY SETTINGS */}
-          {activeMenu === "admin_display" && (
-            <div className="max-w-xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
-              <div>
-                <h3 className="font-black text-xl text-white">Kiosk Hardware & Screen Settings</h3>
-                <p className="text-xs text-slate-400 mt-1">Configure audio and idle timeout behaviors</p>
-              </div>
-
-              <form onSubmit={handleSaveKioskConfig} className="space-y-5 text-xs">
-                <div>
-                  <label htmlFor="a11y-parent-page-tsx-24" className="block text-slate-400 font-bold mb-1">Idle Auto-Lock Timeout (Seconds)</label>
-                  <input id="a11y-parent-page-tsx-24"
-                    type="number"
-                    value={kioskConfig.idleTimeoutSec}
-                    onChange={(e) => setKioskConfig({ ...kioskConfig, idleTimeoutSec: Number(e.target.value) })}
-                    className="w-full bg-slate-950/80 border border-white/10 p-3.5 rounded-2xl text-white font-bold"
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1">Seconds of touch inactivity before returning to the home screen.</p>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-950/80 border border-white/5 rounded-2xl">
-                  <div>
-                    <h4 className="font-bold text-white text-sm">Audio Sound Effects</h4>
-                    <p className="text-[11px] text-slate-400">Play arcade chimes on chore completions and prize redemptions.</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={kioskConfig.soundEffects}
-                    onChange={(e) => setKioskConfig({ ...kioskConfig, soundEffects: e.target.checked })}
-                    className="w-5 h-5 accent-indigo-600 rounded"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-4 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 font-black rounded-2xl text-white shadow-lg shadow-indigo-600/30 transition min-h-[48px]"
-                >
-                  Save Display Settings
-                </button>
-              </form>
-            </div>
-          )}
-
+          <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />
           <AdminInfoSections activeMenu={activeMenu} children={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} />
         </main>
       </div>
