@@ -9,6 +9,16 @@ import { calculateAgeProfile } from "@/lib/ageRules";
 import { Child, Reward, RewardAssignment, PendingApproval } from "@/types";
 import { sounds } from "@/lib/sound";
 
+const getRewardImage = (reward: Reward) => {
+  const raw = reward as unknown as Record<string, unknown>;
+  return (raw.imageUrl as string | undefined) || (raw.imageURL as string | undefined) || null;
+};
+
+const getRewardDesc = (reward: Reward) => {
+  const raw = reward as unknown as Record<string, unknown>;
+  return (raw.description as string | undefined) || null;
+};
+
 export default function RewardShop() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -107,15 +117,6 @@ export default function RewardShop() {
     }
   };
 
-  const getRewardImage = (reward: Reward) => {
-    const raw = reward as unknown as Record<string, unknown>;
-    return (raw.imageUrl as string | undefined) || (raw.imageURL as string | undefined) || null;
-  };
-
-  const getRewardDesc = (reward: Reward) => {
-    const raw = reward as unknown as Record<string, unknown>;
-    return (raw.description as string | undefined) || null;
-  };
 
   return (
     <main className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
