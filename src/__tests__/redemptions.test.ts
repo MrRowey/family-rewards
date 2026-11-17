@@ -11,6 +11,7 @@ const prismaMock = {
     update: vi.fn(),
     updateMany: vi.fn(),
   },
+  rewardAssignment: { findMany: vi.fn() },
   rewardRedemption: {
     findFirst: vi.fn(),
     create: vi.fn(),
@@ -33,11 +34,12 @@ import { claimReward, approveReward, declineReward, refundReward } from "@/lib/d
 describe("Redemption Domain Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.rewardAssignment.findMany.mockResolvedValue([]);
   });
 
   it("should deduct stars when claiming a reward", async () => {
-    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10 });
-    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2 });
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 18, targetMonth: null });
     prismaMock.rewardRedemption.findFirst.mockResolvedValue(null);
     prismaMock.child.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.rewardRedemption.create.mockResolvedValue({ id: "red1", status: "PENDING" });
@@ -52,10 +54,30 @@ describe("Redemption Domain Service", () => {
   });
 
   it("should throw INSUFFICIENT_STARS when child balance is too low", async () => {
-    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 3 });
-    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2 });
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 3, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 18, targetMonth: null });
 
     await expect(claimReward("c1", "r1")).rejects.toThrow("INSUFFICIENT_STARS");
+  });
+
+  it("rejects hidden rewards", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: false, isGroup: false, minAge: 0, maxAge: 18, targetMonth: null });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+    expect(prismaMock.child.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects rewards assigned to another child", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 18, targetMonth: null });
+    prismaMock.rewardAssignment.findMany.mockResolvedValue([{ childId: "c2" }]);
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+  });
+
+  it("rejects rewards outside the child's age range", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 16, maxAge: 18, targetMonth: null });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
   });
 
   it("should decrement stock and mark approved", async () => {
