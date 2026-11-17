@@ -1,8 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
+const MAX_TRANSACTION_ATTEMPTS = 3;
+
+async function withTransactionRetry<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try { return await operation(); }
+    catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2034" || attempt >= MAX_TRANSACTION_ATTEMPTS) throw error;
+    }
+  }
+}
+
 export async function claimReward(childId: string, rewardId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const child = await tx.child.findUnique({ where: { id: childId } });
     const reward = await tx.reward.findUnique({ where: { id: rewardId } });
 
@@ -42,6 +53,7 @@ export async function claimReward(childId: string, rewardId: string) {
         childId,
         rewardId,
         status: "PENDING",
+        stockReserved: true,
       },
     });
 
@@ -55,11 +67,11 @@ export async function claimReward(childId: string, rewardId: string) {
     });
 
     return redemption;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
 export async function approveReward(redemptionId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
       include: { reward: true, child: true },
@@ -83,7 +95,14 @@ export async function approveReward(redemptionId: string) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
     }
 
-    // Stock was reserved when the claim was created.
+    // Older pending claims did not reserve stock at claim time.
+    if (!redemption.stockReserved) {
+      const stockUpdate = await tx.reward.updateMany({
+        where: { id: redemption.rewardId, currentStock: { gt: 0 } },
+        data: { currentStock: { decrement: 1 } },
+      });
+      if (stockUpdate.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
+    }
     await tx.auditLog.create({
       data: {
         actor: "Parent",
@@ -94,11 +113,11 @@ export async function approveReward(redemptionId: string) {
     });
 
     return { success: true };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
 export async function declineReward(redemptionId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
       include: { reward: true, child: true },
@@ -123,10 +142,12 @@ export async function declineReward(redemptionId: string) {
     }
 
     // Release the reserved stock on decline.
-    await tx.reward.update({
-      where: { id: redemption.rewardId },
-      data: { currentStock: { increment: 1 } },
-    });
+    if (redemption.stockReserved) {
+      await tx.reward.update({
+        where: { id: redemption.rewardId },
+        data: { currentStock: { increment: 1 } },
+      });
+    }
 
     // Refund reserved stars back to child
     await tx.child.update({
@@ -144,11 +165,11 @@ export async function declineReward(redemptionId: string) {
     });
 
     return { success: true };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
 export async function refundReward(redemptionId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
       include: { reward: true, child: true },
@@ -193,5 +214,5 @@ export async function refundReward(redemptionId: string) {
     });
 
     return { success: true };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
