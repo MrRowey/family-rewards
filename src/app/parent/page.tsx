@@ -9,6 +9,7 @@ import {
   ChevronDown
 } from "lucide-react";
 
+import { fetchParentPortalData } from "@/features/admin/api";
 import type { NavigationMenu, SidebarCategory, ChildProfile, TaskItem, TaskAssignmentItem, RewardItem, TaskCompletionRecord, RewardRedemptionRecord, AuditLogRecord, KioskConfig } from "@/features/admin/types";
 
 export default function ParentDashboard() {
@@ -75,75 +76,22 @@ export default function ParentDashboard() {
   const [confirmPin, setConfirmPin] = useState("");
 
   const loadPortalData = useCallback(async () => {
-    try {
-      const [
-        childRes,
-        taskRes,
-        rewardRes,
-        assignRes,
-        pendingTaskRes,
-        pendingRedempRes,
-        allRedempRes,
-        logRes,
-        configRes,
-      ] = await Promise.all([
-        fetch("/api/children"),
-        fetch("/api/parent/tasks"),
-        fetch(`/api/rewards?month=${selectedMonth}`),
-        fetch("/api/assignments"),
-        fetch("/api/completions?status=PENDING"),
-        fetch("/api/redemptions?status=PENDING"),
-        fetch("/api/redemptions"),
-        fetch("/api/audit-logs"),
-        fetch("/api/config/kiosk"),
-      ]);
-
-      if (childRes.ok) {
-        const data = await childRes.json();
-        const list: ChildProfile[] = Array.isArray(data) ? data : [];
-        setChildren(list);
-        if ( list.length > 0) {
-          setAdjustChildId((prev) => prev || list[0].id);
-          setSchedChildId((prev) => prev || list[0].id);
-        }
+    const data = await fetchParentPortalData(selectedMonth);
+    if (data.children) {
+      setChildren(data.children);
+      if (data.children.length > 0) {
+        setAdjustChildId((prev) => prev || data.children![0].id);
+        setSchedChildId((prev) => prev || data.children![0].id);
       }
-      if (taskRes.ok) {
-        const data = await taskRes.json();
-        setTasks(Array.isArray(data) ? data : []);
-      }
-      if (rewardRes.ok) {
-        const data = await rewardRes.json();
-        setRewards(Array.isArray(data) ? data : []);
-      }
-      if (assignRes.ok) {
-        const data = await assignRes.json();
-        setAssignments(Array.isArray(data) ? data : []);
-      }
-      if (pendingTaskRes.ok) {
-        const data = await pendingTaskRes.json();
-        setPendingTasks(Array.isArray(data) ? data : []);
-      }
-      if (pendingRedempRes.ok) {
-        const data = await pendingRedempRes.json();
-        setPendingRedemptions(Array.isArray(data) ? data : []);
-      }
-      if (allRedempRes.ok) {
-        const data = await allRedempRes.json();
-        setRedemptionsHistory(Array.isArray(data) ? data : []);
-      }
-      if (logRes.ok) {
-        const data = await logRes.json();
-        setAuditLogs(Array.isArray(data) ? data : []);
-      }
-      if (configRes.ok) {
-        const data = await configRes.json();
-        if (data && typeof data === "object" && !("error" in data)) {
-          setKioskConfig(data);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load portal data", err);
     }
+    if (data.tasks) setTasks(data.tasks);
+    if (data.rewards) setRewards(data.rewards);
+    if (data.assignments) setAssignments(data.assignments);
+    if (data.pendingTasks) setPendingTasks(data.pendingTasks);
+    if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
+    if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
+    if (data.auditLogs) setAuditLogs(data.auditLogs);
+    if (data.kioskConfig) setKioskConfig(data.kioskConfig);
   }, [selectedMonth]);
 
   useEffect(() => {
