@@ -41,12 +41,17 @@ describe("Redemption Domain Service", () => {
     prismaMock.rewardRedemption.findFirst.mockResolvedValue(null);
     prismaMock.child.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.rewardRedemption.create.mockResolvedValue({ id: "red1", status: "PENDING" });
+    prismaMock.reward.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await claimReward("c1", "r1");
 
     expect(prismaMock.child.updateMany).toHaveBeenCalledWith({
       where: { id: "c1", stars: { gte: 5 } },
       data: { stars: { decrement: 5 } },
+    });
+    expect(prismaMock.reward.updateMany).toHaveBeenCalledWith({
+      where: { id: "r1", currentStock: { gt: 0 } },
+      data: { currentStock: { decrement: 1 } },
     });
     expect(result).toEqual({ id: "red1", status: "PENDING" });
   });
@@ -58,7 +63,7 @@ describe("Redemption Domain Service", () => {
     await expect(claimReward("c1", "r1")).rejects.toThrow("INSUFFICIENT_STARS");
   });
 
-  it("should decrement stock and mark approved", async () => {
+  it("should approve without deducting already-reserved stock", async () => {
     prismaMock.rewardRedemption.findUnique.mockResolvedValue({
       id: "red1",
       status: "PENDING",
@@ -72,10 +77,7 @@ describe("Redemption Domain Service", () => {
 
     const result = await approveReward("red1");
 
-    expect(prismaMock.reward.updateMany).toHaveBeenCalledWith({
-      where: { id: "r1", currentStock: { gt: 0 } },
-      data: { currentStock: { decrement: 1 } },
-    });
+    expect(prismaMock.reward.updateMany).not.toHaveBeenCalled();
     expect(result).toEqual({ success: true });
   });
 
@@ -95,6 +97,10 @@ describe("Redemption Domain Service", () => {
     expect(prismaMock.child.update).toHaveBeenCalledWith({
       where: { id: "c1" },
       data: { stars: { increment: 5 } },
+    });
+    expect(prismaMock.reward.update).toHaveBeenCalledWith({
+      where: { id: "r1" },
+      data: { currentStock: { increment: 1 } },
     });
     expect(result).toEqual({ success: true });
   });
@@ -121,5 +127,24 @@ describe("Redemption Domain Service", () => {
       data: { currentStock: { increment: 1 } },
     });
     expect(result).toEqual({ success: true });
+  });
+
+  it("does not charge or reserve stock again for an existing pending claim", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 0 });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 0 });
+    prismaMock.rewardRedemption.findFirst.mockResolvedValue({ id: "existing", status: "PENDING" });
+    await expect(claimReward("c1", "r1")).resolves.toEqual({ id: "existing", status: "PENDING" });
+    expect(prismaMock.child.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.reward.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a claim if atomic stock reservation fails", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10 });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 1 });
+    prismaMock.rewardRedemption.findFirst.mockResolvedValue(null);
+    prismaMock.child.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.reward.updateMany.mockResolvedValue({ count: 0 });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("OUT_OF_STOCK");
+    expect(prismaMock.rewardRedemption.create).not.toHaveBeenCalled();
   });
 });
