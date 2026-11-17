@@ -2,8 +2,11 @@
 
 import React, { useMemo } from "react";
 import Image from "next/image";
-import { createAvatar, type Style } from "@dicebear/core";
-import { bottts, adventurer, funEmoji, lorelei } from "@dicebear/collection";
+import { Avatar } from "@dicebear/core";
+import bottts from "@dicebear/styles/bottts.json";
+import adventurer from "@dicebear/styles/adventurer.json";
+import funEmoji from "@dicebear/styles/fun-emoji.json";
+import lorelei from "@dicebear/styles/lorelei.json";
 
 interface AvatarProps {
   theme?: string | null;
@@ -15,12 +18,7 @@ interface AvatarProps {
 }
 
 // Strictly typed collection map avoiding 'any'
-const STYLES: Record<string, Style<Record<string, unknown>>> = {
-  bottts: bottts as Style<Record<string, unknown>>,
-  adventurer: adventurer as Style<Record<string, unknown>>,
-  funEmoji: funEmoji as Style<Record<string, unknown>>,
-  lorelei: lorelei as Style<Record<string, unknown>>,
-};
+const STYLES = { bottts, adventurer, funEmoji, lorelei };
 
 export default function AvatarDisplay({
   theme = "bottts",
@@ -32,7 +30,7 @@ export default function AvatarDisplay({
 }: AvatarProps) {
   const avatarSvg = useMemo(() => {
     try {
-      const activeStyle = STYLES[theme || "bottts"] || STYLES.bottts;
+      const activeStyle = STYLES[(theme || "bottts") as keyof typeof STYLES] || STYLES.bottts;
       let parsedOptions: Record<string, unknown> = { seed };
 
       if (config) {
@@ -46,7 +44,7 @@ export default function AvatarDisplay({
         }
       }
 
-      const avatar = createAvatar(activeStyle, {
+      const avatar = new Avatar(activeStyle, {
         ...parsedOptions,
         size,
       });
