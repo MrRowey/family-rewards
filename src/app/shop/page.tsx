@@ -345,13 +345,14 @@ export default function RewardShop() {
                     return (
                       <div
                         key={reward.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Locked reward: ${reward.title}`}
-                        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); sounds.playLockedBuzz(); } }}
-                        onClick={() => sounds.playLockedBuzz()}
-                        className="rounded-3xl p-5 bg-slate-900/40 border border-slate-800/80 shadow-lg backdrop-blur-md flex flex-col justify-between opacity-70 hover:opacity-90 transition-opacity"
+                        className="relative rounded-3xl p-5 bg-slate-900/40 border border-slate-800/80 shadow-lg backdrop-blur-md flex flex-col justify-between opacity-70 hover:opacity-90 transition-opacity"
                       >
+                        <button
+                          type="button"
+                          aria-label={`Locked reward: ${reward.title}`}
+                          onClick={() => sounds.playLockedBuzz()}
+                          className="absolute inset-0 z-10 rounded-3xl cursor-not-allowed focus-visible:outline-2 focus-visible:outline-indigo-400"
+                        />
                         <div>
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="relative grayscale opacity-80">
