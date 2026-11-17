@@ -125,7 +125,7 @@ export default function ParentDashboard() {
   const [redemptionsHistory, setRedemptionsHistory] = useState<RewardRedemptionRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
   const [kioskConfig, setKioskConfig] = useState<KioskConfig>({ idleTimeoutSec: 45, soundEffects: true, maxDailyTasks: 5 });
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
 
   // Forms: Task Creation
   const [taskTitle, setTaskTitle] = useState("");
@@ -804,8 +804,8 @@ export default function ParentDashboard() {
                   <Plus className="w-4 h-4 text-indigo-400" /> Create Master Chore
                 </h3>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Title</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-1" className="block text-xs font-bold text-slate-400 mb-1">Title</label>
+                  <input id="a11y-parent-page-tsx-1"
                     type="text"
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
@@ -816,8 +816,8 @@ export default function ParentDashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Icon Emoji</label>
-                    <input
+                    <label htmlFor="a11y-parent-page-tsx-2" className="block text-xs font-bold text-slate-400 mb-1">Icon Emoji</label>
+                    <input id="a11y-parent-page-tsx-2"
                       type="text"
                       value={taskIcon}
                       onChange={(e) => setTaskIcon(e.target.value)}
@@ -825,8 +825,8 @@ export default function ParentDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Star Award</label>
-                    <input
+                    <label htmlFor="a11y-parent-page-tsx-3" className="block text-xs font-bold text-slate-400 mb-1">Star Award</label>
+                    <input id="a11y-parent-page-tsx-3"
                       type="number"
                       value={taskStarValue}
                       onChange={(e) => setTaskStarValue(Number(e.target.value))}
@@ -836,7 +836,7 @@ export default function ParentDashboard() {
                 </div>
 
                 <div className="space-y-2 pt-2">
-                  <label className="block text-xs font-bold text-slate-400">Sub-Steps (Optional)</label>
+                  <label htmlFor="a11y-parent-page-tsx-4" className="block text-xs font-bold text-slate-400">Sub-Steps (Optional)</label>
                   {taskSubSteps.map((step, idx) => (
                     <div key={idx} className="flex gap-2">
                       <input
@@ -912,7 +912,7 @@ export default function ParentDashboard() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-400 mb-1">Select Child</label>
-                  <select
+                  <select id="a11y-parent-page-tsx-4"
                     value={schedChildId}
                     onChange={(e) => setSchedChildId(e.target.value)}
                     required
@@ -926,8 +926,8 @@ export default function ParentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Select Master Task</label>
-                  <select
+                  <label htmlFor="a11y-parent-page-tsx-5" className="block text-xs font-bold text-slate-400 mb-1">Select Master Task</label>
+                  <select id="a11y-parent-page-tsx-5"
                     value={schedTaskId}
                     onChange={(e) => setSchedTaskId(e.target.value)}
                     required
@@ -942,8 +942,8 @@ export default function ParentDashboard() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Day of Week</label>
-                    <select
+                    <label htmlFor="a11y-parent-page-tsx-6" className="block text-xs font-bold text-slate-400 mb-1">Day of Week</label>
+                    <select id="a11y-parent-page-tsx-6"
                       value={schedDay}
                       onChange={(e) => setSchedDay(Number(e.target.value))}
                       className="w-full bg-slate-950/80 border border-white/10 p-3 rounded-2xl text-xs text-white"
@@ -954,8 +954,8 @@ export default function ParentDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Recurrence</label>
-                    <select
+                    <label htmlFor="a11y-parent-page-tsx-7" className="block text-xs font-bold text-slate-400 mb-1">Recurrence</label>
+                    <select id="a11y-parent-page-tsx-7"
                       value={schedInterval}
                       onChange={(e) => setSchedInterval(Number(e.target.value))}
                       className="w-full bg-slate-950/80 border border-white/10 p-3 rounded-2xl text-xs text-white"
@@ -1015,8 +1015,8 @@ export default function ParentDashboard() {
                 </h3>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Prize Title</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-8" className="block text-xs font-bold text-slate-400 mb-1">Prize Title</label>
+                  <input id="a11y-parent-page-tsx-8"
                     type="text"
                     value={shopTitle}
                     onChange={(e) => setShopTitle(e.target.value)}
@@ -1027,8 +1027,8 @@ export default function ParentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Description (Optional)</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-9" className="block text-xs font-bold text-slate-400 mb-1">Description (Optional)</label>
+                  <input id="a11y-parent-page-tsx-9"
                     type="text"
                     value={shopDesc}
                     onChange={(e) => setShopDesc(e.target.value)}
@@ -1039,8 +1039,8 @@ export default function ParentDashboard() {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Icon</label>
-                    <input
+                    <label htmlFor="a11y-parent-page-tsx-10" className="block text-xs font-bold text-slate-400 mb-1">Icon</label>
+                    <input id="a11y-parent-page-tsx-10"
                       type="text"
                       value={shopIcon}
                       onChange={(e) => setShopIcon(e.target.value)}
@@ -1048,8 +1048,8 @@ export default function ParentDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Cost ⭐</label>
-                    <input
+                    <label htmlFor="a11y-parent-page-tsx-11" className="block text-xs font-bold text-slate-400 mb-1">Cost ⭐</label>
+                    <input id="a11y-parent-page-tsx-11"
                       type="number"
                       value={shopCost}
                       onChange={(e) => setShopCost(Number(e.target.value))}
@@ -1057,8 +1057,8 @@ export default function ParentDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Stock</label>
-                    <input
+                    <label htmlFor="a11y-parent-page-tsx-12" className="block text-xs font-bold text-slate-400 mb-1">Stock</label>
+                    <input id="a11y-parent-page-tsx-12"
                       type="number"
                       value={shopStock}
                       onChange={(e) => setShopStock(Number(e.target.value))}
@@ -1107,8 +1107,8 @@ export default function ParentDashboard() {
                 </p>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Goal Title</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-13" className="block text-xs font-bold text-slate-400 mb-1">Goal Title</label>
+                  <input id="a11y-parent-page-tsx-13"
                     type="text"
                     value={shopTitle}
                     onChange={(e) => setShopTitle(e.target.value)}
@@ -1120,8 +1120,8 @@ export default function ParentDashboard() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Icon</label>
-                    <input
+                    <label htmlFor="a11y-parent-page-tsx-14" className="block text-xs font-bold text-slate-400 mb-1">Icon</label>
+                    <input id="a11y-parent-page-tsx-14"
                       type="text"
                       value={shopIcon}
                       onChange={(e) => setShopIcon(e.target.value)}
@@ -1129,8 +1129,8 @@ export default function ParentDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Total Stars ⭐</label>
-                    <input
+                    <label htmlFor="a11y-parent-page-tsx-15" className="block text-xs font-bold text-slate-400 mb-1">Total Stars ⭐</label>
+                    <input id="a11y-parent-page-tsx-15"
                       type="number"
                       value={shopCost}
                       onChange={(e) => setShopCost(Number(e.target.value))}
@@ -1267,8 +1267,8 @@ export default function ParentDashboard() {
               <form onSubmit={handleCreateChild} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
                 <h3 className="text-base font-black text-white">Add Child Profile</h3>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Name</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-16" className="block text-xs font-bold text-slate-400 mb-1">Name</label>
+                  <input id="a11y-parent-page-tsx-16"
                     type="text"
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
@@ -1278,8 +1278,8 @@ export default function ParentDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Avatar Emoji</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-17" className="block text-xs font-bold text-slate-400 mb-1">Avatar Emoji</label>
+                  <input id="a11y-parent-page-tsx-17"
                     type="text"
                     value={childAvatar}
                     onChange={(e) => setChildAvatar(e.target.value)}
@@ -1287,8 +1287,8 @@ export default function ParentDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Date of Birth</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-18" className="block text-xs font-bold text-slate-400 mb-1">Date of Birth</label>
+                  <input id="a11y-parent-page-tsx-18"
                     type="date"
                     value={childDob}
                     onChange={(e) => setChildDob(e.target.value)}
@@ -1333,8 +1333,8 @@ export default function ParentDashboard() {
 
               <form onSubmit={handleAdjustStars} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-slate-400 font-bold mb-1">Select Child</label>
-                  <select
+                  <label htmlFor="a11y-parent-page-tsx-19" className="block text-slate-400 font-bold mb-1">Select Child</label>
+                  <select id="a11y-parent-page-tsx-19"
                     value={adjustChildId}
                     onChange={(e) => setAdjustChildId(e.target.value)}
                     required
@@ -1348,10 +1348,10 @@ export default function ParentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-bold mb-1">
+                  <label htmlFor="a11y-parent-page-tsx-20" className="block text-slate-400 font-bold mb-1">
                     Amount to Adjust (e.g. +5 or -3)
                   </label>
-                  <input
+                  <input id="a11y-parent-page-tsx-20"
                     type="text"
                     inputMode="numeric"
                     value={adjustAmount}
@@ -1369,8 +1369,8 @@ export default function ParentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-bold mb-1">Audit Reason (Required)</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-21" className="block text-slate-400 font-bold mb-1">Audit Reason (Required)</label>
+                  <input id="a11y-parent-page-tsx-21"
                     type="text"
                     value={adjustReason}
                     onChange={(e) => setAdjustReason(e.target.value)}
@@ -1400,8 +1400,8 @@ export default function ParentDashboard() {
 
               <form onSubmit={handleResetPin} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-slate-400 font-bold mb-1">New PIN</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-22" className="block text-slate-400 font-bold mb-1">New PIN</label>
+                  <input id="a11y-parent-page-tsx-22"
                     type="password"
                     maxLength={6}
                     value={newPin}
@@ -1413,8 +1413,8 @@ export default function ParentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-bold mb-1">Confirm New PIN</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-23" className="block text-slate-400 font-bold mb-1">Confirm New PIN</label>
+                  <input id="a11y-parent-page-tsx-23"
                     type="password"
                     maxLength={6}
                     value={confirmPin}
@@ -1445,8 +1445,8 @@ export default function ParentDashboard() {
 
               <form onSubmit={handleSaveKioskConfig} className="space-y-5 text-xs">
                 <div>
-                  <label className="block text-slate-400 font-bold mb-1">Idle Auto-Lock Timeout (Seconds)</label>
-                  <input
+                  <label htmlFor="a11y-parent-page-tsx-24" className="block text-slate-400 font-bold mb-1">Idle Auto-Lock Timeout (Seconds)</label>
+                  <input id="a11y-parent-page-tsx-24"
                     type="number"
                     value={kioskConfig.idleTimeoutSec}
                     onChange={(e) => setKioskConfig({ ...kioskConfig, idleTimeoutSec: Number(e.target.value) })}
