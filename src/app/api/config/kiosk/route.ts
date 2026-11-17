@@ -28,7 +28,7 @@ export async function PATCH(req: Request) {
     if (!config) {
       config = await prisma.familyConfig.create({
         data: {
-          isConfigured: true,
+          isConfigured: false,
           idleTimeoutSec: 45,
           soundEffects: true,
           maxDailyTasks: 5,
@@ -54,7 +54,7 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json({ idleTimeoutSec: updated.idleTimeoutSec, soundEffects: updated.soundEffects, maxDailyTasks: updated.maxDailyTasks });
   } catch (error) {
     console.error("Failed to update config:", error);
     return NextResponse.json({ error: "Failed to update config" }, { status: 500 });
