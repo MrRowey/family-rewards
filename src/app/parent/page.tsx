@@ -894,7 +894,7 @@ export default function ParentDashboard() {
           )}
 
           <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />
-          <AdminInfoSections activeMenu={activeMenu} children={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} />
+          <AdminInfoSections activeMenu={activeMenu} householdChildren={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} />
         </main>
       </div>
     </div>
