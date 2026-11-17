@@ -911,7 +911,7 @@ export default function ParentDashboard() {
                 </h3>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">Select Child</label>
+                  <label htmlFor="a11y-parent-page-tsx-4" className="block text-xs font-bold text-slate-400 mb-1">Select Child</label>
                   <select id="a11y-parent-page-tsx-4"
                     value={schedChildId}
                     onChange={(e) => setSchedChildId(e.target.value)}
