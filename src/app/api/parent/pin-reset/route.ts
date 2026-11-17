@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
     const { newPin } = await req.json();
-    if (!newPin || String(newPin).length < 4) {
+    if (typeof newPin !== "string" || !/^\d{4,8}$/.test(newPin)) {
       return NextResponse.json({ error: "PIN must be at least 4 digits" }, { status: 400 });
     }
 
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
 
     await prisma.familyConfig.update({
       where: { id: config.id },
-      data: { parentPin: String(newPin) },
+      data: { parentPin: await bcrypt.hash(newPin, 12) },
     });
 
     await prisma.auditLog.create({
