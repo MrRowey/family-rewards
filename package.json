@@ -9,11 +9,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "oxlint .",
     "test": "vitest run",
     "postinstall": "prisma generate",
     "kiosk:up": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
-    "kiosk:down": "docker compose down"
+    "kiosk:down": "docker compose down",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dicebear/core": "^10.7.0",
@@ -45,13 +46,12 @@
     "@types/react-dom": "^19",
     "@vitest/mocker": "^5.1.0",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "^10",
-    "eslint-config-next": "^16.4.6",
     "prisma": "^7.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^7",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "oxlint": "^1.0.0"
   },
   "overrides": {
     "braces": "^3.0.3",
