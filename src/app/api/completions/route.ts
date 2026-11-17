@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       },
       include: {
         task: true,
-        child: true,
+        child: { select: { id: true, name: true, avatar: true, stars: true } },
       },
       orderBy: { completedAt: "asc" },
     });
