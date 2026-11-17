@@ -1,25 +1,18 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { apiError, parseJson } from "@/lib/api";
 import { claimReward } from "@/lib/domain/redemptions";
+
+const ClaimSchema = z.object({
+  childId: z.string().min(1),
+  rewardId: z.string().min(1),
+});
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { childId, rewardId } = body;
-
-    if (!childId || !rewardId) {
-      return NextResponse.json({ error: "childId and rewardId are required" }, { status: 400 });
-    }
-
-    const redemption = await claimReward(childId, rewardId);
-    return NextResponse.json(redemption, { status: 201 });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Failed to submit reward claim";
-    if (message.startsWith("NOT_FOUND")) {
-      return NextResponse.json({ error: message }, { status: 404 });
-    }
-    if (message.startsWith("INSUFFICIENT_STARS") || message.startsWith("OUT_OF_STOCK")) {
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Failed to submit reward claim" }, { status: 500 });
+    const { childId, rewardId } = await parseJson(request, ClaimSchema);
+    return NextResponse.json(await claimReward(childId, rewardId), { status: 201 });
+  } catch (error) {
+    return apiError(error, "Failed to submit reward claim");
   }
 }
