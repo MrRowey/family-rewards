@@ -19,5 +19,9 @@
     "build/**",
     "coverage/**",
     "next-env.d.ts"
-  ]
+  ],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off"
+  }
 }
