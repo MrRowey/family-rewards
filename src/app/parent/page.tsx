@@ -174,7 +174,7 @@ export default function ParentDashboard() {
         logRes,
         configRes,
       ] = await Promise.all([
-        fetch("/api/children"),
+        fetch("/api/parent/children"),
         fetch("/api/parent/tasks"),
         fetch(`/api/rewards?month=${selectedMonth}`),
         fetch("/api/assignments"),
