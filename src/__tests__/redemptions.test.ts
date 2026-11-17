@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 
-const transactionMock = vi.fn();
+const { transactionMock } = vi.hoisted(() => ({ transactionMock: vi.fn() }));
 const prismaMock = {
   child: {
     findUnique: vi.fn(),
