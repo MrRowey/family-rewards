@@ -28,7 +28,9 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true, requiresLogin: true });
+    response.cookies.set("parent_session", "", { httpOnly: true, secure: process.env.COOKIE_SECURE === "true", sameSite: "lax", path: "/", maxAge: 0 });
+    return response;
   } catch (error) {
     console.error("Failed to reset PIN:", error);
     return NextResponse.json({ error: "Failed to reset PIN" }, { status: 500 });
