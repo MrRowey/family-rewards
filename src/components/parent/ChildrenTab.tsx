@@ -33,8 +33,8 @@ export function ChildrenTab({ childrenList, onAddChild, onDeleteChild }: Childre
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Child&apos;s Name</label>
-            <input
+            <label htmlFor="a11y-parent-ChildrenTab-tsx-1" className="block text-xs font-semibold text-slate-400 mb-1">Child&apos;s Name</label>
+            <input id="a11y-parent-ChildrenTab-tsx-1"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -45,8 +45,8 @@ export function ChildrenTab({ childrenList, onAddChild, onDeleteChild }: Childre
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Date of Birth</label>
-            <input
+            <label htmlFor="a11y-parent-ChildrenTab-tsx-2" className="block text-xs font-semibold text-slate-400 mb-1">Date of Birth</label>
+            <input id="a11y-parent-ChildrenTab-tsx-2"
               type="date"
               value={dob}
               onChange={(e) => setDob(e.target.value)}
@@ -56,7 +56,7 @@ export function ChildrenTab({ childrenList, onAddChild, onDeleteChild }: Childre
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Avatar Emoji</label>
+            <div className="block text-xs font-semibold text-slate-400 mb-1" id="child-avatar-emoji-label">Avatar Emoji</div>
             <div className="flex gap-2">
               {["🦁", "🐻", "🦊", "🦕", "🚀", "🦄"].map((e) => (
                 <button

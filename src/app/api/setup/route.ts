@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const hashedPin = await bcrypt.hash(pin, 10);
+    const hashedPin = await hash(pin, 10);
 
     if (existingConfig) {
       const result = await prisma.familyConfig.updateMany({

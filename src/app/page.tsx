@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Sparkles, Star, ChevronRight, User } from "lucide-react";
@@ -35,7 +35,7 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const res = await fetch("/api/children");
       if (res.ok) {
@@ -47,7 +47,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetch("/api/config")
@@ -63,7 +63,7 @@ export default function HomePage() {
         console.error("Failed to fetch config:", err);
         setLoading(false);
       });
-  }, [router]);
+  }, [router, loadData]);
 
   if (loading) {
     return (

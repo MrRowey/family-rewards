@@ -9,6 +9,16 @@ import { calculateAgeProfile } from "@/lib/ageRules";
 import { Child, Reward, RewardAssignment, PendingApproval } from "@/types";
 import { sounds } from "@/lib/sound";
 
+const getRewardImage = (reward: Reward) => {
+  const raw = reward as unknown as Record<string, unknown>;
+  return (raw.imageUrl as string | undefined) || (raw.imageURL as string | undefined) || null;
+};
+
+const getRewardDesc = (reward: Reward) => {
+  const raw = reward as unknown as Record<string, unknown>;
+  return (raw.description as string | undefined) || null;
+};
+
 export default function RewardShop() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -107,15 +117,6 @@ export default function RewardShop() {
     }
   };
 
-  const getRewardImage = (reward: Reward) => {
-    const raw = reward as unknown as Record<string, unknown>;
-    return (raw.imageUrl as string | undefined) || (raw.imageURL as string | undefined) || null;
-  };
-
-  const getRewardDesc = (reward: Reward) => {
-    const raw = reward as unknown as Record<string, unknown>;
-    return (raw.description as string | undefined) || null;
-  };
 
   return (
     <main className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
@@ -345,9 +346,14 @@ export default function RewardShop() {
                     return (
                       <div
                         key={reward.id}
-                        onClick={() => sounds.playLockedBuzz()}
-                        className="rounded-3xl p-5 bg-slate-900/40 border border-slate-800/80 shadow-lg backdrop-blur-md flex flex-col justify-between opacity-70 hover:opacity-90 transition-opacity"
+                        className="relative rounded-3xl p-5 bg-slate-900/40 border border-slate-800/80 shadow-lg backdrop-blur-md flex flex-col justify-between opacity-70 hover:opacity-90 transition-opacity"
                       >
+                        <button
+                          type="button"
+                          aria-label={`Locked reward: ${reward.title}`}
+                          onClick={() => sounds.playLockedBuzz()}
+                          className="absolute inset-0 z-10 rounded-3xl cursor-not-allowed focus-visible:outline-2 focus-visible:outline-indigo-400"
+                        />
                         <div>
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="relative grayscale opacity-80">

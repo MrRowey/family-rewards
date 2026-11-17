@@ -200,7 +200,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             {tasks.map((task) => {
               const substeps = task.subSteps || [];
               const allSubstepsDone =
-                substeps.length === 0 || substeps.every((s) => checkedSubsteps[s.id]);
+                substeps.every((s) => checkedSubsteps[s.id]);
 
               return (
                 <div

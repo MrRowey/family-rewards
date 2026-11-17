@@ -71,10 +71,10 @@ export default function FirstTimeSetup() {
 
         <form onSubmit={handleSetup} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-2">
+            <label htmlFor="a11y-setup-page-tsx-1" className="block text-xs font-bold text-slate-400 mb-2">
               PIN Length: {pinLength} Digits
             </label>
-            <input
+            <input id="a11y-setup-page-tsx-1"
               type="range"
               min={4}
               max={8}
@@ -89,8 +89,8 @@ export default function FirstTimeSetup() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1">Enter Parent PIN</label>
-            <input
+            <label htmlFor="a11y-setup-page-tsx-2" className="block text-xs font-bold text-slate-400 mb-1">Enter Parent PIN</label>
+            <input id="a11y-setup-page-tsx-2"
               type="password"
               inputMode="numeric"
               maxLength={pinLength}
@@ -103,8 +103,8 @@ export default function FirstTimeSetup() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1">Confirm Parent PIN</label>
-            <input
+            <label htmlFor="a11y-setup-page-tsx-3" className="block text-xs font-bold text-slate-400 mb-1">Confirm Parent PIN</label>
+            <input id="a11y-setup-page-tsx-3"
               type="password"
               inputMode="numeric"
               maxLength={pinLength}
