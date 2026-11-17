@@ -53,6 +53,7 @@ describe("Redemption Domain Service", () => {
       where: { id: "r1", currentStock: { gt: 0 } },
       data: { currentStock: { decrement: 1 } },
     });
+    expect(prismaMock.rewardRedemption.create).toHaveBeenCalledWith({ data: { childId: "c1", rewardId: "r1", status: "PENDING", stockReserved: true } });
     expect(result).toEqual({ id: "red1", status: "PENDING" });
   });
 
@@ -67,6 +68,7 @@ describe("Redemption Domain Service", () => {
     prismaMock.rewardRedemption.findUnique.mockResolvedValue({
       id: "red1",
       status: "PENDING",
+      stockReserved: true,
       rewardId: "r1",
       childId: "c1",
       reward: { title: "Toy", starCost: 5 },
@@ -85,6 +87,7 @@ describe("Redemption Domain Service", () => {
     prismaMock.rewardRedemption.findUnique.mockResolvedValue({
       id: "red1",
       status: "PENDING",
+      stockReserved: true,
       childId: "c1",
       rewardId: "r1",
       reward: { title: "Toy", starCost: 5 },
@@ -146,5 +149,39 @@ describe("Redemption Domain Service", () => {
     prismaMock.reward.updateMany.mockResolvedValue({ count: 0 });
     await expect(claimReward("c1", "r1")).rejects.toThrow("OUT_OF_STOCK");
     expect(prismaMock.rewardRedemption.create).not.toHaveBeenCalled();
+  });
+
+  it("deducts stock when approving a legacy unreserved claim", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      id: "legacy", status: "PENDING", stockReserved: false, rewardId: "r1", childId: "c1",
+      reward: { title: "Toy", starCost: 5 }, child: { name: "Alex" },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.reward.updateMany.mockResolvedValue({ count: 1 });
+    await expect(approveReward("legacy")).resolves.toEqual({ success: true });
+    expect(prismaMock.reward.updateMany).toHaveBeenCalledWith({
+      where: { id: "r1", currentStock: { gt: 0 } }, data: { currentStock: { decrement: 1 } },
+    });
+  });
+
+  it("does not restore stock when declining a legacy unreserved claim", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      id: "legacy", status: "PENDING", stockReserved: false, rewardId: "r1", childId: "c1",
+      reward: { title: "Toy", starCost: 5 }, child: { name: "Alex" },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    await expect(declineReward("legacy")).resolves.toEqual({ success: true });
+    expect(prismaMock.reward.update).not.toHaveBeenCalled();
+    expect(prismaMock.child.update).toHaveBeenCalled();
+  });
+
+  it("rolls back approval if legacy stock is exhausted", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      id: "legacy", status: "PENDING", stockReserved: false, rewardId: "r1", childId: "c1",
+      reward: { title: "Toy", starCost: 5 }, child: { name: "Alex" },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.reward.updateMany.mockResolvedValue({ count: 0 });
+    await expect(approveReward("legacy")).rejects.toThrow("OUT_OF_STOCK");
   });
 });
