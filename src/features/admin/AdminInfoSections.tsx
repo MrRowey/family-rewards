@@ -5,13 +5,13 @@ import type { NavigationMenu, ChildProfile, TaskItem, RewardRedemptionRecord, Au
 
 interface AdminInfoSectionsProps {
   activeMenu: NavigationMenu;
-  children: ChildProfile[];
+  householdChildren: ChildProfile[];
   tasks: TaskItem[];
   redemptionsHistory: RewardRedemptionRecord[];
   auditLogs: AuditLogRecord[];
 }
 
-export function AdminInfoSections({ activeMenu, children, tasks, redemptionsHistory, auditLogs }: AdminInfoSectionsProps) {
+export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemptionsHistory, auditLogs }: AdminInfoSectionsProps) {
   return <>
 {/* 13. FAMILY ANALYTICS */}
           {activeMenu === "admin_analytics" && (
@@ -21,7 +21,7 @@ export function AdminInfoSections({ activeMenu, children, tasks, redemptionsHist
                 <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-xl">
                   <span className="text-xs text-slate-400 font-bold">Total Stars in Circulation</span>
                   <div className="text-4xl font-black text-amber-300 mt-2">
-                    {children.reduce((acc, c) => acc + c.stars, 0)} ⭐
+                    {householdChildren.reduce((acc, c) => acc + c.stars, 0)} ⭐
                   </div>
                 </div>
                 <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-xl">
