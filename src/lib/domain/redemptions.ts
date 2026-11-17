@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { calculateAgeProfile } from "@/lib/ageRules";
 
 export async function claimReward(childId: string, rewardId: string) {
   return await prisma.$transaction(async (tx) => {
@@ -7,6 +8,24 @@ export async function claimReward(childId: string, rewardId: string) {
 
     if (!child || !reward) {
       throw new Error("NOT_FOUND: Child or Reward record not found");
+    }
+
+    if (!reward.isVisible || reward.isGroup) {
+      throw new Error("NOT_ELIGIBLE: Reward is not available for individual claims");
+    }
+
+    const age = calculateAgeProfile(child.dob).ageYears;
+    if (age < reward.minAge || age > reward.maxAge) {
+      throw new Error("NOT_ELIGIBLE: Reward is outside the child's age range");
+    }
+
+    if (reward.targetMonth !== null && reward.targetMonth !== new Date().getMonth() + 1) {
+      throw new Error("NOT_ELIGIBLE: Reward is not available this month");
+    }
+
+    const assignments = await tx.rewardAssignment.findMany({ where: { rewardId } });
+    if (assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId)) {
+      throw new Error("NOT_ELIGIBLE: Reward is not assigned to this child");
     }
 
     if (reward.currentStock <= 0) {
