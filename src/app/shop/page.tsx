@@ -345,6 +345,10 @@ export default function RewardShop() {
                     return (
                       <div
                         key={reward.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Locked reward: ${reward.title}`}
+                        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); sounds.playLockedBuzz(); } }}
                         onClick={() => sounds.playLockedBuzz()}
                         className="rounded-3xl p-5 bg-slate-900/40 border border-slate-800/80 shadow-lg backdrop-blur-md flex flex-col justify-between opacity-70 hover:opacity-90 transition-opacity"
                       >
