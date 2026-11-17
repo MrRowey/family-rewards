@@ -40,4 +40,7 @@ COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
 
+# Uploaded files live in a separately mounted, writable persistent volume.
+ENV UPLOAD_DIR=/app/uploads
+
 CMD ["server.js"]
