@@ -54,6 +54,7 @@ export async function claimReward(childId: string, rewardId: string) {
         rewardId,
         status: "PENDING",
         stockReserved: true,
+        starCostAtClaim: reward.starCost,
       },
     });
 
@@ -152,7 +153,7 @@ export async function declineReward(redemptionId: string) {
     // Refund reserved stars back to child
     await tx.child.update({
       where: { id: redemption.childId },
-      data: { stars: { increment: redemption.reward.starCost } },
+      data: { stars: { increment: (redemption.starCostAtClaim ?? redemption.reward.starCost) } },
     });
 
     await tx.auditLog.create({
@@ -160,7 +161,7 @@ export async function declineReward(redemptionId: string) {
         actor: "Parent",
         actorType: "PARENT",
         action: "DECLINED_REWARD",
-        details: `Declined reward "${redemption.reward.title}" for ${redemption.child.name}. Refunded ${redemption.reward.starCost} stars.`,
+        details: `Declined reward "${redemption.reward.title}" for ${redemption.child.name}. Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars.`,
       },
     });
 
@@ -196,7 +197,7 @@ export async function refundReward(redemptionId: string) {
     // Refund stars & increment stock
     await tx.child.update({
       where: { id: redemption.childId },
-      data: { stars: { increment: redemption.reward.starCost } },
+      data: { stars: { increment: (redemption.starCostAtClaim ?? redemption.reward.starCost) } },
     });
 
     await tx.reward.update({
@@ -209,7 +210,7 @@ export async function refundReward(redemptionId: string) {
         actor: "Parent",
         actorType: "PARENT",
         action: "REFUNDED_REWARD",
-        details: `Refunded ${redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". Stock restored.`,
+        details: `Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". Stock restored.`,
       },
     });
 
