@@ -1,69 +1,29 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { assignReward, unassignReward } from "@/features/rewards/assignments";
 
-// POST /api/rewards/assignment -> Make a reward visible for a child
+function parseIds(body: unknown): { rewardId: string; childId: string } | null {
+  if (!body || typeof body !== "object") return null;
+  const { rewardId, childId } = body as Record<string, unknown>;
+  return typeof rewardId === "string" && rewardId.length > 0 && typeof childId === "string" && childId.length > 0 ? { rewardId, childId } : null;
+}
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { rewardId, childId } = body;
-
-    if (!rewardId || !childId) {
-      return NextResponse.json(
-        { error: "Reward ID and Child ID are required" },
-        { status: 400 }
-      );
-    }
-
-    const assignment = await prisma.rewardAssignment.upsert({
-      where: {
-        childId_rewardId: {
-          childId,
-          rewardId,
-        },
-      },
-      update: {},
-      create: {
-        childId,
-        rewardId,
-      },
-    });
-
-    return NextResponse.json(assignment, { status: 201 });
-  } catch (error) {
-    console.error("POST Reward Assignment Error:", error);
-    return NextResponse.json(
-      { error: "Failed to assign reward visibility" },
-      { status: 500 }
-    );
+    const ids = parseIds(await request.json());
+    if (!ids) return NextResponse.json({ error: "Reward ID and Child ID are required" }, { status: 400 });
+    return NextResponse.json(await assignReward(ids.rewardId, ids.childId), { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Failed to assign reward visibility" }, { status: 500 });
   }
 }
 
-// DELETE /api/rewards/assignment -> Hide a reward for a child
 export async function DELETE(request: Request) {
   try {
-    const body = await request.json();
-    const { rewardId, childId } = body;
-
-    if (!rewardId || !childId) {
-      return NextResponse.json(
-        { error: "Reward ID and Child ID are required" },
-        { status: 400 }
-      );
-    }
-
-    await prisma.rewardAssignment.deleteMany({
-      where: {
-        rewardId,
-        childId,
-      },
-    });
-
+    const ids = parseIds(await request.json());
+    if (!ids) return NextResponse.json({ error: "Reward ID and Child ID are required" }, { status: 400 });
+    await unassignReward(ids.rewardId, ids.childId);
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("DELETE Reward Assignment Error:", error);
-    return NextResponse.json(
-      { error: "Failed to remove reward visibility" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Failed to remove reward visibility" }, { status: 500 });
   }
 }
