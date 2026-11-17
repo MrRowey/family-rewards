@@ -397,9 +397,10 @@ export default function ParentDashboard() {
       body: JSON.stringify({ newPin }),
     });
     if (res.ok) {
-      alert("Parent PIN updated successfully!");
+      alert("Parent PIN updated. Please sign in again.");
       setNewPin("");
       setConfirmPin("");
+      router.replace("/");
     } else {
       alert("Failed to update PIN");
     }
