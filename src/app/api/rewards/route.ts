@@ -14,16 +14,14 @@ export async function GET(req: Request) {
     }
 
     const rewards = await prisma.reward.findMany({
-      where: {
-        ...(parentView
-          ? (parsedMonth !== null ? { targetMonth: parsedMonth } : {})
-          : {
-              isVisible: true,
-              isGroup: false,
-              currentStock: { gt: 0 },
-              OR: [{ targetMonth: null }, { targetMonth: new Date().getMonth() + 1 }],
-            }),
-      },
+      where: parentView
+        ? (parsedMonth !== null ? { targetMonth: parsedMonth } : {})
+        : {
+            isVisible: true,
+            isGroup: false,
+            currentStock: { gt: 0 },
+            OR: [{ targetMonth: null }, { targetMonth: new Date().getMonth() + 1 }],
+          },
       include: { assignments: true },
     });
 
