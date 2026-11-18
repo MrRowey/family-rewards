@@ -8,24 +8,21 @@ interface ParentSidebarProps {
   setActiveMenu: (menu: NavigationMenu) => void;
   collapsedCategories: Record<SidebarCategory, boolean>;
   toggleCategory: (category: SidebarCategory) => void;
-  pendingTasksCount: number;
-  pendingRedemptionsCount: number;
   totalPending: number;
   loadPortalData: () => Promise<void>;
   handleLogout: () => Promise<void>;
 }
 
-export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, toggleCategory, pendingTasksCount, pendingRedemptionsCount, totalPending, loadPortalData, handleLogout }: ParentSidebarProps) {
+export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, toggleCategory, totalPending, loadPortalData, handleLogout }: ParentSidebarProps) {
   return (
-<aside className="w-72 shrink-0 bg-slate-900/70 backdrop-blur-xl border-r border-white/10 flex flex-col justify-between p-4 z-20 overflow-y-auto">
+<aside className="w-32 sm:w-56 shrink-0 bg-slate-900 border-r border-white/10 flex flex-col justify-between p-4 z-20 overflow-y-auto">
         <div className="space-y-4">
           <div className="flex items-center gap-3 px-3 py-2 border-b border-white/5 pb-3">
-            <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="w-10 h-10 rounded-2xl bg-slate-700 flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="font-black text-sm tracking-tight text-white">Parent Hub</h1>
-              <p className="text-[11px] text-slate-400 font-medium">Control Center</p>
             </div>
           </div>
 
@@ -54,26 +51,13 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("task_approvals")}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "task_approvals"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
-                    <span className="flex items-center gap-2"><CheckSquare className="w-4 h-4" /> Task Approvals</span>
-                    {pendingTasksCount > 0 && (
-                      <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">{pendingTasksCount}</span>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setActiveMenu("shop_approvals")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition min-h-[38px] ${
-                      activeMenu === "shop_approvals"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2"><Gift className="w-4 h-4" /> Shop Requests</span>
-                    {pendingRedemptionsCount > 0 && (
-                      <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">{pendingRedemptionsCount}</span>
+                    <span className="flex items-center gap-2"><CheckSquare className="w-4 h-4" /> Review Requests</span>
+                    {totalPending > 0 && (
+                      <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">{totalPending}</span>
                     )}
                   </button>
                 </div>
@@ -87,7 +71,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                 onClick={() => toggleCategory("vault")}
                 className="w-full flex items-center justify-between px-3.5 py-2.5 text-[11px] uppercase font-black tracking-wider text-slate-400 hover:text-white transition"
               >
-                <span>Task Vault</span>
+                <span>Chores</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${collapsedCategories.vault ? "-rotate-90" : "rotate-0"}`} />
               </button>
 
@@ -97,21 +81,21 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("task_vault")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "task_vault"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
-                    <Layers className="w-4 h-4" /> Master Task Vault
+                    <Layers className="w-4 h-4" /> Chore Library
                   </button>
                   <button
                     onClick={() => setActiveMenu("task_scheduler")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "task_scheduler"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
-                    <Calendar className="w-4 h-4" /> Task Scheduler
+                    <Calendar className="w-4 h-4" /> Chore Scheduler
                   </button>
                 </div>
               )}
@@ -134,7 +118,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("shop_items")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "shop_items"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
@@ -144,7 +128,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("shop_group")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "shop_group"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
@@ -154,17 +138,17 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("shop_visibility")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "shop_visibility"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
-                    <Eye className="w-4 h-4" /> Visibility Matrix
+                    <Eye className="w-4 h-4" /> Shop Planner
                   </button>
                   <button
                     onClick={() => setActiveMenu("shop_refunds")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "shop_refunds"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
@@ -191,7 +175,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("user_children")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "user_children"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
@@ -201,21 +185,11 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("user_adjust")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "user_adjust"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
                     <Sparkles className="w-4 h-4" /> Balance Adjust
-                  </button>
-                  <button
-                    onClick={() => setActiveMenu("user_pin")}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
-                      activeMenu === "user_pin"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <KeyRound className="w-4 h-4" /> Reset PIN
                   </button>
                 </div>
               )}
@@ -235,10 +209,20 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
               {!collapsedCategories.admin && (
                 <div className="p-1.5 pt-0 space-y-1">
                   <button
+                    onClick={() => setActiveMenu("user_pin")}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
+                      activeMenu === "user_pin"
+                        ? "bg-slate-700 text-white"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                    }`}
+                  >
+                    <KeyRound className="w-4 h-4" /> Reset PIN
+                  </button>
+                  <button
                     onClick={() => setActiveMenu("admin_display")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "admin_display"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
@@ -248,7 +232,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("admin_analytics")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "admin_analytics"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
@@ -258,7 +242,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("admin_backup")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "admin_backup"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
@@ -268,7 +252,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     onClick={() => setActiveMenu("admin_audit")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
                       activeMenu === "admin_audit"
-                        ? "bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                        ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >

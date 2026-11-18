@@ -1,7 +1,8 @@
 "use client";
 
+import { CreateDialog } from "@/features/admin/CreateDialog";
 import type React from "react";
-import { Calendar, Plus, X } from "lucide-react";
+import { Calendar, X } from "lucide-react";
 import type { NavigationMenu, ChildProfile, TaskItem, TaskAssignmentItem } from "@/features/admin/types";
 
 interface TaskManagementSectionsProps {
@@ -34,11 +35,9 @@ export function TaskManagementSections({ activeMenu, tasks, householdChildren, a
   return <>
 {/* 3. TASK VAULT CREATION */}
           {activeMenu === "task_vault" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={handleCreateTask} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
-                <h3 className="text-base font-black flex items-center gap-2 text-white">
-                  <Plus className="w-4 h-4 text-indigo-400" /> Create Master Chore
-                </h3>
+            <div className="space-y-5">
+              <CreateDialog label="Add Chore">
+              <form onSubmit={handleCreateTask} className="space-y-4">
                 <div>
                   <label htmlFor="a11y-parent-page-tsx-1" className="block text-xs font-bold text-slate-400 mb-1">Title</label>
                   <input id="a11y-parent-page-tsx-1"
@@ -111,6 +110,7 @@ export function TaskManagementSections({ activeMenu, tasks, householdChildren, a
                   Save to Master Vault
                 </button>
               </form>
+              </CreateDialog>
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Master Chores ({tasks.length})</h3>

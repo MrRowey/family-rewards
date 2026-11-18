@@ -1,8 +1,9 @@
 "use client";
 
+import { CreateDialog } from "@/features/admin/CreateDialog";
 import { useState } from "react";
 import type React from "react";
-import { Gift, RotateCcw, Eye, EyeOff, Users2 } from "lucide-react";
+import { RotateCcw, Eye, EyeOff } from "lucide-react";
 import type { NavigationMenu, ChildProfile, RewardItem, TaskAssignmentItem, RewardRedemptionRecord } from "@/features/admin/types";
 
 interface ShopManagementSectionsProps {
@@ -32,7 +33,9 @@ interface ShopManagementSectionsProps {
 }
 
 export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
-  const shopPrizes = rewards.filter((reward) => !reward.isGroup);
+  const [costDescending, setCostDescending] = useState(false);
+  const orderedRewards = rewards.toSorted((a, b) => costDescending ? b.starCost - a.starCost : a.starCost - b.starCost);
+  const shopPrizes = orderedRewards.filter((reward) => !reward.isGroup);
   const [visibilityUpdates, setVisibilityUpdates] = useState<Record<string, boolean>>({});
   const [visibilityPending, setVisibilityPending] = useState<string | null>(null);
   const [visibilityError, setVisibilityError] = useState<string | null>(null);
@@ -59,11 +62,9 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
   return <>
 {/* 5. SHOP ITEMS CREATION */}
           {activeMenu === "shop_items" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={(event) => handleCreateReward(event, false)} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
-                <h3 className="text-base font-black flex items-center gap-2 text-white">
-                  <Gift className="w-4 h-4 text-amber-400" /> Create Shop Prize
-                </h3>
+            <div className="space-y-5">
+              <CreateDialog label="Add Prize">
+              <form onSubmit={(event) => handleCreateReward(event, false)} className="space-y-4">
 
                 <div>
                   <label htmlFor="a11y-parent-page-tsx-8" className="block text-xs font-bold text-slate-400 mb-1">Prize Title</label>
@@ -127,11 +128,17 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   {rewardSaving ? "Saving..." : "Save Prize to Shop"}
                 </button>
               </form>
+              </CreateDialog>
+              <label className="ml-4 inline-flex items-center gap-2 text-sm">Star cost
+                <select className="min-h-11 rounded-lg bg-slate-900 px-3" value={String(costDescending)} onChange={(event) => setCostDescending(event.target.value === "true")}>
+                  <option value="false">Lowest first</option>
+                  <option value="true">Highest first</option>
+                </select>
+              </label>
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Shop Inventory ({shopPrizes.length})</h3>
                 {inventoryLoadFailed && <p role="alert">Could not load prizes. Select Refresh Data to retry.</p>}
-                <output className="block text-sm text-amber-200">{visibilityError}</output>
                 {!inventoryLoadFailed && shopPrizes.length === 0 && (
                   <p className="rounded-2xl border border-dashed border-white/15 p-6 text-sm text-slate-300">Save your first prize to start stocking the shop.</p>
                 )}
@@ -152,14 +159,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                           {visible ? "Shown in shop" : "Hidden from shop"}
                         </p>
                         <p className="text-xs text-slate-400">{rw.currentStock === 0 ? "Out of stock" : `${rw.currentStock} in stock`} · Monthly stock: {rw.monthlyStock}</p>
-                        <button
-                          type="button"
-                          disabled={visibilityPending !== null}
-                          onClick={() => updateVisibility(rw.id, !visible)}
-                          className="min-h-11 rounded-xl border border-white/15 px-3 text-sm text-slate-200"
-                        >
-                          {visibilityPending === rw.id ? "Saving…" : visible ? "Hide from shop" : "Show in shop"}
-                        </button>
+
                       </div>
                     );
                   })}
@@ -170,11 +170,9 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
 
           {/* 6. GROUP GOALS */}
           {activeMenu === "shop_group" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={(event) => handleCreateReward(event, true)} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
-                <h3 className="text-base font-black flex items-center gap-2 text-white">
-                  <Users2 className="w-4 h-4 text-indigo-400" /> Create Collaborative Goal
-                </h3>
+            <div className="space-y-5">
+              <CreateDialog label="Add Group Goal">
+              <form onSubmit={(event) => handleCreateReward(event, true)} className="space-y-4">
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Group goals allow siblings to combine their earned stars toward shared experiences (e.g. Water Park, Pizza Party).
                 </p>
@@ -222,11 +220,18 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   Create Group Goal
                 </button>
               </form>
+              </CreateDialog>
+              <label className="ml-4 inline-flex items-center gap-2 text-sm">Star cost
+                <select className="min-h-11 rounded-lg bg-slate-900 px-3" value={String(costDescending)} onChange={(event) => setCostDescending(event.target.value === "true")}>
+                  <option value="false">Lowest first</option>
+                  <option value="true">Highest first</option>
+                </select>
+              </label>
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Family Group Goals ({rewards.filter((r) => r.isGroup).length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {rewards.filter((r) => r.isGroup).map((rw) => (
+                  {orderedRewards.filter((r) => r.isGroup).map((rw) => (
                     <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-indigo-500/30 p-5 rounded-3xl space-y-2 shadow-lg">
                       <div className="flex justify-between items-start">
                         <span className="text-4xl">{rw.icon}</span>
@@ -246,9 +251,26 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
           {/* 7. SHOP VISIBILITY MATRIX */}
           {activeMenu === "shop_visibility" && (
             <div className="space-y-6">
+              <section className="space-y-3 rounded-xl border border-slate-800 p-4">
+                <h3 className="font-semibold">Shop visibility</h3>
+                <output className="block text-sm text-amber-200">{visibilityError}</output>
+                {shopPrizes.map((prize) => {
+                  const visible = visibilityUpdates[prize.id] ?? prize.isVisible;
+                  return (
+                    <div key={prize.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3">
+                      <span>{prize.title}</span>
+                      <button type="button" disabled={visibilityPending !== null}
+                        onClick={() => updateVisibility(prize.id, !visible)}
+                        className="min-h-11 rounded-lg border border-slate-700 px-3 text-sm">
+                        {visibilityPending === prize.id ? "Saving…" : visible ? "Hide from shop" : "Show in shop"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </section>
               <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-xl">
                 <div>
-                  <h3 className="text-lg font-black text-white">Monthly Visibility Matrix</h3>
+                  <h3 className="text-lg font-black text-white">Shop Planner</h3>
                   <p className="text-xs text-slate-400">Toggle whether each child can view and claim items</p>
                 </div>
                 <select

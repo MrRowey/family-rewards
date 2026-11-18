@@ -12,9 +12,11 @@ interface ApprovalSectionsProps {
 }
 
 export function ApprovalSections({ activeMenu, pendingTasks, pendingRedemptions, handleTaskApproval, handleShopApproval }: ApprovalSectionsProps) {
-  return <>
+  if (activeMenu !== "task_approvals") return null;
+  return <div className="grid items-start gap-6 xl:grid-cols-2">
 {/* 1. TASK APPROVALS */}
-          {activeMenu === "task_approvals" && (
+          <section className="min-w-0 space-y-4">
+            <h3 className="text-lg font-semibold">Completed Chores</h3>
             <div className="space-y-4">
               {pendingTasks.length === 0 ? (
                 <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-16 rounded-3xl text-center text-slate-400 shadow-2xl">
@@ -52,10 +54,11 @@ export function ApprovalSections({ activeMenu, pendingTasks, pendingRedemptions,
                 </div>
               )}
             </div>
-          )}
+          </section>
 
           {/* 2. SHOP APPROVALS */}
-          {activeMenu === "shop_approvals" && (
+          <section className="min-w-0 space-y-4">
+            <h3 className="text-lg font-semibold">Shop Redemptions</h3>
             <div className="space-y-4">
               {pendingRedemptions.length === 0 ? (
                 <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-16 rounded-3xl text-center text-slate-400 shadow-2xl">
@@ -93,8 +96,8 @@ export function ApprovalSections({ activeMenu, pendingTasks, pendingRedemptions,
                 </div>
               )}
             </div>
-          )}
+          </section>
 
           
-  </>;
+  </div>;
 }

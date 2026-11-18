@@ -1,5 +1,6 @@
 "use client";
 
+import { CreateDialog } from "@/features/admin/CreateDialog";
 import type React from "react";
 
 import type { NavigationMenu, ChildProfile } from "@/features/admin/types";
@@ -27,9 +28,9 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
   return <>
 {/* 9. CHILD PROFILES */}
           {activeMenu === "user_children" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={handleCreateChild} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
-                <h3 className="text-base font-black text-white">Add Child Profile</h3>
+            <div className="space-y-5">
+              <CreateDialog label="Add Child">
+              <form onSubmit={handleCreateChild} className="space-y-4">
                 <div>
                   <label htmlFor="a11y-parent-page-tsx-16" className="block text-xs font-bold text-slate-400 mb-1">Name</label>
                   <input id="a11y-parent-page-tsx-16"
@@ -67,6 +68,7 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                   Save Child Profile
                 </button>
               </form>
+              </CreateDialog>
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Registered Profiles ({householdChildren.length})</h3>
