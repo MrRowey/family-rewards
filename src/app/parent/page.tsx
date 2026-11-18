@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 
@@ -61,7 +61,7 @@ export default function ParentDashboard() {
   const [shopIcon, setShopIcon] = useState("🎁");
   const [shopCost, setShopCost] = useState(5);
   const [shopStock, setShopStock] = useState(2);
-  const [shopIsGroup, setShopIsGroup] = useState(false);
+  const rewardSaveInFlight = useRef(false);
   const [rewardSaving, setRewardSaving] = useState(false);
   const [rewardSaveMessage, setRewardSaveMessage] = useState<string | null>(null);
 
@@ -168,8 +168,10 @@ export default function ParentDashboard() {
     loadPortalData();
   };
 
-  const handleCreateReward = async (e: React.FormEvent) => {
+  const handleCreateReward = async (e: React.FormEvent, isGroup: boolean) => {
     e.preventDefault();
+    if (rewardSaveInFlight.current) return;
+    rewardSaveInFlight.current = true;
     setRewardSaveMessage(null);
     setRewardSaving(true);
     try {
@@ -177,7 +179,7 @@ export default function ParentDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: shopTitle, description: shopDesc, icon: shopIcon,
-          starCost: shopCost, monthlyStock: shopStock, isGroup: shopIsGroup }),
+          starCost: shopCost, monthlyStock: shopStock, isGroup }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -185,12 +187,12 @@ export default function ParentDashboard() {
       }
       setShopTitle("");
       setShopDesc("");
-      setShopIsGroup(false);
       setRewardSaveMessage("Prize saved successfully.");
       await loadPortalData();
     } catch (error) {
       setRewardSaveMessage(error instanceof Error ? error.message : "Unable to save prize.");
     } finally {
+      rewardSaveInFlight.current = false;
       setRewardSaving(false);
     }
   };
@@ -312,7 +314,7 @@ export default function ParentDashboard() {
         <main className="flex-1 overflow-y-auto p-8 space-y-6">
           <ApprovalSections activeMenu={activeMenu} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />
           <TaskManagementSections activeMenu={activeMenu} tasks={tasks} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} schedTaskId={schedTaskId} setSchedTaskId={setSchedTaskId} schedDay={schedDay} setSchedDay={setSchedDay} schedInterval={schedInterval} setSchedInterval={setSchedInterval} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
-          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} assignments={assignments} redemptionsHistory={redemptionsHistory} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} setShopIsGroup={setShopIsGroup} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} toggleRewardVisibility={toggleRewardVisibility} handleRefund={handleRefund} />
+          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} assignments={assignments} redemptionsHistory={redemptionsHistory} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} toggleRewardVisibility={toggleRewardVisibility} handleRefund={handleRefund} />
           <ChildManagementSections activeMenu={activeMenu} householdChildren={children} childName={childName} setChildName={setChildName} childAvatar={childAvatar} setChildAvatar={setChildAvatar} childDob={childDob} setChildDob={setChildDob} adjustChildId={adjustChildId} setAdjustChildId={setAdjustChildId} adjustAmount={adjustAmount} setAdjustAmount={setAdjustAmount} adjustReason={adjustReason} setAdjustReason={setAdjustReason} handleCreateChild={handleCreateChild} handleAdjustStars={handleAdjustStars} />
           <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />
           <AdminInfoSections activeMenu={activeMenu} householdChildren={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} />

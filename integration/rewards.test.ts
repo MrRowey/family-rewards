@@ -39,7 +39,7 @@ describe("PostgreSQL reward integrity", () => {
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
     expect((await prisma.reward.findUniqueOrThrow({ where: { id: item.id } })).currentStock).toBe(0);
     const balances = await prisma.child.findMany({ where: { id: { in: [a.id, b.id] } }, select: { stars: true } });
-    expect(balances.map((entry) => entry.stars).sort((x, y) => x - y)).toEqual([15, 20]);
+    expect(balances.map((entry) => entry.stars).toSorted((x, y) => x - y)).toEqual([15, 20]);
     expect(await prisma.rewardRedemption.count({ where: { rewardId: item.id, status: "PENDING" } })).toBe(1);
   });
 

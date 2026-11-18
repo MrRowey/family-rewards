@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { findRewards, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
   findRewards: vi.fn(),
+  createReward: vi.fn(),
   findChild: vi.fn(),
   updateChild: vi.fn(),
   createAudit: vi.fn(),
@@ -29,6 +30,14 @@ beforeEach(() => {
     }),
   );
 });
+
+function jsonPost(path: string, body: unknown) {
+  return new Request(`http://localhost${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
 describe("reward visibility boundaries", () => {
   it("restricts public rewards to visible, in-stock individual rewards in the current month", async () => {
@@ -76,13 +85,10 @@ describe("reward visibility boundaries", () => {
 });
 
 describe("star adjustment integrity", () => {
-  const request = (body: unknown) => new Request("http://localhost/api/children/adjust-stars", {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
-  });
 
   it("rejects noninteger and nonnumeric amounts", async () => {
     for (const amount of ["10", 1.5, null, 0]) {
-      const response = await adjustStars(request({ childId: "child1", amount, reason: "test" }));
+      const response = await adjustStars(jsonPost("/api/children/adjust-stars", { childId: "child1", amount, reason: "test" }));
       expect(response.status).toBe(400);
     }
     expect(transaction).not.toHaveBeenCalled();
@@ -92,7 +98,7 @@ describe("star adjustment integrity", () => {
     findChild.mockResolvedValue({ id: "child1", name: "Sam", stars: 3 });
     updateChild.mockResolvedValue({ id: "child1", stars: 0 });
     createAudit.mockResolvedValue({});
-    const response = await adjustStars(request({ childId: "child1", amount: -5, reason: "Correction" }));
+    const response = await adjustStars(jsonPost("/api/children/adjust-stars", { childId: "child1", amount: -5, reason: "Correction" }));
     expect(response.status).toBe(200);
     expect(updateChild).toHaveBeenCalledWith({ where: { id: "child1" }, data: { stars: 0 } });
     expect(createAudit).toHaveBeenCalledTimes(1);
@@ -100,21 +106,24 @@ describe("star adjustment integrity", () => {
   });
 });
 
-
 describe("parent reward creation", () => {
-  const request = (body: unknown) => new Request("http://localhost/api/parent/rewards", {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
-  });
   const valid = { title: "Movie night", description: "Friday", icon: "🎬", starCost: 10, monthlyStock: 2, isGroup: false };
   it("creates a visible, stocked reward", async () => {
     createReward.mockResolvedValue({ id: "reward1", ...valid, currentStock: 2 });
-    const response = await createParentReward(request(valid));
+    const response = await createParentReward(jsonPost("/api/parent/rewards", valid));
     expect(response.status).toBe(201);
     expect(createReward).toHaveBeenCalledWith({ data: expect.objectContaining({ title: "Movie night", starCost: 10, monthlyStock: 2, currentStock: 2, isGroup: false }) });
   });
+  it("preserves the group goal flag", async () => {
+    createReward.mockResolvedValue({ id: "group1", ...valid, isGroup: true });
+    const response = await createParentReward(jsonPost("/api/parent/rewards", { ...valid, isGroup: true }));
+    expect(response.status).toBe(201);
+    expect(createReward).toHaveBeenCalledWith({ data: expect.objectContaining({ isGroup: true }) });
+  });
+
   it("rejects invalid costs and stock without writing", async () => {
     for (const data of [{ ...valid, starCost: -1 }, { ...valid, starCost: "10" }, { ...valid, monthlyStock: 0 }, { ...valid, title: "" }]) {
-      expect((await createParentReward(request(data))).status).toBe(400);
+      expect((await createParentReward(jsonPost("/api/parent/rewards", data))).status).toBe(400);
     }
     expect(createReward).not.toHaveBeenCalled();
   });

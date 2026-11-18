@@ -22,20 +22,19 @@ interface ShopManagementSectionsProps {
   setShopCost: (value: number) => void;
   shopStock: number;
   setShopStock: (value: number) => void;
-  setShopIsGroup: (value: boolean) => void;
-  handleCreateReward: (event: React.FormEvent) => Promise<void>;
+  handleCreateReward: (event: React.FormEvent, isGroup: boolean) => Promise<void>;
   rewardSaving: boolean;
   rewardSaveMessage: string | null;
   toggleRewardVisibility: (rewardId: string, childId: string, assigned: boolean) => Promise<void>;
   handleRefund: (id: string) => Promise<void>;
 }
 
-export function ShopManagementSections({ activeMenu, householdChildren, rewards, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, setShopIsGroup, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+export function ShopManagementSections({ activeMenu, householdChildren, rewards, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
   return <>
 {/* 5. SHOP ITEMS CREATION */}
           {activeMenu === "shop_items" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={handleCreateReward} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
+              <form onSubmit={(event) => handleCreateReward(event, false)} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
                 <h3 className="text-base font-black flex items-center gap-2 text-white">
                   <Gift className="w-4 h-4 text-amber-400" /> Create Shop Prize
                 </h3>
@@ -93,7 +92,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </div>
 
-                {rewardSaveMessage && <p role="status" aria-live="polite" className="text-sm text-amber-200">{rewardSaveMessage}</p>}
+                <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
                 <button
                   type="submit"
                   disabled={rewardSaving}
@@ -126,7 +125,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
           {/* 6. GROUP GOALS */}
           {activeMenu === "shop_group" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={(e) => { setShopIsGroup(true); handleCreateReward(e); }} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
+              <form onSubmit={(event) => handleCreateReward(event, true)} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
                 <h3 className="text-base font-black flex items-center gap-2 text-white">
                   <Users2 className="w-4 h-4 text-indigo-400" /> Create Collaborative Goal
                 </h3>
@@ -167,8 +166,11 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </div>
 
+                <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
+
                 <button
                   type="submit"
+                  disabled={rewardSaving}
                   className="w-full bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 font-black py-3 rounded-2xl text-xs text-white shadow-lg shadow-indigo-600/30 transition min-h-[46px]"
                 >
                   Create Group Goal
