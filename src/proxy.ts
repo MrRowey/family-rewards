@@ -26,7 +26,7 @@ export async function proxy(req: NextRequest) {
 
   const isParentPage = pathname.startsWith("/parent");
   const isParentApi = pathname.startsWith("/api/parent");
-  const isSensitiveRead = method === "GET" && (pathname.startsWith("/api/admin/") || pathname === "/api/approvals" || pathname === "/api/audit-logs" || (pathname === "/api/redemptions" && !req.nextUrl.searchParams.has("childId")) || ((pathname === "/api/completions" || pathname === "/api/task-completions") && !req.nextUrl.searchParams.has("childId")));
+  const isSensitiveRead = method === "GET" && (pathname.startsWith("/api/admin/") || pathname === "/api/approvals" || pathname === "/api/audit-logs" || pathname === "/api/redemptions" || ((pathname === "/api/completions" || pathname === "/api/task-completions") && !req.nextUrl.searchParams.has("childId")));
   const isApiRoute = pathname.startsWith("/api");
 
   let requiresAuth = isParentPage || isParentApi || isSensitiveRead;

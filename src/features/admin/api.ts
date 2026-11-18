@@ -43,7 +43,7 @@ export async function fetchParentPortalData(month: number): Promise<ParentPortal
     redemptionsHistory, auditLogs, kioskConfig] = await Promise.all([
     fetchJson("/api/parent/children"),
     fetchJson("/api/tasks"),
-    fetchJson(`/api/rewards?month=${month}`),
+    fetchJson(`/api/parent/rewards?month=${month}`),
     fetchJson("/api/task-assignments"),
     fetchJson("/api/task-completions?status=PENDING"),
     fetchJson("/api/redemptions?status=PENDING"),
