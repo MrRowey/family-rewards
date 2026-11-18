@@ -150,6 +150,8 @@ model RewardRedemption {
   rewardId    String
   reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
+  stockReserved Boolean @default(false) // Legacy claims did not reserve stock on creation
+  starCostAtClaim Int? // Null for legacy claims created before price snapshots
   requestedAt DateTime @default(now())
 }
 
