@@ -36,3 +36,20 @@ The first production release must be verified against a clean database. Once fam
 - When served over HTTPS, set `COOKIE_SECURE=true`. Use an HTTPS reverse proxy and avoid exposing PostgreSQL.
 - Keep persistent database and uploads volumes and verify that their backups can be restored.
 - Confirm `/api/health` reports success and that the container restarts correctly after a reboot.
+
+
+## Distribution and future in-app updates
+
+**GitHub first install (v1):** Clone or download the repository, configure environment secrets, and start Docker Compose. This is supported only against an empty Family Rewards database. Do not delete or replace an existing installation's volumes.
+
+**Later Parent Dashboard feature — App Updates:** An authenticated parent-only page may check published release metadata, display the version and changelog, and initiate a controlled upgrade workflow. The app must never run arbitrary commands from user-supplied URLs, expose Docker control to unauthenticated requests, or assume the application container can safely replace itself.
+
+**Required upgrade safeguards before implementing the update button:**
+1. Introduce reviewed, versioned, forward-only Prisma migrations and verify upgrades from the last released schema.
+2. Take consistent PostgreSQL and uploaded-file backups; verify restore procedures and provide a recovery path.
+3. Check release compatibility and available disk space, run preflight validation, and surface migration/upgrade errors to the parent.
+4. Prefer a trusted host-side updater or deployment orchestrator over mounting the Docker socket into the web app.
+5. Preserve database and uploads volumes during application image replacement; never run `docker compose down --volumes` for upgrades.
+6. Add integration tests for upgrade, interruption, failure recovery and retained family data.
+
+The in-app update feature is **out of scope for PR #18**. This PR only prepares a secure, clean first installation and documents the future upgrade contract.
