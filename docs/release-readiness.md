@@ -6,17 +6,20 @@
 - PR #18 adds privacy regression coverage for public rewards and removes the parent PIN hash from backups.
 - Passing CI does **not** establish that an existing family database can be upgraded safely.
 
-## Existing deployments: database migration blocker
+## Database policy: fresh installation only
 
-The current Compose migration service runs `prisma db push`. The checked-in migration directory contains only an initial baseline, while the current Prisma schema has additional fields and models. Do **not** switch an existing installation directly to `prisma migrate deploy` or mark the baseline applied without first reconciling the live database schema and migration history. Either action can break upgrades or leave schema drift.
+There is currently no live Family Rewards installation and no production data to preserve. The first deployment can initialize an empty PostgreSQL volume directly from the current `prisma/schema.prisma` using the existing Compose `prisma db push` migration service. This is intentional for the initial fresh install; the historical migration baseline is **not** an accurate representation of the current schema and must not be applied with `prisma migrate deploy`.
 
-Before promoting to `main`:
+For a disposable local installation only, to erase all existing Family Rewards database records **and uploaded images**, run:
 
-1. Take a PostgreSQL logical backup (for example, `pg_dump -Fc`) and separately back up the uploads volume. The in-app JSON backup is not a substitute for a verified database restore.
-2. Restore both backups into a disposable environment; never test upgrades against the only production copy.
-3. Compare the restored schema with `prisma/schema.prisma` and the migration history; generate, review, and commit a non-destructive forward migration for any differences.
-4. Test the upgrade from an existing-volume installation and a clean install. Verify stars, approvals, claims, stock reservations, child records, avatars and audit logs.
-5. Only after both paths pass, replace the production `db push` strategy with a reviewed versioned migration deployment.
+```sh
+docker compose down --volumes
+docker compose up --build -d
+```
+
+**Warning:** `docker compose down --volumes` permanently deletes the project's named PostgreSQL and uploads volumes. Verify the Compose project and volumes before running it. Never use this command on an installation containing data you want to keep.
+
+The first production release must be verified against a clean database. Once families begin using the app, do not reset their volumes or rely on automatic schema synchronization for upgrades. Before any subsequent schema-changing release, introduce a reviewed versioned migration strategy and test a backup/restore plus upgrade path.
 
 ## Manual end-to-end smoke test
 
