@@ -224,7 +224,7 @@ export default function ParentDashboard() {
     }
 
     try {
-      const res = await fetch(`/api/children/${childId}/stars`, {
+      const res = await fetch(`/api/children/${targetChildId}/stars`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
