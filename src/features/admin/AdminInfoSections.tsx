@@ -3,7 +3,7 @@
 import { RestoreBackup } from "./RestoreBackup";
 import { FamilyTrends } from "./FamilyTrends";
 import { useState } from "react";
-import { AlertCircle, Database } from "lucide-react";
+import { Database } from "lucide-react";
 import type { NavigationMenu, ChildProfile, TaskItem, RewardRedemptionRecord, AuditLogRecord } from "./types";
 
 interface AdminInfoSectionsProps {
@@ -60,30 +60,21 @@ export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemp
 
           {activeMenu === "admin_analytics" && <FamilyTrends profiles={householdChildren} />}
 
-          {/* 14. BACKUP & RESTORE */}
           {activeMenu === "admin_settings" && (
-            <div className="max-w-xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
-              <div>
-                <h3 className="font-black text-xl text-white">Database Backup & Export</h3>
-                <p className="text-xs text-slate-400 mt-1">Download a JSON snapshot of your family data</p>
+            <section aria-labelledby="backup-settings-heading" className="space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+              <h3 id="backup-settings-heading" className="text-lg font-semibold">Backup &amp; Restore</h3>
+              <div className="grid items-start gap-5 lg:grid-cols-2">
+                <section className="min-w-0 space-y-3 rounded-xl border border-slate-800 p-5">
+                  <h4 className="font-semibold">Export family data</h4>
+                  <p className="text-sm text-slate-300">Download a JSON backup of profiles, chores, schedules, rewards, and activity. Keep a separate copy of uploaded photos.</p>
+                  <a href="/api/admin/backup" download className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-slate-100 px-4 text-sm font-semibold text-slate-900">
+                    <Database size={16} /> Download backup
+                  </a>
+                </section>
+                <RestoreBackup onRestore={onRestore} />
               </div>
-
-              <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-xs text-indigo-200 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                <span>Exports children profiles, chores, recurring schedules, shop prizes, and audit history to prevent data loss.</span>
-              </div>
-
-              <a
-                href="/api/admin/backup"
-                download
-                className="w-full flex items-center justify-center gap-2 py-4 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 font-black rounded-2xl text-white shadow-lg shadow-indigo-600/30 transition min-h-[48px] text-xs"
-              >
-                <Database className="w-4 h-4" /> Export Database Backup (.json)
-              </a>
-            </div>
+            </section>
           )}
-
-          {activeMenu === "admin_settings" && <RestoreBackup onRestore={onRestore} />}
 
           {activeMenu === "admin_audit" && (
             <section className="space-y-4">

@@ -46,12 +46,12 @@ export function RestoreBackup({ onRestore }: { onRestore: () => Promise<void> })
   }
 
   return (
-    <section className="max-w-xl space-y-4 rounded-xl border border-slate-800 p-5">
-      <h3 className="text-lg font-semibold">Restore family data</h3>
+    <section className="min-w-0 space-y-4 rounded-xl border border-slate-800 p-5">
+      <h4 className="font-semibold">Restore family data</h4>
       <p className="text-sm text-slate-300">Restore replaces family records. Keep a separate copy of uploaded photos. Your current parent PIN and kiosk settings stay in place.</p>
       <label className="grid gap-2 text-sm">
         Backup file (.json)
-        <input type="file" accept=".json,application/json" disabled={busy}
+        <input type="file" className="max-w-full text-sm" accept=".json,application/json" disabled={busy}
           onChange={(event) => {
             setFile(event.target.files?.[0]);
             setSummary(undefined);

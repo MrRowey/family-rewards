@@ -17,12 +17,13 @@ interface AdminSettingsSectionsProps {
 }
 
 export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPin, setConfirmPin, kioskConfig, kioskSaveMessage, setKioskConfig, handleResetPin, handleSaveKioskConfig }: AdminSettingsSectionsProps) {
-  return <>
+  if (activeMenu !== "admin_settings") return null;
+  return <div className="grid items-start gap-5 lg:grid-cols-2">
 {/* 11. PIN RESET */}
-          {activeMenu === "admin_settings" && (
-            <div className="max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
+
+            <div className="min-w-0 space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
               <div>
-                <h3 className="font-black text-xl text-white">Reset Parent PIN</h3>
+                <h3 className="text-lg font-semibold text-white">Security</h3>
                 <p className="text-xs text-slate-400 mt-1">Set a new 4–6 digit PIN for kiosk mode unlocking</p>
               </div>
 
@@ -55,19 +56,18 @@ export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPi
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 font-black rounded-2xl text-white shadow-lg shadow-indigo-600/30 transition min-h-[48px]"
+                  className="min-h-11 rounded-lg bg-slate-100 px-4 font-semibold text-slate-900"
                 >
-                  Update Security PIN
+                  Change parent PIN
                 </button>
               </form>
             </div>
-          )}
 
           {/* 12. KIOSK DISPLAY SETTINGS */}
-          {activeMenu === "admin_settings" && (
-            <div className="max-w-xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
+
+            <div className="min-w-0 space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
               <div>
-                <h3 className="font-black text-xl text-white">Kiosk Display</h3>
+                <h3 className="text-lg font-semibold text-white">Kiosk Display</h3>
                 <p className="text-xs text-slate-400 mt-1">Configure audio and idle timeout behaviors</p>
               </div>
 
@@ -113,13 +113,12 @@ export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPi
                     onChange={(event) => setKioskConfig({ ...kioskConfig, largeKioskText: event.target.checked })} />
                 </label>
                 <output className="block text-sm text-slate-300">{kioskSaveMessage}</output>
-                <button type="submit" className="min-h-11 w-full rounded-lg bg-slate-100 px-4 font-semibold text-slate-900">
+                <button type="submit" className="min-h-11 rounded-lg bg-slate-100 px-4 font-semibold text-slate-900">
                   Save Display Settings
                 </button>
               </form>
             </div>
-          )}
 
           
-  </>;
+  </div>;
 }
