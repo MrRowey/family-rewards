@@ -1,5 +1,6 @@
 "use client";
 
+import AvatarDisplay from "@/components/AvatarDisplay";
 import { CreateDialog } from "@/features/admin/CreateDialog";
 import type React from "react";
 
@@ -76,7 +77,9 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                   {householdChildren.map((child) => (
                     <div key={child.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex items-center justify-between shadow-xl">
                       <div className="flex items-center gap-4">
-                        <span className="text-4xl">{child.avatar}</span>
+                        {child.avatarConfig ? (
+                          <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={48} />
+                        ) : <span className="text-4xl">{child.avatar}</span>}
                         <div>
                           <h4 className="font-black text-base text-white">{child.name}</h4>
                           <p className="text-xs text-amber-300 font-black mt-0.5">⭐ {child.stars} Stars</p>

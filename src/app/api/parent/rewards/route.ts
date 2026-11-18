@@ -13,6 +13,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid prize details" }, { status: 400 });
   }
   const data = input as Record<string, unknown>;
+  const imageURL = data.imageURL;
+  if (imageURL !== undefined && (typeof imageURL !== "string" || !/^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(imageURL))) {
+    return NextResponse.json({ error: "Upload a valid prize photo." }, { status: 400 });
+  }
   const title = typeof data.title === "string" ? data.title.trim() : "";
   const description = typeof data.description === "string" ? data.description.trim() : "";
   const icon = typeof data.icon === "string" ? data.icon.trim() : "🎁";
@@ -24,7 +28,7 @@ export async function POST(req: Request) {
   }
   try {
     const reward = await prisma.reward.create({ data: {
-      title, description: description || null, icon,
+      title, description: description || null, icon, imageURL,
       starCost: data.starCost, monthlyStock: data.monthlyStock, currentStock: data.monthlyStock,
       isGroup: data.isGroup === true,
     } });

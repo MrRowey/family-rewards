@@ -167,21 +167,33 @@ export default function ParentDashboard() {
 
   const handleCreateReward = async (e: React.FormEvent, isGroup: boolean) => {
     e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const photo = new FormData(form).get("photo");
     if (rewardSaveInFlight.current) return;
     rewardSaveInFlight.current = true;
     setRewardSaveMessage(null);
     setRewardSaving(true);
     try {
+      let imageURL: string | undefined;
+      if (photo instanceof File && photo.size > 0) {
+        const data = new FormData();
+        data.set("file", photo);
+        const upload = await fetch("/api/upload", { method: "POST", body: data });
+        const result = await upload.json();
+        if (!upload.ok) throw new Error(result.error || "Unable to upload photo.");
+        imageURL = result.imageUrl;
+      }
       const response = await fetch("/api/parent/rewards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: shopTitle, description: shopDesc, icon: shopIcon,
-          starCost: shopCost, monthlyStock: shopStock, isGroup }),
+          starCost: shopCost, monthlyStock: shopStock, isGroup, imageURL }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || `Unable to save prize (HTTP ${response.status})`);
       }
+      form.reset();
       setShopTitle("");
       setShopDesc("");
       setRewardSaveMessage("Prize saved successfully.");

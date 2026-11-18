@@ -21,6 +21,8 @@ export interface ChildProfile {
   id: string;
   name: string;
   avatar: string;
+  avatarTheme?: string | null;
+  avatarConfig?: string | null;
   stars: number;
   dob: string;
 }
@@ -51,6 +53,7 @@ export interface TaskAssignmentItem {
 }
 
 export interface RewardItem {
+  imageURL?: string | null;
   id: string;
   title: string;
   description?: string | null;

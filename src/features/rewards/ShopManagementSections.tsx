@@ -1,6 +1,7 @@
 "use client";
 
 import { CreateDialog } from "@/features/admin/CreateDialog";
+import Image from "next/image";
 import { useState } from "react";
 import type React from "react";
 import { RotateCcw, Eye, EyeOff } from "lucide-react";
@@ -119,6 +120,12 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </div>
 
+                <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Photo (optional)</span>
+                  <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
+                    className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
+                  <span className="block text-xs text-slate-400">PNG, JPEG or WebP, up to 2 MB.</span>
+                </label>
                 <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
                 <button
                   type="submit"
@@ -148,7 +155,9 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                     return (
                       <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
                         <div className="flex justify-between items-start">
-                          <span className="text-4xl">{rw.icon}</span>
+                          {rw.imageURL ? (
+                          <Image src={rw.imageURL} alt="" width={96} height={72} unoptimized className="h-[72px] w-24 rounded-lg object-cover" />
+                        ) : <span className="text-4xl">{rw.icon}</span>}
                           <span className="text-xs font-black bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
                             ⭐ {rw.starCost}
                           </span>
@@ -210,6 +219,12 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </div>
 
+                <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Photo (optional)</span>
+                  <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
+                    className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
+                  <span className="block text-xs text-slate-400">PNG, JPEG or WebP, up to 2 MB.</span>
+                </label>
                 <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
 
                 <button
@@ -234,7 +249,9 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   {orderedRewards.filter((r) => r.isGroup).map((rw) => (
                     <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-indigo-500/30 p-5 rounded-3xl space-y-2 shadow-lg">
                       <div className="flex justify-between items-start">
-                        <span className="text-4xl">{rw.icon}</span>
+                        {rw.imageURL ? (
+                          <Image src={rw.imageURL} alt="" width={96} height={72} unoptimized className="h-[72px] w-24 rounded-lg object-cover" />
+                        ) : <span className="text-4xl">{rw.icon}</span>}
                         <span className="text-xs font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full">
                           Target: {rw.starCost} ⭐
                         </span>
