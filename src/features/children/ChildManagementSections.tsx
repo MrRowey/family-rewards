@@ -26,6 +26,8 @@ interface ChildManagementSectionsProps {
 }
 
 export function ChildManagementSections({ activeMenu, householdChildren, childName, setChildName, childAvatar, setChildAvatar, childDob, setChildDob, adjustChildId, setAdjustChildId, adjustAmount, setAdjustAmount, adjustReason, setAdjustReason, handleCreateChild, handleAdjustStars }: ChildManagementSectionsProps) {
+  const selectedChild = householdChildren.find((child) => child.id === adjustChildId);
+  const adjustment = Number(adjustAmount);
   return <>
 {/* 9. CHILD PROFILES */}
           {activeMenu === "user_children" && (
@@ -118,7 +120,7 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
 
                 <div>
                   <label htmlFor="a11y-parent-page-tsx-20" className="block text-slate-400 font-bold mb-1">
-                    Amount to Adjust (e.g. +5 or -3)
+                    Stars to add or remove
                   </label>
                   <input id="a11y-parent-page-tsx-20"
                     type="text"
@@ -149,9 +151,16 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                   />
                 </div>
 
+                {selectedChild && (
+                  <dl className="grid grid-cols-2 gap-4 rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm">
+                    <div><dt className="text-slate-400">Current balance</dt><dd className="mt-1 font-semibold">{selectedChild.stars} stars</dd></div>
+                    <div><dt className="text-slate-400">After adjustment</dt><dd className="mt-1 font-semibold">{Number.isSafeInteger(adjustment) ? Math.max(0, selectedChild.stars + adjustment) : "—"} stars</dd></div>
+                  </dl>
+                )}
                 <button
                   type="submit"
-                  className="w-full py-4 bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 font-black rounded-2xl text-slate-950 shadow-lg shadow-amber-500/20 transition min-h-[48px]"
+                  disabled={!selectedChild || !Number.isSafeInteger(adjustment) || adjustment === 0 || !adjustReason.trim()}
+                  className="w-full py-4 disabled:opacity-50 bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 font-black rounded-2xl text-slate-950 shadow-lg shadow-amber-500/20 transition min-h-[48px]"
                 >
                   Apply Star Adjustment
                 </button>

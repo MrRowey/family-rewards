@@ -84,6 +84,7 @@ export interface RewardRedemptionRecord {
 export interface AuditLogRecord {
   id: string;
   actor: string;
+  action: string;
   details: string;
   createdAt: string;
 }

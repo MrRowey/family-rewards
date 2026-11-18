@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AlertCircle, Database } from "lucide-react";
 import type { NavigationMenu, ChildProfile, TaskItem, RewardRedemptionRecord, AuditLogRecord } from "./types";
 
@@ -11,7 +12,25 @@ interface AdminInfoSectionsProps {
   auditLogs: AuditLogRecord[];
 }
 
+function formatAction(action: string) {
+  return action.toLowerCase().replaceAll("_", " ");
+}
+
 export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemptionsHistory, auditLogs }: AdminInfoSectionsProps) {
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditAction, setAuditAction] = useState("");
+  const [auditDate, setAuditDate] = useState("");
+  const actions = [...new Set(auditLogs.map((log) => log.action))].toSorted();
+  const search = auditSearch.trim().toLowerCase();
+  const start = auditDate ? new Date(auditDate + "T00:00:00") : null;
+  const end = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1) : null;
+  const filteredLogs = auditLogs.filter((log) => {
+    const created = new Date(log.createdAt);
+    return (!auditAction || log.action === auditAction)
+      && (!start || !end || (created >= start && created < end))
+      && (log.actor.toLowerCase().includes(search) || log.details.toLowerCase().includes(search));
+  });
+
   return <>
 {/* 13. FAMILY ANALYTICS */}
           {activeMenu === "admin_analytics" && (
@@ -59,30 +78,50 @@ export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemp
             </div>
           )}
 
-          {/* 15. AUDIT LOG */}
           {activeMenu === "admin_audit" && (
-            <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-3 shadow-xl">
-              <h3 className="font-black text-lg text-white mb-4">System Audit Trail</h3>
-              {auditLogs.length === 0 ? (
-                <p className="text-slate-500 text-center py-8 text-xs font-semibold">No audit logs recorded yet.</p>
+            <section className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <label className="grid gap-1 text-sm">Search people or details
+                  <input type="search" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)}
+                    className="min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3" />
+                </label>
+                <label className="grid gap-1 text-sm">Action
+                  <select value={auditAction} onChange={(event) => setAuditAction(event.target.value)}
+                    className="min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3">
+                    <option value="">All actions</option>
+                    {actions.map((action) => <option key={action} value={action}>{formatAction(action)}</option>)}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm">Date
+                  <input type="date" value={auditDate} onChange={(event) => setAuditDate(event.target.value)}
+                    className="min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3" />
+                </label>
+              </div>
+              <p className="text-sm text-slate-400">Showing {filteredLogs.length} of {auditLogs.length} recent entries (up to 50).</p>
+              {filteredLogs.length === 0 ? (
+                <p className="rounded-xl border border-slate-800 p-5 text-sm text-slate-300">
+                  {auditLogs.length ? "No entries match these filters." : "No activity recorded yet."}
+                </p>
               ) : (
-                auditLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="bg-slate-950/80 border border-white/5 p-4 rounded-2xl flex justify-between items-center text-xs"
-                  >
-                    <div>
-                      <span className="font-black text-indigo-400 mr-2">[{log.actor}]</span>
-                      <span className="text-slate-300">{log.details}</span>
-                    </div>
-                    <span className="text-[11px] text-slate-500 font-mono">
-                      {new Date(log.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                ))
+                <div className="overflow-x-auto rounded-xl border border-slate-800">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-900 text-slate-300">
+                      <tr>{["When", "Actor", "Action", "Details"].map((heading) => <th key={heading} scope="col" className="p-3 font-semibold">{heading}</th>)}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {filteredLogs.map((log) => (
+                        <tr key={log.id} className="align-top">
+                          <td className="whitespace-nowrap p-3 text-slate-400"><time dateTime={log.createdAt}>{new Date(log.createdAt).toLocaleString()}</time></td>
+                          <td className="p-3 font-medium text-slate-200">{log.actor}</td>
+                          <td className="p-3 capitalize text-slate-300">{formatAction(log.action)}</td>
+                          <td className="p-3 text-slate-300">{log.details}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-            </div>
+            </section>
           )}
-        
   </>;
 }
