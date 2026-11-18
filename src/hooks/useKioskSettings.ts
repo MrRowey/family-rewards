@@ -12,6 +12,7 @@ export function useKioskSettings(enableIdleReset: boolean = true) {
     idleTimeoutSec: 45,
     soundEffects: true,
     reducedMotion: false,
+    largeKioskText: false,
     showPickerStars: true,
     maxDailyTasks: 5,
   });

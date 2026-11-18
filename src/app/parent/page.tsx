@@ -40,7 +40,7 @@ export default function ParentDashboard() {
   const [pendingRedemptions, setPendingRedemptions] = useState<RewardRedemptionRecord[]>([]);
   const [redemptionsHistory, setRedemptionsHistory] = useState<RewardRedemptionRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
-  const [kioskConfig, setKioskConfig] = useState<KioskConfig>({ idleTimeoutSec: 45, soundEffects: true, reducedMotion: false, showPickerStars: true, maxDailyTasks: 5 });
+  const [kioskConfig, setKioskConfig] = useState<KioskConfig>({ idleTimeoutSec: 45, soundEffects: true, reducedMotion: false, largeKioskText: false, showPickerStars: true, maxDailyTasks: 5 });
 
   // Forms: Task Creation
   const [taskSaveError, setTaskSaveError] = useState("");

@@ -82,7 +82,7 @@ export default function HomePage() {
   }
 
   return (
-    <main data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-6 sm:p-10 select-none touch-manipulation flex flex-col justify-between">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-6 sm:p-10 select-none touch-manipulation flex flex-col justify-between">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-indigo-600/15 blur-[140px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 right-10 w-[500px] h-[300px] bg-amber-500/10 blur-[130px] rounded-full" />

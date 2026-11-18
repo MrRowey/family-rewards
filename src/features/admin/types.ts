@@ -92,6 +92,7 @@ export interface KioskConfig {
   idleTimeoutSec: number;
   soundEffects: boolean;
   reducedMotion: boolean;
+  largeKioskText: boolean;
   showPickerStars: boolean;
   maxDailyTasks: number;
 }

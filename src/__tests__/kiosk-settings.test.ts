@@ -23,7 +23,7 @@ describe("kiosk settings service", () => {
     findFirst.mockResolvedValue(null);
     await expect(getKioskSettings()).resolves.toEqual({
       idleTimeoutSec: 45, soundEffects: true, maxDailyTasks: 5,
-      reducedMotion: false, showPickerStars: true,
+      reducedMotion: false, largeKioskText: false, showPickerStars: true,
     });
   });
 
@@ -35,8 +35,8 @@ describe("kiosk settings service", () => {
   });
 
   it("returns saved display preferences", async () => {
-    findFirst.mockResolvedValue({ reducedMotion: true, showPickerStars: false });
-    await expect(getKioskSettings()).resolves.toMatchObject({ reducedMotion: true, showPickerStars: false });
+    findFirst.mockResolvedValue({ reducedMotion: true, largeKioskText: true, showPickerStars: false });
+    await expect(getKioskSettings()).resolves.toMatchObject({ reducedMotion: true, largeKioskText: true, showPickerStars: false });
   });
 
   it("preserves legacy endpoint behavior when configuration is missing", async () => {
@@ -51,7 +51,7 @@ describe("kiosk settings service", () => {
     updateConfig.mockResolvedValue({ idleTimeoutSec: 60, soundEffects: false, maxDailyTasks: 5 });
     await expect(updateKioskSettings({ idleTimeoutSec: 60, soundEffects: false }, true)).resolves.toEqual({
       idleTimeoutSec: 60, soundEffects: false, maxDailyTasks: 5,
-      reducedMotion: false, showPickerStars: true,
+      reducedMotion: false, largeKioskText: false, showPickerStars: true,
     });
     expect(createConfig).toHaveBeenCalledTimes(1);
     expect(createAudit).toHaveBeenCalledTimes(1);

@@ -60,3 +60,12 @@
   transition: none !important;
   scroll-behavior: auto !important;
 }
+
+[data-large-kiosk-text="true"] :is(button, a, input, select) {
+  min-block-size: 3rem;
+}
+
+[data-large-kiosk-text="true"] :is(.text-xs, .text-sm, button, input, select) {
+  font-size: max(1rem, 1em);
+  line-height: 1.5;
+}

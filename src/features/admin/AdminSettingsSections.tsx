@@ -107,6 +107,11 @@ export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPi
                   <input type="checkbox" checked={kioskConfig.showPickerStars}
                     onChange={(event) => setKioskConfig({ ...kioskConfig, showPickerStars: event.target.checked })} />
                 </label>
+                <label className="flex min-h-11 items-center justify-between gap-4 text-sm">
+                  Larger text and touch controls
+                  <input type="checkbox" checked={kioskConfig.largeKioskText}
+                    onChange={(event) => setKioskConfig({ ...kioskConfig, largeKioskText: event.target.checked })} />
+                </label>
                 <output className="block text-sm text-slate-300">{kioskSaveMessage}</output>
                 <button type="submit" className="min-h-11 w-full rounded-lg bg-slate-100 px-4 font-semibold text-slate-900">
                   Save Display Settings

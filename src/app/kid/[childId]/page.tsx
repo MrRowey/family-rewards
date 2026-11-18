@@ -136,7 +136,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   }
 
   return (
-    <main data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
       <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800/80 bg-slate-900/40 p-6 rounded-3xl backdrop-blur-md">
         <div className="flex items-center gap-5">
           <button

@@ -5,6 +5,7 @@ export const KioskSettingsSchema = z.object({
   idleTimeoutSec: z.number().int().min(10).max(3600).optional(),
   soundEffects: z.boolean().optional(),
   reducedMotion: z.boolean().optional(),
+  largeKioskText: z.boolean().optional(),
   showPickerStars: z.boolean().optional(),
   maxDailyTasks: z.number().int().min(1).max(100).optional(),
 }).strict();
@@ -15,6 +16,7 @@ export async function getKioskSettings() {
     idleTimeoutSec: config?.idleTimeoutSec ?? 45,
     soundEffects: config?.soundEffects ?? true,
     reducedMotion: config?.reducedMotion ?? false,
+    largeKioskText: config?.largeKioskText ?? false,
     showPickerStars: config?.showPickerStars ?? true,
     maxDailyTasks: config?.maxDailyTasks ?? 5,
   };
@@ -43,6 +45,7 @@ export async function updateKioskSettings(input: z.infer<typeof KioskSettingsSch
       idleTimeoutSec: updated.idleTimeoutSec,
       soundEffects: updated.soundEffects,
       reducedMotion: updated.reducedMotion ?? false,
+      largeKioskText: updated.largeKioskText ?? false,
       showPickerStars: updated.showPickerStars ?? true,
       maxDailyTasks: updated.maxDailyTasks,
     };

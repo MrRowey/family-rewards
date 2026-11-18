@@ -36,6 +36,7 @@ function isKioskConfig(value: unknown): value is KioskConfig {
   return typeof config.idleTimeoutSec === "number"
     && typeof config.soundEffects === "boolean"
     && typeof config.reducedMotion === "boolean"
+    && typeof config.largeKioskText === "boolean"
     && typeof config.showPickerStars === "boolean"
     && typeof config.maxDailyTasks === "number";
 }

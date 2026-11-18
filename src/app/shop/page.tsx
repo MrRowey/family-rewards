@@ -121,7 +121,7 @@ export default function RewardShop() {
 
 
   return (
-    <main data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 right-1/4 w-[600px] h-[350px] bg-amber-500/10 blur-[150px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 left-10 w-[500px] h-[300px] bg-indigo-600/15 blur-[140px] rounded-full" />
