@@ -24,6 +24,7 @@ export async function GET(req: Request) {
         : {
             ...(plan ? { id: { in: plan.rewardIds } } : { isVisible: true }),
             isGroup: false,
+            isArchived: false,
             currentStock: { gt: 0 },
             OR: [{ targetMonth: null }, { targetMonth: today.getMonth() + 1 }],
           },

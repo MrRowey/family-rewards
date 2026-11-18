@@ -213,11 +213,11 @@ export default function ParentDashboard() {
     }
   };
 
-  const handleRefund = async (redemptionId: string, decision: "APPROVE" | "DECLINE") => {
+  const handleRefund = async (redemptionId: string, decision: "APPROVE" | "DECLINE", returnToStock: boolean) => {
     const response = await fetch("/api/redemptions/refund", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ redemptionId, decision }),
+      body: JSON.stringify({ redemptionId, decision, returnToStock }),
     });
     if (!response.ok) throw new Error("Could not update the refund request.");
     await loadPortalData();
@@ -310,7 +310,7 @@ export default function ParentDashboard() {
   return (
     <div className="flex h-dvh bg-slate-950 text-slate-100 font-sans">
       {/* SIDEBAR NAVIGATION */}
-      <ParentSidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} collapsedCategories={collapsedCategories} toggleCategory={toggleCategory} totalPending={totalPending} loadPortalData={loadPortalData} handleLogout={handleLogout} />
+      <ParentSidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} collapsedCategories={collapsedCategories} toggleCategory={toggleCategory} totalPending={totalPending} pendingRefunds={redemptionsHistory.filter((item) => item.refundState === "PENDING").length} loadPortalData={loadPortalData} handleLogout={handleLogout} />
 
       {/* MAIN VIEWPORT */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
@@ -323,7 +323,7 @@ export default function ParentDashboard() {
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
           {activeMenu === "task_approvals" && <ApprovalSections activeMenu={activeMenu} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />}
           <TaskManagementSections activeMenu={activeMenu} tasks={tasks} taskSaveError={taskSaveError} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
-          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} inventoryLoadFailed={inventoryLoadFailed} assignments={assignments} redemptionsHistory={redemptionsHistory} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} handleRefund={handleRefund} />
+          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} inventoryLoadFailed={inventoryLoadFailed} refresh={loadPortalData} assignments={assignments} redemptionsHistory={redemptionsHistory} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} handleRefund={handleRefund} />
           <ChildManagementSections activeMenu={activeMenu} householdChildren={children} childName={childName} setChildName={setChildName} childAvatar={childAvatar} setChildAvatar={setChildAvatar} childDob={childDob} setChildDob={setChildDob} adjustChildId={adjustChildId} setAdjustChildId={setAdjustChildId} adjustAmount={adjustAmount} setAdjustAmount={setAdjustAmount} adjustReason={adjustReason} setAdjustReason={setAdjustReason} handleCreateChild={handleCreateChild} handleAdjustStars={handleAdjustStars} />
           <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} kioskSaveMessage={kioskSaveMessage} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />
           <AdminInfoSections activeMenu={activeMenu} householdChildren={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} onRestore={loadPortalData} />

@@ -121,6 +121,7 @@ model Reward {
   currentStock Int                @default(1)
   minAge       Int                @default(2)
   maxAge       Int                @default(18)
+  isArchived   Boolean            @default(false)
   isVisible    Boolean            @default(true)
   isGroup      Boolean            @default(false) 
   targetMonth  Int?               

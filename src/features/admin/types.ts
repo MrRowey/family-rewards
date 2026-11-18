@@ -62,7 +62,10 @@ export interface RewardItem {
   currentStock: number;
   isGroup: boolean;
   isVisible: boolean;
+  isArchived?: boolean;
   targetMonth: number | null;
+  minAge?: number;
+  maxAge?: number;
   assignments?: { childId: string }[];
 }
 
@@ -74,6 +77,7 @@ export interface TaskCompletionRecord {
 
 export interface RewardRedemptionRecord {
   refundState: string | null;
+  status?: string;
   starCostAtClaim: number | null;
   id: string;
   reward?: RewardItem;

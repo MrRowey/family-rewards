@@ -2,6 +2,7 @@
 
 import { CreateDialog } from "@/features/admin/CreateDialog";
 import { groupByCategory } from "@/features/admin/groupByCategory";
+import { EditReward } from "./EditReward";
 import { ShopMonthPlanner } from "./ShopMonthPlanner";
 import Image from "next/image";
 import { useState } from "react";
@@ -13,6 +14,7 @@ interface ShopManagementSectionsProps {
   householdChildren: ChildProfile[];
   rewards: RewardItem[];
   inventoryLoadFailed: boolean;
+  refresh: () => Promise<void>;
   assignments: TaskAssignmentItem[];
   redemptionsHistory: RewardRedemptionRecord[];
   shopTitle: string;
@@ -28,12 +30,14 @@ interface ShopManagementSectionsProps {
   handleCreateReward: (event: React.FormEvent, isGroup: boolean) => Promise<void>;
   rewardSaving: boolean;
   rewardSaveMessage: string | null;
-  handleRefund: (id: string, decision: "APPROVE" | "DECLINE") => Promise<void>;
+  handleRefund: (id: string, decision: "APPROVE" | "DECLINE", returnToStock: boolean) => Promise<void>;
 }
 
-export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, redemptionsHistory, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, handleRefund }: ShopManagementSectionsProps) {
+export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, refresh, redemptionsHistory, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, handleRefund }: ShopManagementSectionsProps) {
+  const [skipStock, setSkipStock] = useState<Record<string, boolean>>({});
   const [refundPending, setRefundPending] = useState(false);
   const [refundMessage, setRefundMessage] = useState("");
+  const refundHistory = redemptionsHistory.filter((item) => item.status === "REFUNDED" || item.refundState === "DECLINED");
   const refundRequests = redemptionsHistory.filter((item) => item.refundState === "PENDING").toReversed();
 
   async function reviewRefund(id: string, decision: "APPROVE" | "DECLINE") {
@@ -41,7 +45,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
     setRefundPending(true);
     setRefundMessage("");
     try {
-      await handleRefund(id, decision);
+      await handleRefund(id, decision, !skipStock[id]);
       setRefundMessage(decision === "APPROVE" ? "Refund approved." : "Refund declined.");
     } catch {
       setRefundMessage("Could not update the refund request. Try again.");
@@ -162,6 +166,8 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                           </span>
                         </div>
                         <h4 className="wrap-break-word font-black text-base text-white">{rw.title}</h4>
+                      {rw.isArchived && <p className="text-sm text-slate-400">Archived</p>}
+                      <EditReward reward={rw} refresh={refresh} />
                         {rw.description && <p className="wrap-break-word text-sm text-slate-300">{rw.description}</p>}
                         <p className="text-xs text-slate-400">{rw.currentStock === 0 ? "Out of stock" : `${rw.currentStock} in stock`} · Monthly stock: {rw.monthlyStock}</p>
 
@@ -262,6 +268,8 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                         </span>
                       </div>
                       <h4 className="font-black text-base text-white">{rw.title}</h4>
+                      {rw.isArchived && <p className="text-sm text-slate-400">Archived</p>}
+                      <EditReward reward={rw} refresh={refresh} />
                       <p className="text-xs text-slate-400">Cooperative sibling target</p>
                     </div>
                   ))}
@@ -292,7 +300,12 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                     <h4 className="font-semibold">{request.reward?.title}</h4>
                     <p className="text-sm text-slate-300">{request.child?.name} · {request.starCostAtClaim ?? request.reward?.starCost} stars</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={!skipStock[request.id]} disabled={refundPending}
+                        onChange={(event) => setSkipStock({ ...skipStock, [request.id]: !event.target.checked })} />
+                      Return to stock
+                    </label>
                     <button type="button" disabled={refundPending} onClick={() => reviewRefund(request.id, "APPROVE")}
                       className="min-h-11 rounded-lg bg-emerald-100 px-4 font-semibold text-emerald-950 disabled:opacity-50">Approve</button>
                     <button type="button" disabled={refundPending} onClick={() => reviewRefund(request.id, "DECLINE")}
@@ -300,6 +313,16 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </article>
               ))}
+              <details className="rounded-xl border border-slate-800 p-4">
+                <summary className="cursor-pointer font-semibold">Refund history ({refundHistory.length})</summary>
+                {refundHistory.length === 0 && <p className="mt-2 text-sm text-slate-300">No completed refund decisions.</p>}
+                <ul className="mt-2 divide-y divide-slate-800 text-sm">
+                  {refundHistory.map((item) => <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3">
+                    <span>{item.reward?.title} · {item.child?.name}</span>
+                    <span className="text-slate-300">{item.status === "REFUNDED" ? "Refunded" : "Declined"}</span>
+                  </li>)}
+                </ul>
+              </details>
             </section>
           )}
   </>;

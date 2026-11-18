@@ -9,11 +9,12 @@ interface ParentSidebarProps {
   collapsedCategories: Record<SidebarCategory, boolean>;
   toggleCategory: (category: SidebarCategory) => void;
   totalPending: number;
+  pendingRefunds: number;
   loadPortalData: () => Promise<void>;
   handleLogout: () => Promise<void>;
 }
 
-export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, toggleCategory, totalPending, loadPortalData, handleLogout }: ParentSidebarProps) {
+export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, toggleCategory, totalPending, pendingRefunds, loadPortalData, handleLogout }: ParentSidebarProps) {
   return (
 <aside className="w-32 sm:w-56 shrink-0 bg-slate-900 border-r border-white/10 flex flex-col justify-between p-4 z-20 overflow-y-auto">
         <div className="space-y-4">
@@ -153,6 +154,7 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     }`}
                   >
                     <RotateCcw className="w-4 h-4" /> Shop Refunds
+                    {pendingRefunds > 0 && <span className="ml-auto rounded-full bg-amber-400 px-2 text-slate-950">{pendingRefunds}</span>}
                   </button>
                 </div>
               )}

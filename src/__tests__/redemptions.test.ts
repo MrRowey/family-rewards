@@ -66,6 +66,17 @@ describe("Redemption Domain Service", () => {
     expect(prismaMock.reward.update).not.toHaveBeenCalled();
   });
 
+  it("can refund the original stars without returning stock", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      status: "APPROVED", refundState: "PENDING", childId: "c1", rewardId: "r1", starCostAtClaim: 5,
+      child: { name: "Alex" }, reward: { title: "Toy", starCost: 8 },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    await refundReward("red1", "APPROVE", false);
+    expect(prismaMock.child.update).toHaveBeenCalledWith({ where: { id: "c1" }, data: { stars: { increment: 5 } } });
+    expect(prismaMock.reward.update).not.toHaveBeenCalled();
+  });
+
   it("does not approve a refund twice", async () => {
     prismaMock.rewardRedemption.findUnique.mockResolvedValue({ status: "REFUNDED", refundState: "APPROVED" });
     await expect(refundReward("red1", "APPROVE")).rejects.toThrow("INVALID_STATE");

@@ -46,6 +46,7 @@ export const backupSchema = z.object({
       minAge: z.number().int().min(0).max(2147483647).optional(),
       maxAge: z.number().int().min(0).max(2147483647).optional(),
       isVisible: z.boolean().optional(),
+      isArchived: z.boolean().optional(),
       isGroup: z.boolean().optional(),
       targetMonth: z.number().int().min(1).max(12).nullable().optional(),
       createdAt: date.optional(),

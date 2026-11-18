@@ -23,7 +23,7 @@ export async function claimReward(childId: string, rewardId: string) {
     }
 
     // Eligibility must be validated before returning an existing pending claim.
-    if (reward.isGroup) {
+    if (reward.isGroup || reward.isArchived) {
       throw new Error("NOT_ELIGIBLE: Reward is not available for individual claims");
     }
     const age = calculateAgeProfile(child.dob).ageYears;
@@ -190,7 +190,7 @@ export async function declineReward(redemptionId: string) {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
-export async function refundReward(redemptionId: string, decision?: "APPROVE" | "DECLINE") {
+export async function refundReward(redemptionId: string, decision?: "APPROVE" | "DECLINE", returnToStock = true) {
   return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
@@ -237,17 +237,18 @@ export async function refundReward(redemptionId: string, decision?: "APPROVE" | 
       data: { stars: { increment: (redemption.starCostAtClaim ?? redemption.reward.starCost) } },
     });
 
-    await tx.reward.update({
-      where: { id: redemption.rewardId },
-      data: { currentStock: { increment: 1 } },
-    });
+    if (returnToStock) {
+      await tx.reward.update({
+        where: { id: redemption.rewardId }, data: { currentStock: { increment: 1 } },
+      });
+    }
 
     await tx.auditLog.create({
       data: {
         actor: "Parent",
         actorType: "PARENT",
         action: "REFUNDED_REWARD",
-        details: `Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". Stock restored.`,
+        details: `Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". ${returnToStock ? "Stock restored." : "Stock unchanged."}`,
       },
     });
 

@@ -2,6 +2,7 @@
 export { GET } from "../../rewards/route";
 
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
@@ -42,24 +43,33 @@ export async function POST(req: Request) {
   }
 }
 
+const updatePrize = z.object({
+  id: z.string().min(1),
+  isVisible: z.boolean().optional(),
+  isArchived: z.boolean().optional(),
+  title: z.string().trim().min(1).max(150).optional(),
+  description: z.string().trim().max(1000).nullable().optional(),
+  category: z.string().trim().max(60).nullable().optional(),
+  imageURL: z.string().regex(/^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/).nullable().optional(),
+  starCost: z.number().int().min(1).max(1000000).optional(),
+  monthlyStock: z.number().int().min(1).max(1000000).optional(),
+  currentStock: z.number().int().min(0).max(1000000).optional(),
+}).strict();
+
 export async function PATCH(req: Request) {
-  const input: unknown = await req.json().catch(() => null);
-  if (!input || typeof input !== "object" || !("id" in input) ||
-      typeof input.id !== "string" || !input.id || !("isVisible" in input) ||
-      typeof input.isVisible !== "boolean") {
-    return NextResponse.json({ error: "A prize ID and visibility are required." }, { status: 400 });
-  }
+  const input = updatePrize.safeParse(await req.json().catch(() => null));
+  if (!input.success) return NextResponse.json({ error: "Enter valid prize details." }, { status: 400 });
 
   try {
+    const { id, ...data } = input.data;
+    if (Object.keys(data).length === 0) return NextResponse.json({ error: "Choose a change to save." }, { status: 400 });
     const result = await prisma.reward.updateMany({
-      where: { id: input.id, isGroup: false },
-      data: { isVisible: input.isVisible },
+      where: { id, ...(data.isVisible !== undefined && { isGroup: false }) },
+      data,
     });
-    if (result.count === 0) {
-      return NextResponse.json({ error: "Prize not found." }, { status: 404 });
-    }
-    return NextResponse.json({ isVisible: input.isVisible });
+    if (result.count === 0) return NextResponse.json({ error: "Prize not found." }, { status: 404 });
+    return NextResponse.json({ ...data });
   } catch {
-    return NextResponse.json({ error: "Unable to update prize visibility." }, { status: 500 });
+    return NextResponse.json({ error: "Unable to update prize." }, { status: 500 });
   }
 }

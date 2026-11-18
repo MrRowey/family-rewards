@@ -31,7 +31,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ rewardIds: null });
     }
     const ids = [...new Set(rewardIds)];
-    const count = await prisma.reward.count({ where: { id: { in: ids }, isGroup: false } });
+    const count = await prisma.reward.count({ where: { id: { in: ids }, isGroup: false, isArchived: false } });
     if (count !== ids.length) return NextResponse.json({ error: "Choose existing shop prizes." }, { status: 400 });
     const plan = await prisma.shopPlan.upsert({
       where, create: { ...key, rewardIds: ids }, update: { rewardIds: ids },

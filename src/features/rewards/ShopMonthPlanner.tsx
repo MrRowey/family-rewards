@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import { calculateAgeProfile } from "@/lib/ageRules";
 import type { ChildProfile, RewardItem } from "@/features/admin/types";
 
 export function ShopMonthPlanner({ profiles, rewards }: { profiles: ChildProfile[]; rewards: RewardItem[] }) {
@@ -10,6 +11,7 @@ export function ShopMonthPlanner({ profiles, rewards }: { profiles: ChildProfile
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   });
   const childId = profiles.some((child) => child.id === selection) ? selection : profiles[0]?.id;
+  const profile = profiles.find((child) => child.id === childId);
   const [year, month] = period.split("-").map(Number);
 
   return (
@@ -24,19 +26,20 @@ export function ShopMonthPlanner({ profiles, rewards }: { profiles: ChildProfile
           <input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} className="min-h-11 rounded-lg bg-slate-900 px-3" />
         </label>
       </div>
-      {childId && month ? <MonthPlan key={childId + period} childId={childId} year={year} month={month} rewards={rewards} /> : (
+      {profile && month ? <MonthPlan key={childId + period} profile={profile} year={year} month={month} rewards={rewards} /> : (
         <p className="text-sm text-slate-300">Choose a child and month to start planning.</p>
       )}
     </section>
   );
 }
 
-function MonthPlan({ childId, year, month, rewards }: { childId: string; year: number; month: number; rewards: RewardItem[] }) {
+function MonthPlan({ profile, year, month, rewards }: { profile: ChildProfile; year: number; month: number; rewards: RewardItem[] }) {
+  const childId = profile.id;
   const [saved, setSaved] = useState<string[] | null>();
   const [draft, setDraft] = useState<string[] | null>(null);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
-  const candidates = rewards.filter((reward) => !reward.isGroup && (reward.targetMonth === null || reward.targetMonth === month));
+  const candidates = rewards.filter((reward) => !reward.isGroup && !reward.isArchived && (reward.targetMonth === null || reward.targetMonth === month));
   const included = draft ?? [];
   const costs = [...new Set(candidates.map((reward) => reward.starCost))].toSorted((a, b) => a - b);
   const monthName = new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: "long" });
@@ -81,6 +84,10 @@ function MonthPlan({ childId, year, month, rewards }: { childId: string; year: n
   }
 
   if (saved === undefined) return <output>{message || "Loading shop plan…"}</output>;
+
+  const defaultItems = candidates.filter((reward) => reward.isVisible && (!reward.assignments?.length || reward.assignments.some((entry) => entry.childId === childId)));
+  const previewItems = draft === null ? defaultItems : candidates.filter((reward) => included.includes(reward.id));
+  const previewAge = calculateAgeProfile(new Date(profile.dob), new Date(year, month - 1, 1)).ageYears;
 
   return (
     <div className="space-y-4">
@@ -130,8 +137,22 @@ function MonthPlan({ childId, year, month, rewards }: { childId: string; year: n
           {included.length === 0 && <p className="text-sm text-slate-400">Drop prizes here to add them.</p>}
         </section>
       </div>
+      <details className="rounded-xl border border-slate-800 p-4">
+        <summary className="cursor-pointer font-semibold">Preview as {profile.name}</summary>
+        <p className="mt-2 text-sm text-slate-400">Uses the current draft and stock, with age checked on the first day of {monthName}.</p>
+        {previewItems.length === 0 && <p className="mt-2 text-sm">No prizes in this plan.</p>}
+        <ul className="mt-2 divide-y divide-slate-800 text-sm">
+          {previewItems.map((reward) => {
+            const ageEligible = previewAge >= (reward.minAge ?? 2) && previewAge <= (reward.maxAge ?? 18);
+            const availability = !ageEligible ? "Outside age range" : reward.currentStock <= 0 ? "Out of stock" : "Available";
+            return <li key={reward.id} className="flex flex-wrap justify-between gap-2 py-2">
+              <span>{reward.title} · {reward.starCost} stars</span><span className="text-slate-300">{availability}</span>
+            </li>;
+          })}
+        </ul>
+      </details>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" disabled={saving || (saved !== null && draft === saved)} onClick={() => save(included)}
+        <button type="button" disabled={saving || (saved !== null && draft === saved)} onClick={() => save(included.filter((id) => candidates.some((reward) => reward.id === id)))}
           className="min-h-11 rounded-lg bg-slate-100 px-4 font-semibold text-slate-900 disabled:opacity-50">Save month</button>
         {saved !== null && <button type="button" disabled={saving} onClick={() => save(null)}
           className="min-h-11 rounded-lg border border-slate-700 px-4">Use default availability</button>}
