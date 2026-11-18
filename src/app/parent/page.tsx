@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 
-import { fetchParentPortalData } from "@/features/admin/api";
+import { fetchParentPortalData, fetchParentQueues } from "@/features/admin/api";
 import { ParentSidebar } from "@/features/admin/ParentSidebar";
 import { AdminInfoSections } from "@/features/admin/AdminInfoSections";
 import { AdminSettingsSections } from "@/features/admin/AdminSettingsSections";
@@ -77,7 +77,13 @@ export default function ParentDashboard() {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
 
+  const approvalInFlight = useRef(false);
+  const queueRevision = useRef(0);
+  const [approvalMessage, setApprovalMessage] = useState("");
+  const [approvalBusy, setApprovalBusy] = useState(false);
+
   const loadPortalData = useCallback(async () => {
+    const revision = ++queueRevision.current;
     const data = await fetchParentPortalData();
     if (data.children) {
       setChildren(data.children);
@@ -90,9 +96,11 @@ export default function ParentDashboard() {
     if (data.rewards) setRewards(data.rewards);
     setInventoryLoadFailed(!data.rewards);
     if (data.assignments) setAssignments(data.assignments);
-    if (data.pendingTasks) setPendingTasks(data.pendingTasks);
-    if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
-    if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
+    if (revision === queueRevision.current) {
+      if (data.pendingTasks) setPendingTasks(data.pendingTasks);
+      if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
+      if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
+    }
     if (data.auditLogs) setAuditLogs(data.auditLogs);
     if (data.kioskConfig) setKioskConfig(data.kioskConfig);
   }, []);
@@ -108,30 +116,59 @@ export default function ParentDashboard() {
     };
   }, [loadPortalData]);
 
+  useEffect(() => {
+    let active = true;
+    async function refreshQueues() {
+      if (document.hidden || approvalInFlight.current) return;
+      const revision = ++queueRevision.current;
+      const data = await fetchParentQueues();
+      if (!active || revision !== queueRevision.current || approvalInFlight.current) return;
+      if (data.pendingTasks) setPendingTasks(data.pendingTasks);
+      if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
+      if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
+    }
+    const timer = window.setInterval(refreshQueues, 10000);
+    window.addEventListener("focus", refreshQueues);
+    document.addEventListener("visibilitychange", refreshQueues);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshQueues);
+      document.removeEventListener("visibilitychange", refreshQueues);
+    };
+  }, []);
+
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
   };
 
-  const handleTaskApproval = async (completionId: string, action: "APPROVE" | "DECLINE") => {
-    setPendingTasks((prev) => prev.filter((t) => t.id !== completionId));
-    await fetch("/api/task-completions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completionId, action }),
-    });
-    loadPortalData();
+  const decideApproval = async (url: string, method: string, body: Record<string, string>) => {
+    if (approvalInFlight.current) return;
+    approvalInFlight.current = true;
+    queueRevision.current++;
+    setApprovalBusy(true);
+    setApprovalMessage("");
+    try {
+      const response = await fetch(url, {
+        method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error();
+      setApprovalMessage("Decision saved.");
+    } catch {
+      setApprovalMessage("Could not save the decision. Try again.");
+    } finally {
+      await loadPortalData();
+      approvalInFlight.current = false;
+      setApprovalBusy(false);
+    }
   };
 
-  const handleShopApproval = async (redemptionId: string, action: "APPROVE" | "DECLINE") => {
-    setPendingRedemptions((prev) => prev.filter((r) => r.id !== redemptionId));
-    await fetch("/api/redemptions/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ redemptionId, action }),
-    });
-    loadPortalData();
-  };
+  const handleTaskApproval = (completionId: string, action: "APPROVE" | "DECLINE") =>
+    decideApproval("/api/task-completions", "PATCH", { completionId, action });
+
+  const handleShopApproval = (redemptionId: string, action: "APPROVE" | "DECLINE") =>
+    decideApproval("/api/redemptions/approve", "POST", { redemptionId, action });
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,7 +358,7 @@ export default function ParentDashboard() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
-          {activeMenu === "task_approvals" && <ApprovalSections activeMenu={activeMenu} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />}
+          {activeMenu === "task_approvals" && <ApprovalSections activeMenu={activeMenu} busy={approvalBusy} message={approvalMessage} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />}
           <TaskManagementSections activeMenu={activeMenu} tasks={tasks} taskSaveError={taskSaveError} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
           <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} inventoryLoadFailed={inventoryLoadFailed} refresh={loadPortalData} assignments={assignments} redemptionsHistory={redemptionsHistory} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} handleRefund={handleRefund} />
           <ChildManagementSections activeMenu={activeMenu} householdChildren={children} childName={childName} setChildName={setChildName} childAvatar={childAvatar} setChildAvatar={setChildAvatar} childDob={childDob} setChildDob={setChildDob} adjustChildId={adjustChildId} setAdjustChildId={setAdjustChildId} adjustAmount={adjustAmount} setAdjustAmount={setAdjustAmount} adjustReason={adjustReason} setAdjustReason={setAdjustReason} handleCreateChild={handleCreateChild} handleAdjustStars={handleAdjustStars} />

@@ -17,7 +17,7 @@ export interface ParentPortalData {
 
 async function fetchJson(url: string): Promise<unknown | undefined> {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) return undefined;
     return await response.json() as unknown;
   } catch (error) {
@@ -41,16 +41,26 @@ function isKioskConfig(value: unknown): value is KioskConfig {
     && typeof config.maxDailyTasks === "number";
 }
 
+export async function fetchParentQueues() {
+  const [tasks, history] = await Promise.all([
+    fetchJson("/api/task-completions?status=PENDING"),
+    fetchJson("/api/redemptions"),
+  ]);
+  const redemptionsHistory = history === undefined ? undefined : asList<RewardRedemptionRecord>(history);
+  return {
+    pendingTasks: tasks === undefined ? undefined : asList<TaskCompletionRecord>(tasks),
+    pendingRedemptions: redemptionsHistory?.filter((item) => item.status === "PENDING"),
+    redemptionsHistory,
+  };
+}
+
 export async function fetchParentPortalData(): Promise<ParentPortalData> {
-  const [children, tasks, rewards, assignments, pendingTasks, pendingRedemptions,
-    redemptionsHistory, auditLogs, kioskConfig] = await Promise.all([
+  const [children, tasks, rewards, assignments, queues, auditLogs, kioskConfig] = await Promise.all([
     fetchJson("/api/parent/children"),
     fetchJson("/api/tasks"),
     fetchJson("/api/parent/rewards"),
     fetchJson("/api/task-assignments"),
-    fetchJson("/api/task-completions?status=PENDING"),
-    fetchJson("/api/redemptions?status=PENDING"),
-    fetchJson("/api/redemptions"),
+    fetchParentQueues(),
     fetchJson("/api/audit-logs"),
     fetchJson("/api/kiosk/settings"),
   ]);
@@ -60,9 +70,7 @@ export async function fetchParentPortalData(): Promise<ParentPortalData> {
     ...(tasks !== undefined && { tasks: asList<TaskItem>(tasks) }),
     ...(rewards !== undefined && { rewards: asList<RewardItem>(rewards) }),
     ...(assignments !== undefined && { assignments: asList<TaskAssignmentItem>(assignments) }),
-    ...(pendingTasks !== undefined && { pendingTasks: asList<TaskCompletionRecord>(pendingTasks) }),
-    ...(pendingRedemptions !== undefined && { pendingRedemptions: asList<RewardRedemptionRecord>(pendingRedemptions) }),
-    ...(redemptionsHistory !== undefined && { redemptionsHistory: asList<RewardRedemptionRecord>(redemptionsHistory) }),
+    ...queues,
     ...(auditLogs !== undefined && { auditLogs: asList<AuditLogRecord>(auditLogs) }),
     ...(isKioskConfig(kioskConfig) && { kioskConfig }),
   };
