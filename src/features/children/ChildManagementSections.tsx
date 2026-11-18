@@ -69,7 +69,7 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
               </form>
 
               <div className="lg:col-span-2 space-y-4">
-                <h3 className="font-black text-lg text-white">Registered Profiles ({children.length})</h3>
+                <h3 className="font-black text-lg text-white">Registered Profiles ({householdChildren.length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {householdChildren.map((child) => (
                     <div key={child.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex items-center justify-between shadow-xl">
