@@ -74,7 +74,7 @@ describe("reward visibility boundaries", () => {
 
   it("retains full parent access for the dashboard", async () => {
     await getRewards(new Request("http://localhost/api/parent/rewards?month=11"));
-    expect(findRewards.mock.calls[0][0].where).toEqual({ targetMonth: 11 });
+    expect(findRewards.mock.calls[0][0].where).toEqual({ OR: [{ targetMonth: null }, { targetMonth: 11 }] });
   });
 
   it("rejects invalid month values", async () => {

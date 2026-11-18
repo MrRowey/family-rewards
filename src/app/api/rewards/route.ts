@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
     const rewards = await prisma.reward.findMany({
       where: parentView
-        ? (parsedMonth !== null ? { targetMonth: parsedMonth } : {})
+        ? (parsedMonth !== null ? { OR: [{ targetMonth: null }, { targetMonth: parsedMonth }] } : {})
         : {
             isVisible: true,
             isGroup: false,
