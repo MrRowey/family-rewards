@@ -28,6 +28,7 @@ export default function RewardShop() {
   const [pendingRedemptions, setPendingRedemptions] = useState<PendingApproval[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
+  const [shopError, setShopError] = useState(false);
   const requestVersion = useRef(0);
   const [rewardChildId, setRewardChildId] = useState<string | null>(null);
 
@@ -44,6 +45,7 @@ export default function RewardShop() {
         rwRes.ok ? rwRes.json() : null, chRes.ok ? chRes.json() as Promise<Child[]> : null, appRes.ok ? appRes.json() : null,
       ]);
       if (version !== requestVersion.current) return;
+      setShopError(!rwRes.ok || !chRes.ok || !appRes.ok);
       if (nextRewards) {
         setRewards(nextRewards);
         setRewardChildId(selectedChildId);
@@ -60,6 +62,7 @@ export default function RewardShop() {
         setPendingRedemptions(appData || []);
       }
     } catch (err) {
+      if (version === requestVersion.current) setShopError(true);
       console.error("Failed to load shop data:", err);
     }
   }, [selectedChildId]);
@@ -97,7 +100,7 @@ export default function RewardShop() {
   const handleClaimReward = async (e: React.MouseEvent, rewardId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!selectedChildId) return;
+    if (!selectedChildId || submittingId || shopError || rewardChildId !== selectedChildId) return;
 
     setSubmittingId(rewardId);
 
@@ -226,7 +229,11 @@ export default function RewardShop() {
 
       {/* Right Area: Storefront Shelves */}
       <section className="relative z-10 flex-1 overflow-y-auto space-y-8 pr-1">
-        {visibleRewards.length === 0 ? (
+        {shopError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-sm text-amber-200">Could not refresh the shop. Trying again automatically.</p>}
+        {activeChild && <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />}
+        {rewardChildId !== selectedChildId || (shopError && visibleRewards.length === 0) ? (
+          !shopError && <output className="block text-sm text-slate-300">Loading shop…</output>
+        ) : visibleRewards.length === 0 ? (
           <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-16 text-center max-w-xl mx-auto shadow-2xl mt-12">
             <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/30 rounded-3xl flex items-center justify-center mx-auto mb-5 text-4xl">
               🎁
@@ -323,7 +330,7 @@ export default function RewardShop() {
                           ) : (
                             <button
                               type="button"
-                              disabled={isSubmitting}
+                              disabled={submittingId !== null || shopError}
                               onClick={(e) => handleClaimReward(e, reward.id)}
                               className="w-full min-h-[48px] bg-linear-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-[0.98] transition cursor-pointer text-sm"
                             >
@@ -338,8 +345,6 @@ export default function RewardShop() {
                 </div>
               )}
             </div>
-
-            <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />
 
             {/* Shelf 2: Goal Vault (Locked / Need More Stars) */}
             {lockedRewards.length > 0 && (
