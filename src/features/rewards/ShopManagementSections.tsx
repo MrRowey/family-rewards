@@ -28,7 +28,7 @@ interface ShopManagementSectionsProps {
   handleRefund: (id: string) => Promise<void>;
 }
 
-export function ShopManagementSections({ activeMenu, householdChildren, rewards, assignments, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, setShopIsGroup, handleCreateReward, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+export function ShopManagementSections({ activeMenu, householdChildren, rewards, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, setShopIsGroup, handleCreateReward, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
   return <>
 {/* 5. SHOP ITEMS CREATION */}
           {activeMenu === "shop_items" && (
