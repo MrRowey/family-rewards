@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     const config = await prisma.familyConfig.findFirst();
 
-    if (!config || !config.parentPin) {
+    if (!config?.isConfigured || !config.parentPin) {
       return NextResponse.json({ error: "Parent PIN not configured" }, { status: 400 });
     }
 

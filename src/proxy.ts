@@ -5,7 +5,9 @@ import { verifyParentToken } from "@/lib/auth";
 const PUBLIC_API_MUTATIONS = new Set([
   "/api/auth/verify-pin",
   "/api/completions",
+  "/api/task-completions",
   "/api/rewards/claim",
+  "/api/redemptions",
   "/api/setup",
 ]);
 
@@ -24,7 +26,7 @@ export async function proxy(req: NextRequest) {
 
   const isParentPage = pathname.startsWith("/parent");
   const isParentApi = pathname.startsWith("/api/parent");
-  const isSensitiveRead = method === "GET" && (pathname.startsWith("/api/admin/") || pathname === "/api/approvals" || pathname === "/api/audit-logs" || (pathname === "/api/redemptions" && !req.nextUrl.searchParams.has("childId")) || (pathname === "/api/completions" && !req.nextUrl.searchParams.has("childId")));
+  const isSensitiveRead = method === "GET" && (pathname.startsWith("/api/admin/") || pathname === "/api/approvals" || pathname === "/api/audit-logs" || (pathname === "/api/redemptions" && !req.nextUrl.searchParams.has("childId")) || ((pathname === "/api/completions" || pathname === "/api/task-completions") && !req.nextUrl.searchParams.has("childId")));
   const isApiRoute = pathname.startsWith("/api");
 
   let requiresAuth = isParentPage || isParentApi || isSensitiveRead;

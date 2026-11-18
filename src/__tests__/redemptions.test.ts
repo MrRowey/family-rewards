@@ -13,6 +13,7 @@ const prismaMock = {
     update: vi.fn(),
     updateMany: vi.fn(),
   },
+  rewardAssignment: { findMany: vi.fn() },
   rewardRedemption: {
     findFirst: vi.fn(),
     create: vi.fn(),
@@ -36,11 +37,12 @@ describe("Redemption Domain Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     transactionMock.mockImplementation((callback) => callback(prismaMock));
+    prismaMock.rewardAssignment.findMany.mockResolvedValue([]);
   });
 
   it("should deduct stars when claiming a reward", async () => {
-    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10 });
-    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2 });
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });
     prismaMock.rewardRedemption.findFirst.mockResolvedValue(null);
     prismaMock.child.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.rewardRedemption.create.mockResolvedValue({ id: "red1", status: "PENDING" });
@@ -61,8 +63,8 @@ describe("Redemption Domain Service", () => {
   });
 
   it("should throw INSUFFICIENT_STARS when child balance is too low", async () => {
-    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 3 });
-    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2 });
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 3, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });
 
     await expect(claimReward("c1", "r1")).rejects.toThrow("INSUFFICIENT_STARS");
   });
@@ -160,8 +162,8 @@ describe("Redemption Domain Service", () => {
   });
 
   it("does not charge or reserve stock again for an existing pending claim", async () => {
-    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 0 });
-    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 0 });
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 0, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 0, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });
     prismaMock.rewardRedemption.findFirst.mockResolvedValue({ id: "existing", status: "PENDING" });
     await expect(claimReward("c1", "r1")).resolves.toEqual({ id: "existing", status: "PENDING" });
     expect(prismaMock.child.updateMany).not.toHaveBeenCalled();
@@ -169,8 +171,8 @@ describe("Redemption Domain Service", () => {
   });
 
   it("rejects a claim if atomic stock reservation fails", async () => {
-    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10 });
-    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 1 });
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 1, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });
     prismaMock.rewardRedemption.findFirst.mockResolvedValue(null);
     prismaMock.child.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.reward.updateMany.mockResolvedValue({ count: 0 });
@@ -216,8 +218,8 @@ describe("Redemption Domain Service", () => {
       code: "P2034", clientVersion: "7.10.1",
     });
     transactionMock.mockRejectedValueOnce(conflict);
-    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10 });
-    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 1 });
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 1, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });
     prismaMock.rewardRedemption.findFirst.mockResolvedValue(null);
     prismaMock.child.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.reward.updateMany.mockResolvedValue({ count: 1 });
@@ -252,6 +254,46 @@ describe("Redemption Domain Service", () => {
     await expect(declineReward("red1")).rejects.toThrow("INVALID_STATE");
     expect(prismaMock.child.update).not.toHaveBeenCalled();
     expect(prismaMock.reward.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects hidden rewards before charging stars or reserving stock", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", starCost: 5, currentStock: 2, isVisible: false, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+    expect(prismaMock.child.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.reward.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects group rewards from individual claims", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", isVisible: true, isGroup: true });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+  });
+
+  it("rejects rewards assigned only to another child", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });
+    prismaMock.rewardAssignment.findMany.mockResolvedValue([{ childId: "c2" }]);
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+  });
+
+  it("rejects rewards outside the child's age range", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 30, maxAge: 40, targetMonth: null });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+  });
+
+  it("rejects rewards from another month", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: (new Date().getMonth() + 1) % 12 + 1 });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+  });
+
+  it("does not return an existing pending claim if eligibility has been revoked", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", isVisible: false, isGroup: false });
+    prismaMock.rewardRedemption.findFirst.mockResolvedValue({ id: "existing", status: "PENDING" });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
   });
 
 });

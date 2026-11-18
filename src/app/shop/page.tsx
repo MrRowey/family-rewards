@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Lock, ShoppingBag, Sparkles, Clock, Star, Package } from "lucide-react";
 import confetti from "canvas-confetti";
-import { calculateAgeProfile } from "@/lib/ageRules";
 import { Child, Reward, RewardAssignment, PendingApproval } from "@/types";
 import { sounds } from "@/lib/sound";
 
@@ -44,7 +43,7 @@ export default function RewardShop() {
 
       if (appRes.ok) {
         const appData = await appRes.json();
-        setPendingRedemptions(appData.pendingRewards || []);
+        setPendingRedemptions(appData || []);
       }
     } catch (err) {
       console.error("Failed to load shop data:", err);
@@ -63,12 +62,11 @@ export default function RewardShop() {
   }, [loadShopData]);
 
   const activeChild = children.find((c) => c.id === selectedChildId);
-  const activeChildAge = activeChild?.dob
-    ? calculateAgeProfile(new Date(activeChild.dob)).ageYears
-    : 0;
+  const activeChildAge = activeChild?.ageYears ?? 0;
 
   const visibleRewards = rewards.filter((reward) => {
-    if (reward.currentStock <= 0) return false;
+    if (!reward.isVisible || reward.isGroup || reward.currentStock <= 0) return false;
+    if (reward.targetMonth != null && reward.targetMonth !== new Date().getMonth() + 1) return false;
     if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
     if (reward.assignments && reward.assignments.length > 0) {
       return reward.assignments.some((a: RewardAssignment) => a.childId === selectedChildId);

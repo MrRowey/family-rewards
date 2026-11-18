@@ -12,6 +12,7 @@ export function apiError(error: unknown, fallback: string): NextResponse {
     NOT_ASSIGNED: 400,
     INSUFFICIENT_STARS: 400,
     OUT_OF_STOCK: 400,
+    NOT_ELIGIBLE: 400,
     INVALID_STATE: 409,
     CONCURRENCY_ERROR: 409,
   };

@@ -41,7 +41,7 @@ function isKioskConfig(value: unknown): value is KioskConfig {
 export async function fetchParentPortalData(month: number): Promise<ParentPortalData> {
   const [children, tasks, rewards, assignments, pendingTasks, pendingRedemptions,
     redemptionsHistory, auditLogs, kioskConfig] = await Promise.all([
-    fetchJson("/api/children"),
+    fetchJson("/api/parent/children"),
     fetchJson("/api/tasks"),
     fetchJson(`/api/rewards?month=${month}`),
     fetchJson("/api/task-assignments"),

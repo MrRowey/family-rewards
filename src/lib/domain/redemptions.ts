@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { calculateAgeProfile } from "@/lib/ageRules";
 
 const MAX_TRANSACTION_ATTEMPTS = 3;
 
@@ -19,6 +20,22 @@ export async function claimReward(childId: string, rewardId: string) {
 
     if (!child || !reward) {
       throw new Error("NOT_FOUND: Child or Reward record not found");
+    }
+
+    // Eligibility must be validated before returning an existing pending claim.
+    if (!reward.isVisible || reward.isGroup) {
+      throw new Error("NOT_ELIGIBLE: Reward is not available for individual claims");
+    }
+    const age = calculateAgeProfile(child.dob).ageYears;
+    if (age < reward.minAge || age > reward.maxAge) {
+      throw new Error("NOT_ELIGIBLE: Reward is outside the child's age range");
+    }
+    if (reward.targetMonth !== null && reward.targetMonth !== new Date().getMonth() + 1) {
+      throw new Error("NOT_ELIGIBLE: Reward is not available this month");
+    }
+    const assignments = await tx.rewardAssignment.findMany({ where: { rewardId } });
+    if (assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId)) {
+      throw new Error("NOT_ELIGIBLE: Reward is not assigned to this child");
     }
 
     // Return the existing claim without charging twice or consuming another stock unit.
