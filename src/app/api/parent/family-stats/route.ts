@@ -18,7 +18,8 @@ export async function GET(request: Request) {
       prisma.completion.groupBy({
         by: ["forDate"],
         where: { childId, status: "APPROVED", forDate: { gte: start, lt: end } },
-        _count: { _all: true },
+        _count: { _all: true, starsAwarded: true },
+        _sum: { starsAwarded: true },
       }),
       prisma.rewardRedemption.findMany({
         where: { childId, status: "APPROVED", requestedAt: { gte: start, lt: end } },
@@ -29,12 +30,16 @@ export async function GET(request: Request) {
     const rows = Array.from({ length: days }, (_, index) => {
       const date = new Date(start);
       date.setUTCDate(start.getUTCDate() + index);
-      return { date: date.toISOString().slice(0, 10), chores: 0, prizes: 0, starsSpent: 0, missingPrices: 0 };
+      return { date: date.toISOString().slice(0, 10), chores: 0, prizes: 0, starsSpent: 0, starsEarned: 0, missingAwards: 0, missingPrices: 0 };
     });
     const byDate = new Map(rows.map((row) => [row.date, row]));
-    for (const { forDate, _count: { _all: count } } of completions) {
+    for (const { forDate, _count: { _all: count, starsAwarded: captured }, _sum: { starsAwarded } } of completions) {
       const row = byDate.get(forDate.toISOString().slice(0, 10));
-      if (row) row.chores = count;
+      if (row) {
+        row.chores = count;
+        row.starsEarned = starsAwarded ?? 0;
+        row.missingAwards = count - captured;
+      }
     }
     for (const redemption of redemptions) {
       const row = byDate.get(redemption.requestedAt.toISOString().slice(0, 10));

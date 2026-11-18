@@ -8,12 +8,15 @@ interface TrendRow {
   chores: number;
   prizes: number;
   starsSpent: number;
+  starsEarned: number;
+  missingAwards: number;
   missingPrices: number;
 }
 
 const metrics = [
   { key: "chores", label: "Approved chores", color: "bg-sky-400" },
   { key: "prizes", label: "Approved prize claims", color: "bg-emerald-400" },
+  { key: "starsEarned", label: "Stars earned from chores", color: "bg-violet-400" },
   { key: "starsSpent", label: "Stars spent on approved prizes", color: "bg-amber-400" },
 ] as const;
 
@@ -65,12 +68,13 @@ function TrendResults({ childId, days }: { childId: string; days: string }) {
 
   if (failed) return <p role="alert">Could not load activity for this range.</p>;
   if (!rows) return <output>Loading activity…</output>;
+  const missingAwards = rows.reduce((total, row) => total + row.missingAwards, 0);
   const missingPrices = rows.reduce((total, row) => total + row.missingPrices, 0);
 
   return (
     <>
       <p className="text-sm text-slate-300">Chores use the scheduled date. Prize claims use the request date. Dates are shown in UTC.</p>
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-2">
         {metrics.map(({ key, label, color }) => {
           const values = rows.map((row) => row[key]);
           const max = Math.max(1, ...values);
@@ -86,6 +90,7 @@ function TrendResults({ childId, days }: { childId: string; days: string }) {
           );
         })}
       </div>
+      {missingAwards > 0 && <p className="text-sm text-slate-300">{missingAwards} older approvals have no recorded star award and are excluded from stars earned.</p>}
       {missingPrices > 0 && <p className="text-sm text-slate-300">{missingPrices} older claims have no recorded price and are excluded from the stars total.</p>}
       <details className="rounded-xl border border-slate-800 p-4">
         <summary className="cursor-pointer font-semibold">Daily figures</summary>

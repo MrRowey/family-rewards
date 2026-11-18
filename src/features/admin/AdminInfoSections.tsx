@@ -1,5 +1,6 @@
 "use client";
 
+import { RestoreBackup } from "./RestoreBackup";
 import { FamilyTrends } from "./FamilyTrends";
 import { useState } from "react";
 import { AlertCircle, Database } from "lucide-react";
@@ -11,13 +12,14 @@ interface AdminInfoSectionsProps {
   tasks: TaskItem[];
   redemptionsHistory: RewardRedemptionRecord[];
   auditLogs: AuditLogRecord[];
+  onRestore: () => Promise<void>;
 }
 
 function formatAction(action: string) {
   return action.toLowerCase().replaceAll("_", " ");
 }
 
-export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemptionsHistory, auditLogs }: AdminInfoSectionsProps) {
+export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemptionsHistory, auditLogs, onRestore }: AdminInfoSectionsProps) {
   const [auditSearch, setAuditSearch] = useState("");
   const [auditAction, setAuditAction] = useState("");
   const [auditDate, setAuditDate] = useState("");
@@ -80,6 +82,8 @@ export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemp
               </a>
             </div>
           )}
+
+          {activeMenu === "admin_backup" && <RestoreBackup onRestore={onRestore} />}
 
           {activeMenu === "admin_audit" && (
             <section className="space-y-4">

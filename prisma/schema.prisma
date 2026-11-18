@@ -103,6 +103,7 @@ model Completion {
   status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
   forDate     DateTime @db.Date
   completedAt DateTime @default(now())
+  starsAwarded Int?
 
   @@unique([childId, taskId, forDate])
 }
