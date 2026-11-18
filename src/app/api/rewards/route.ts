@@ -25,14 +25,22 @@ export async function GET(req: Request) {
       include: { assignments: true },
     });
 
-    if (childId) {
-      return NextResponse.json(rewards.filter((r) =>
-        parentView
-          ? r.assignments.some((a) => a.childId === childId)
-          : r.assignments.length === 0 || r.assignments.some((a) => a.childId === childId)
-      ));
+    if (parentView) {
+      return NextResponse.json(childId
+        ? rewards.filter((r) => r.assignments.some((a) => a.childId === childId))
+        : rewards);
     }
-    return NextResponse.json(rewards);
+
+    // Public clients need only assignment eligibility, not other children's IDs.
+    // Unassigned rewards are available to every child.
+    return NextResponse.json(rewards
+      .filter((r) => r.assignments.length === 0 || (childId !== null && r.assignments.some((a) => a.childId === childId)))
+      .map((r) => ({
+        ...r,
+        assignments: childId && r.assignments.some((a) => a.childId === childId)
+          ? [{ childId }]
+          : [],
+      })));
   } catch {
     return NextResponse.json({ error: "Failed to fetch rewards" }, { status: 500 });
   }

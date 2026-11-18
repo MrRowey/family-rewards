@@ -16,7 +16,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # Migration runner to apply schema changes before starting the main app
+  # Fresh-install schema initialization. Do not use db push as an upgrade strategy once family data exists.
   migrate:
     build:
       context: .

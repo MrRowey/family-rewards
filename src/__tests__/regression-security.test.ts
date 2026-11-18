@@ -39,6 +39,29 @@ describe("reward visibility boundaries", () => {
     expect(where.OR).toContainEqual({ targetMonth: null });
   });
 
+  it("does not expose other children's reward assignments", async () => {
+    findRewards.mockResolvedValue([
+      { id: "a", assignments: [{ childId: "child1" }, { childId: "child2" }] },
+      { id: "b", assignments: [] },
+      { id: "c", assignments: [{ childId: "child2" }] },
+    ]);
+    const response = await getRewards(new Request("http://localhost/api/rewards?childId=child1"));
+    const body = await response.json();
+    expect(body.map((r: { id: string }) => r.id)).toEqual(["a", "b"]);
+    expect(body[0].assignments).toEqual([{ childId: "child1" }]);
+    expect(body[1].assignments).toEqual([]);
+  });
+
+  it("does not expose child-specific rewards without a selected child", async () => {
+    findRewards.mockResolvedValue([
+      { id: "assigned", assignments: [{ childId: "child1" }] },
+      { id: "global", assignments: [] },
+    ]);
+    const response = await getRewards(new Request("http://localhost/api/rewards"));
+    const body = await response.json();
+    expect(body.map((r: { id: string }) => r.id)).toEqual(["global"]);
+  });
+
   it("retains full parent access for the dashboard", async () => {
     await getRewards(new Request("http://localhost/api/parent/rewards?month=11"));
     expect(findRewards.mock.calls[0][0].where).toEqual({ targetMonth: 11 });
