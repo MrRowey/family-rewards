@@ -59,6 +59,8 @@ export interface RewardItem {
   monthlyStock: number;
   currentStock: number;
   isGroup: boolean;
+  isVisible: boolean;
+  targetMonth: number | null;
   assignments?: { childId: string }[];
 }
 

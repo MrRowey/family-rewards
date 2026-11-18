@@ -38,12 +38,12 @@ function isKioskConfig(value: unknown): value is KioskConfig {
     && typeof config.maxDailyTasks === "number";
 }
 
-export async function fetchParentPortalData(month: number): Promise<ParentPortalData> {
+export async function fetchParentPortalData(): Promise<ParentPortalData> {
   const [children, tasks, rewards, assignments, pendingTasks, pendingRedemptions,
     redemptionsHistory, auditLogs, kioskConfig] = await Promise.all([
     fetchJson("/api/parent/children"),
     fetchJson("/api/tasks"),
-    fetchJson(`/api/parent/rewards?month=${month}`),
+    fetchJson("/api/parent/rewards"),
     fetchJson("/api/task-assignments"),
     fetchJson("/api/task-completions?status=PENDING"),
     fetchJson("/api/redemptions?status=PENDING"),

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type React from "react";
 import { Gift, RotateCcw, Eye, EyeOff, Users2 } from "lucide-react";
 import type { NavigationMenu, ChildProfile, RewardItem, TaskAssignmentItem, RewardRedemptionRecord } from "@/features/admin/types";
@@ -8,6 +9,7 @@ interface ShopManagementSectionsProps {
   activeMenu: NavigationMenu;
   householdChildren: ChildProfile[];
   rewards: RewardItem[];
+  inventoryLoadFailed: boolean;
   assignments: TaskAssignmentItem[];
   redemptionsHistory: RewardRedemptionRecord[];
   selectedMonth: number;
@@ -29,7 +31,30 @@ interface ShopManagementSectionsProps {
   handleRefund: (id: string) => Promise<void>;
 }
 
-export function ShopManagementSections({ activeMenu, householdChildren, rewards, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+  const [visibilityUpdates, setVisibilityUpdates] = useState<Record<string, boolean>>({});
+  const [visibilityPending, setVisibilityPending] = useState<string | null>(null);
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
+
+  async function updateVisibility(id: string, isVisible: boolean) {
+    if (visibilityPending) return;
+    setVisibilityPending(id);
+    setVisibilityError(null);
+    try {
+      const response = await fetch("/api/parent/rewards", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isVisible }),
+      });
+      if (!response.ok) throw new Error("Unable to update prize visibility.");
+      setVisibilityUpdates((previous) => ({ ...previous, [id]: isVisible }));
+    } catch {
+      setVisibilityError("Unable to update prize visibility. Try again.");
+    } finally {
+      setVisibilityPending(null);
+    }
+  }
+
   return <>
 {/* 5. SHOP ITEMS CREATION */}
           {activeMenu === "shop_items" && (
@@ -103,7 +128,9 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
               </form>
 
               <div className="lg:col-span-2 space-y-4">
-                <h3 className="font-black text-lg text-white">Active Shop Inventory ({rewards.filter((r) => !r.isGroup).length})</h3>
+                <h3 className="font-black text-lg text-white">Shop Inventory ({rewards.filter((r) => !r.isGroup).length})</h3>
+                {inventoryLoadFailed && <p role="alert">Could not load prizes. Select Refresh Data to retry.</p>}
+                <output className="block text-sm text-amber-200">{visibilityError}</output>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {rewards.filter((r) => !r.isGroup).map((rw) => (
                     <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
@@ -115,6 +142,14 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                       </div>
                       <h4 className="font-black text-base text-white">{rw.title}</h4>
                       <p className="text-xs text-slate-400">Stock: {rw.currentStock} / {rw.monthlyStock} monthly</p>
+                      <button
+                        type="button"
+                        disabled={visibilityPending !== null}
+                        onClick={() => updateVisibility(rw.id, !(visibilityUpdates[rw.id] ?? rw.isVisible))}
+                        className="min-h-11 rounded-xl border border-white/15 px-3 text-sm text-slate-200"
+                      >
+                        {(visibilityUpdates[rw.id] ?? rw.isVisible) ? "Hide from shop" : "Show in shop"}
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -228,7 +263,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {rewards.map((reward) => (
+                    {rewards.filter((reward) => reward.targetMonth === null || reward.targetMonth === selectedMonth).map((reward) => (
                       <tr key={reward.id}>
                         <td className="py-4 font-black flex items-center gap-3 text-white text-sm">
                           <span className="text-2xl">{reward.icon}</span>

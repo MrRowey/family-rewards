@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findRewards, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
+const { findRewards, setRewardVisibility, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
   findRewards: vi.fn(),
   createReward: vi.fn(),
+  setRewardVisibility: vi.fn(),
   findChild: vi.fn(),
   updateChild: vi.fn(),
   createAudit: vi.fn(),
@@ -11,12 +12,12 @@ const { findRewards, createReward, findChild, updateChild, createAudit, transact
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    reward: { findMany: findRewards, create: createReward },
+    reward: { findMany: findRewards, create: createReward, updateMany: setRewardVisibility },
     $transaction: transaction,
   },
 }));
 
-import { POST as createParentReward } from "@/app/api/parent/rewards/route";
+import { POST as createParentReward, PATCH as patchParentReward } from "@/app/api/parent/rewards/route";
 import { GET as getRewards } from "@/app/api/rewards/route";
 import { POST as adjustStars } from "@/app/api/children/adjust-stars/route";
 
@@ -126,5 +127,18 @@ describe("parent reward creation", () => {
       expect((await createParentReward(jsonPost("/api/parent/rewards", data))).status).toBe(400);
     }
     expect(createReward).not.toHaveBeenCalled();
+  });
+});
+
+it("updates visibility only for an individual prize", async () => {
+  setRewardVisibility.mockResolvedValue({ count: 1 });
+  const response = await patchParentReward(new Request("http://localhost/api/parent/rewards", {
+    method: "PATCH",
+    body: JSON.stringify({ id: "prize", isVisible: false }),
+  }));
+  expect(response.status).toBe(200);
+  expect(setRewardVisibility).toHaveBeenCalledWith({
+    where: { id: "prize", isGroup: false },
+    data: { isVisible: false },
   });
 });

@@ -62,6 +62,7 @@ export default function ParentDashboard() {
   const [shopCost, setShopCost] = useState(5);
   const [shopStock, setShopStock] = useState(2);
   const rewardSaveInFlight = useRef(false);
+  const [inventoryLoadFailed, setInventoryLoadFailed] = useState(false);
   const [rewardSaving, setRewardSaving] = useState(false);
   const [rewardSaveMessage, setRewardSaveMessage] = useState<string | null>(null);
 
@@ -80,7 +81,7 @@ export default function ParentDashboard() {
   const [confirmPin, setConfirmPin] = useState("");
 
   const loadPortalData = useCallback(async () => {
-    const data = await fetchParentPortalData(selectedMonth);
+    const data = await fetchParentPortalData();
     if (data.children) {
       setChildren(data.children);
       if (data.children.length > 0) {
@@ -90,13 +91,14 @@ export default function ParentDashboard() {
     }
     if (data.tasks) setTasks(data.tasks);
     if (data.rewards) setRewards(data.rewards);
+    setInventoryLoadFailed(!data.rewards);
     if (data.assignments) setAssignments(data.assignments);
     if (data.pendingTasks) setPendingTasks(data.pendingTasks);
     if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
     if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
     if (data.auditLogs) setAuditLogs(data.auditLogs);
     if (data.kioskConfig) setKioskConfig(data.kioskConfig);
-  }, [selectedMonth]);
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -314,7 +316,7 @@ export default function ParentDashboard() {
         <main className="flex-1 overflow-y-auto p-8 space-y-6">
           <ApprovalSections activeMenu={activeMenu} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />
           <TaskManagementSections activeMenu={activeMenu} tasks={tasks} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} schedTaskId={schedTaskId} setSchedTaskId={setSchedTaskId} schedDay={schedDay} setSchedDay={setSchedDay} schedInterval={schedInterval} setSchedInterval={setSchedInterval} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
-          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} assignments={assignments} redemptionsHistory={redemptionsHistory} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} toggleRewardVisibility={toggleRewardVisibility} handleRefund={handleRefund} />
+          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} inventoryLoadFailed={inventoryLoadFailed} assignments={assignments} redemptionsHistory={redemptionsHistory} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} toggleRewardVisibility={toggleRewardVisibility} handleRefund={handleRefund} />
           <ChildManagementSections activeMenu={activeMenu} householdChildren={children} childName={childName} setChildName={setChildName} childAvatar={childAvatar} setChildAvatar={setChildAvatar} childDob={childDob} setChildDob={setChildDob} adjustChildId={adjustChildId} setAdjustChildId={setAdjustChildId} adjustAmount={adjustAmount} setAdjustAmount={setAdjustAmount} adjustReason={adjustReason} setAdjustReason={setAdjustReason} handleCreateChild={handleCreateChild} handleAdjustStars={handleAdjustStars} />
           <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />
           <AdminInfoSections activeMenu={activeMenu} householdChildren={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} />

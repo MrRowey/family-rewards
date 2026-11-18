@@ -33,3 +33,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unable to save prize" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  const input: unknown = await req.json().catch(() => null);
+  if (!input || typeof input !== "object" || !("id" in input) ||
+      typeof input.id !== "string" || !input.id || !("isVisible" in input) ||
+      typeof input.isVisible !== "boolean") {
+    return NextResponse.json({ error: "A prize ID and visibility are required." }, { status: 400 });
+  }
+
+  try {
+    const result = await prisma.reward.updateMany({
+      where: { id: input.id, isGroup: false },
+      data: { isVisible: input.isVisible },
+    });
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Prize not found." }, { status: 404 });
+    }
+    return NextResponse.json({ isVisible: input.isVisible });
+  } catch {
+    return NextResponse.json({ error: "Unable to update prize visibility." }, { status: 500 });
+  }
+}
