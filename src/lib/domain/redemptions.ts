@@ -190,7 +190,7 @@ export async function declineReward(redemptionId: string) {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
-export async function refundReward(redemptionId: string) {
+export async function refundReward(redemptionId: string, decision?: "APPROVE" | "DECLINE") {
   return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
@@ -205,14 +205,30 @@ export async function refundReward(redemptionId: string) {
       throw new Error("INVALID_STATE: Only APPROVED redemptions can be refunded");
     }
 
-    // Atomically transition APPROVED -> REFUNDED
+    if (decision && redemption.refundState !== "PENDING") {
+      throw new Error("INVALID_STATE: No pending refund request");
+    }
+
+    // Update the request and redemption together before touching balances.
     const updatedRedemption = await tx.rewardRedemption.updateMany({
-      where: { id: redemptionId, status: "APPROVED" },
-      data: { status: "REFUNDED" },
+      where: { id: redemptionId, status: "APPROVED", ...(decision && { refundState: "PENDING" }) },
+      data: decision === "DECLINE"
+        ? { refundState: "DECLINED" }
+        : { status: "REFUNDED", ...(decision && { refundState: "APPROVED" }) },
     });
 
     if (updatedRedemption.count === 0) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
+    }
+
+    if (decision === "DECLINE") {
+      await tx.auditLog.create({
+        data: {
+          actor: "Parent", actorType: "PARENT", action: "DECLINED_REFUND",
+          details: `Declined the refund for "${redemption.reward.title}" for ${redemption.child.name}.`,
+        },
+      });
+      return { success: true };
     }
 
     // Refund stars & increment stock

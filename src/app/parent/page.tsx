@@ -216,16 +216,15 @@ export default function ParentDashboard() {
     }
   };
 
-  const handleRefund = async (redemptionId: string) => {
-    if (!confirm("Refund stars back to child?")) return;
-    await fetch("/api/redemptions/refund", {
+  const handleRefund = async (redemptionId: string, decision: "APPROVE" | "DECLINE") => {
+    const response = await fetch("/api/redemptions/refund", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ redemptionId }),
+      body: JSON.stringify({ redemptionId, decision }),
     });
-    loadPortalData();
+    if (!response.ok) throw new Error("Could not update the refund request.");
+    await loadPortalData();
   };
-
   const handleCreateChild = async (e: React.FormEvent) => {
     e.preventDefault();
     await fetch("/api/children", {

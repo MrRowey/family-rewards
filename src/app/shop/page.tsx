@@ -1,5 +1,6 @@
 "use client";
 
+import { ChildRefundRequests } from "@/features/rewards/ChildRefundRequests";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -324,6 +325,8 @@ export default function RewardShop() {
                 </div>
               )}
             </div>
+
+            <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />
 
             {/* Shelf 2: Goal Vault (Locked / Need More Stars) */}
             {lockedRewards.length > 0 && (

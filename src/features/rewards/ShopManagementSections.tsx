@@ -6,7 +6,6 @@ import { ShopMonthPlanner } from "./ShopMonthPlanner";
 import Image from "next/image";
 import { useState } from "react";
 import type React from "react";
-import { RotateCcw } from "lucide-react";
 import type { NavigationMenu, ChildProfile, RewardItem, TaskAssignmentItem, RewardRedemptionRecord } from "@/features/admin/types";
 
 interface ShopManagementSectionsProps {
@@ -29,10 +28,28 @@ interface ShopManagementSectionsProps {
   handleCreateReward: (event: React.FormEvent, isGroup: boolean) => Promise<void>;
   rewardSaving: boolean;
   rewardSaveMessage: string | null;
-  handleRefund: (id: string) => Promise<void>;
+  handleRefund: (id: string, decision: "APPROVE" | "DECLINE") => Promise<void>;
 }
 
 export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, redemptionsHistory, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, handleRefund }: ShopManagementSectionsProps) {
+  const [refundPending, setRefundPending] = useState(false);
+  const [refundMessage, setRefundMessage] = useState("");
+  const refundRequests = redemptionsHistory.filter((item) => item.refundState === "PENDING").toReversed();
+
+  async function reviewRefund(id: string, decision: "APPROVE" | "DECLINE") {
+    if (refundPending) return;
+    setRefundPending(true);
+    setRefundMessage("");
+    try {
+      await handleRefund(id, decision);
+      setRefundMessage(decision === "APPROVE" ? "Refund approved." : "Refund declined.");
+    } catch {
+      setRefundMessage("Could not update the refund request. Try again.");
+    } finally {
+      setRefundPending(false);
+    }
+  }
+
   const [costDescending, setCostDescending] = useState(false);
   const orderedRewards = rewards.toSorted((a, b) => costDescending ? b.starCost - a.starCost : a.starCost - b.starCost);
   const shopPrizes = orderedRewards.filter((reward) => !reward.isGroup);
@@ -307,35 +324,27 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
           )}
 
           {activeMenu === "shop_refunds" && (
-            <div className="space-y-4">
-              <h3 className="font-black text-lg text-white">Redemption Ledger & Refunds</h3>
-              <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-xl">
-                {redemptionsHistory.length === 0 ? (
-                  <p className="text-slate-500 text-center py-8 text-xs font-semibold">No redemption transactions recorded.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {redemptionsHistory.map((red) => (
-                      <div key={red.id} className="bg-slate-950/80 border border-white/5 p-4 rounded-2xl flex justify-between items-center text-xs">
-                        <div>
-                          <h4 className="font-black text-sm text-white">{red.reward?.title}</h4>
-                          <p className="text-slate-400 mt-0.5">
-                            Child: <strong className="text-slate-200">{red.child?.name}</strong> • Cost: {red.reward?.starCost} Stars
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRefund(red.id)}
-                          className="bg-rose-500/10 border border-rose-500/20 text-rose-300 font-black px-4 py-2 rounded-xl hover:bg-rose-500/20 transition flex items-center gap-1.5"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" /> Refund Stars
-                        </button>
-                      </div>
-                    ))}
+            <section className="space-y-4">
+              <h3 className="text-lg font-semibold">Pending refund requests</h3>
+              <output className="block text-sm text-slate-300">{refundMessage}</output>
+              {refundRequests.length === 0 && (
+                <p className="rounded-xl border border-slate-800 p-5 text-slate-300">No refund requests to review.</p>
+              )}
+              {refundRequests.map((request) => (
+                <article key={request.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                  <div>
+                    <h4 className="font-semibold">{request.reward?.title}</h4>
+                    <p className="text-sm text-slate-300">{request.child?.name} · {request.starCostAtClaim ?? request.reward?.starCost} stars</p>
                   </div>
-                )}
-              </div>
-            </div>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={refundPending} onClick={() => reviewRefund(request.id, "APPROVE")}
+                      className="min-h-11 rounded-lg bg-emerald-100 px-4 font-semibold text-emerald-950 disabled:opacity-50">Approve</button>
+                    <button type="button" disabled={refundPending} onClick={() => reviewRefund(request.id, "DECLINE")}
+                      className="min-h-11 rounded-lg border border-slate-700 px-4 font-semibold disabled:opacity-50">Decline</button>
+                  </div>
+                </article>
+              ))}
+            </section>
           )}
-
-          
   </>;
 }

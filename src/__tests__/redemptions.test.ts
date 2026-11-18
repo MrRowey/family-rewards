@@ -52,6 +52,26 @@ describe("Redemption Domain Service", () => {
     expect(prismaMock.child.updateMany).not.toHaveBeenCalled();
   });
 
+  it("declines a pending refund without changing balance or stock", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({
+      status: "APPROVED", refundState: "PENDING", reward: { title: "Toy" }, child: { name: "Alex" },
+    });
+    prismaMock.rewardRedemption.updateMany.mockResolvedValue({ count: 1 });
+    await expect(refundReward("red1", "DECLINE")).resolves.toEqual({ success: true });
+    expect(prismaMock.rewardRedemption.updateMany).toHaveBeenCalledWith({
+      where: { id: "red1", status: "APPROVED", refundState: "PENDING" },
+      data: { refundState: "DECLINED" },
+    });
+    expect(prismaMock.child.update).not.toHaveBeenCalled();
+    expect(prismaMock.reward.update).not.toHaveBeenCalled();
+  });
+
+  it("does not approve a refund twice", async () => {
+    prismaMock.rewardRedemption.findUnique.mockResolvedValue({ status: "REFUNDED", refundState: "APPROVED" });
+    await expect(refundReward("red1", "APPROVE")).rejects.toThrow("INVALID_STATE");
+    expect(prismaMock.child.update).not.toHaveBeenCalled();
+  });
+
   it("should deduct stars when claiming a reward", async () => {
     prismaMock.child.findUnique.mockResolvedValue({ id: "c1", name: "Alex", stars: 10, dob: new Date("2016-01-01") });
     prismaMock.reward.findUnique.mockResolvedValue({ id: "r1", title: "Toy", starCost: 5, currentStock: 2, isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null });

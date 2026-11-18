@@ -7,6 +7,7 @@ const PUBLIC_API_MUTATIONS = new Set([
   "/api/completions",
   "/api/task-completions",
   "/api/rewards/claim",
+  "/api/kiosk/refund-requests",
   "/api/redemptions",
   "/api/setup",
 ]);

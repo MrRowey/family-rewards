@@ -76,6 +76,8 @@ export interface TaskCompletionRecord {
 }
 
 export interface RewardRedemptionRecord {
+  refundState: string | null;
+  starCostAtClaim: number | null;
   id: string;
   reward?: RewardItem;
   child?: ChildProfile;
