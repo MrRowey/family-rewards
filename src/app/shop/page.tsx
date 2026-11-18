@@ -86,7 +86,7 @@ export default function RewardShop() {
     setSubmittingId(rewardId);
 
     try {
-      const res = await fetch("/api/rewards/claim", {
+      const res = await fetch("/api/redemptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ childId: selectedChildId, rewardId }),

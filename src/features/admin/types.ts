@@ -1,0 +1,89 @@
+export type NavigationMenu =
+  | "task_approvals"
+  | "shop_approvals"
+  | "task_vault"
+  | "task_scheduler"
+  | "shop_items"
+  | "shop_group"
+  | "shop_visibility"
+  | "shop_refunds"
+  | "user_children"
+  | "user_adjust"
+  | "user_pin"
+  | "admin_display"
+  | "admin_analytics"
+  | "admin_backup"
+  | "admin_audit";
+
+export type SidebarCategory = "approvals" | "vault" | "shop" | "users" | "admin";
+
+export interface ChildProfile {
+  id: string;
+  name: string;
+  avatar: string;
+  stars: number;
+  dob: string;
+}
+
+export interface SubStepItem {
+  id: string;
+  title: string;
+}
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  icon: string;
+  starValue: number;
+  subSteps?: SubStepItem[];
+}
+
+export interface TaskAssignmentItem {
+  id: string;
+  childId: string;
+  taskId: string;
+  dayOfWeek: number;
+  repeatInterval: number;
+  startDate: string;
+  endDate?: string | null;
+  task: TaskItem;
+  child: ChildProfile;
+}
+
+export interface RewardItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  icon: string;
+  starCost: number;
+  monthlyStock: number;
+  currentStock: number;
+  isGroup: boolean;
+  assignments?: { childId: string }[];
+}
+
+export interface TaskCompletionRecord {
+  id: string;
+  task?: TaskItem;
+  child?: ChildProfile;
+}
+
+export interface RewardRedemptionRecord {
+  id: string;
+  reward?: RewardItem;
+  child?: ChildProfile;
+}
+
+export interface AuditLogRecord {
+  id: string;
+  actor: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface KioskConfig {
+  idleTimeoutSec: number;
+  soundEffects: boolean;
+  maxDailyTasks: number;
+}
+
