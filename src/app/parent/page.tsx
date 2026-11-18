@@ -114,7 +114,7 @@ export default function ParentDashboard() {
 
   const handleTaskApproval = async (completionId: string, action: "APPROVE" | "DECLINE") => {
     setPendingTasks((prev) => prev.filter((t) => t.id !== completionId));
-    await fetch("/api/completions", {
+    await fetch("/api/task-completions", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completionId, action }),
@@ -135,7 +135,7 @@ export default function ParentDashboard() {
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanSteps = taskSubSteps.filter((s) => s.trim() !== "");
-    await fetch("/api/parent/tasks", {
+    await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: taskTitle, icon: taskIcon, starValue: taskStarValue, subSteps: cleanSteps }),
@@ -148,7 +148,7 @@ export default function ParentDashboard() {
   const handleScheduleTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!schedChildId || !schedTaskId) return;
-    await fetch("/api/assignments", {
+    await fetch("/api/task-assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -162,7 +162,7 @@ export default function ParentDashboard() {
   };
 
   const handleDeleteAssignment = async (id: string) => {
-    await fetch(`/api/assignments?id=${id}`, { method: "DELETE" });
+    await fetch(`/api/task-assignments?id=${id}`, { method: "DELETE" });
     loadPortalData();
   };
 
@@ -186,7 +186,7 @@ export default function ParentDashboard() {
   };
 
   const toggleRewardVisibility = async (rewardId: string, childId: string, currentlyAssigned: boolean) => {
-    await fetch("/api/rewards/assignment", {
+    await fetch("/api/reward-assignments", {
       method: currentlyAssigned ? "DELETE" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ rewardId, childId }),
@@ -224,7 +224,7 @@ export default function ParentDashboard() {
     }
 
     try {
-      const res = await fetch("/api/children/adjust-stars", {
+      const res = await fetch(`/api/children/${childId}/stars`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -254,7 +254,7 @@ export default function ParentDashboard() {
       alert("PINs do not match!");
       return;
     }
-    const res = await fetch("/api/parent/pin-reset", {
+    const res = await fetch("/api/parent/pin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newPin }),
@@ -271,7 +271,7 @@ export default function ParentDashboard() {
 
   const handleSaveKioskConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/config/kiosk", {
+    await fetch("/api/kiosk/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(kioskConfig),

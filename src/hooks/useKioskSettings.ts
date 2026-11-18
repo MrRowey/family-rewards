@@ -26,7 +26,7 @@ export function useKioskSettings(enableIdleReset: boolean = true) {
 
     async function fetchConfig() {
       try {
-        const res = await fetch("/api/config/kiosk");
+        const res = await fetch("/api/kiosk/settings");
         if (res.ok) {
           const data = await res.json();
           if (!isCancelled && data && typeof data === "object") {

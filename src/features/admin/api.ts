@@ -42,14 +42,14 @@ export async function fetchParentPortalData(month: number): Promise<ParentPortal
   const [children, tasks, rewards, assignments, pendingTasks, pendingRedemptions,
     redemptionsHistory, auditLogs, kioskConfig] = await Promise.all([
     fetchJson("/api/children"),
-    fetchJson("/api/parent/tasks"),
+    fetchJson("/api/tasks"),
     fetchJson(`/api/rewards?month=${month}`),
-    fetchJson("/api/assignments"),
-    fetchJson("/api/completions?status=PENDING"),
+    fetchJson("/api/task-assignments"),
+    fetchJson("/api/task-completions?status=PENDING"),
     fetchJson("/api/redemptions?status=PENDING"),
     fetchJson("/api/redemptions"),
     fetchJson("/api/audit-logs"),
-    fetchJson("/api/config/kiosk"),
+    fetchJson("/api/kiosk/settings"),
   ]);
 
   return {
