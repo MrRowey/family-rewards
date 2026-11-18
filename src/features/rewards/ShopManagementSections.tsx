@@ -32,6 +32,7 @@ interface ShopManagementSectionsProps {
 }
 
 export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+  const shopPrizes = rewards.filter((reward) => !reward.isGroup);
   const [visibilityUpdates, setVisibilityUpdates] = useState<Record<string, boolean>>({});
   const [visibilityPending, setVisibilityPending] = useState<string | null>(null);
   const [visibilityError, setVisibilityError] = useState<string | null>(null);
@@ -128,30 +129,40 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
               </form>
 
               <div className="lg:col-span-2 space-y-4">
-                <h3 className="font-black text-lg text-white">Shop Inventory ({rewards.filter((r) => !r.isGroup).length})</h3>
+                <h3 className="font-black text-lg text-white">Shop Inventory ({shopPrizes.length})</h3>
                 {inventoryLoadFailed && <p role="alert">Could not load prizes. Select Refresh Data to retry.</p>}
                 <output className="block text-sm text-amber-200">{visibilityError}</output>
+                {!inventoryLoadFailed && shopPrizes.length === 0 && (
+                  <p className="rounded-2xl border border-dashed border-white/15 p-6 text-sm text-slate-300">Save your first prize to start stocking the shop.</p>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {rewards.filter((r) => !r.isGroup).map((rw) => (
-                    <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
-                      <div className="flex justify-between items-start">
-                        <span className="text-4xl">{rw.icon}</span>
-                        <span className="text-xs font-black bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
-                          ⭐ {rw.starCost}
-                        </span>
+                  {shopPrizes.map((rw) => {
+                    const visible = visibilityUpdates[rw.id] ?? rw.isVisible;
+                    return (
+                      <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
+                        <div className="flex justify-between items-start">
+                          <span className="text-4xl">{rw.icon}</span>
+                          <span className="text-xs font-black bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
+                            ⭐ {rw.starCost}
+                          </span>
+                        </div>
+                        <h4 className="wrap-break-word font-black text-base text-white">{rw.title}</h4>
+                        {rw.description && <p className="wrap-break-word text-sm text-slate-300">{rw.description}</p>}
+                        <p className={visible ? "text-sm text-emerald-300" : "text-sm text-slate-300"}>
+                          {visible ? "Shown in shop" : "Hidden from shop"}
+                        </p>
+                        <p className="text-xs text-slate-400">{rw.currentStock === 0 ? "Out of stock" : `${rw.currentStock} in stock`} · Monthly stock: {rw.monthlyStock}</p>
+                        <button
+                          type="button"
+                          disabled={visibilityPending !== null}
+                          onClick={() => updateVisibility(rw.id, !visible)}
+                          className="min-h-11 rounded-xl border border-white/15 px-3 text-sm text-slate-200"
+                        >
+                          {visibilityPending === rw.id ? "Saving…" : visible ? "Hide from shop" : "Show in shop"}
+                        </button>
                       </div>
-                      <h4 className="font-black text-base text-white">{rw.title}</h4>
-                      <p className="text-xs text-slate-400">Stock: {rw.currentStock} / {rw.monthlyStock} monthly</p>
-                      <button
-                        type="button"
-                        disabled={visibilityPending !== null}
-                        onClick={() => updateVisibility(rw.id, !(visibilityUpdates[rw.id] ?? rw.isVisible))}
-                        className="min-h-11 rounded-xl border border-white/15 px-3 text-sm text-slate-200"
-                      >
-                        {(visibilityUpdates[rw.id] ?? rw.isVisible) ? "Hide from shop" : "Show in shop"}
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
