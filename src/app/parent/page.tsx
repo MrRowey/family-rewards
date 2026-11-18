@@ -44,6 +44,7 @@ export default function ParentDashboard() {
   const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
 
   // Forms: Task Creation
+  const [taskSaveError, setTaskSaveError] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
   const [taskIcon, setTaskIcon] = useState("⭐");
   const [taskStarValue, setTaskStarValue] = useState(1);
@@ -138,12 +139,20 @@ export default function ParentDashboard() {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const category = String(new FormData(form).get("category") ?? "");
     const cleanSteps = taskSubSteps.filter((s) => s.trim() !== "");
-    await fetch("/api/tasks", {
+    const response = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: taskTitle, icon: taskIcon, starValue: taskStarValue, subSteps: cleanSteps }),
+      body: JSON.stringify({ title: taskTitle, category, icon: taskIcon, starValue: taskStarValue, subSteps: cleanSteps }),
     });
+    if (!response.ok) {
+      setTaskSaveError("Could not save the chore.");
+      return;
+    }
+    setTaskSaveError("");
+    form.reset();
     setTaskTitle("");
     setTaskSubSteps([""]);
     loadPortalData();
@@ -168,7 +177,9 @@ export default function ParentDashboard() {
   const handleCreateReward = async (e: React.FormEvent, isGroup: boolean) => {
     e.preventDefault();
     const form = e.currentTarget as HTMLFormElement;
-    const photo = new FormData(form).get("photo");
+    const fields = new FormData(form);
+    const photo = fields.get("photo");
+    const category = String(fields.get("category") ?? "");
     if (rewardSaveInFlight.current) return;
     rewardSaveInFlight.current = true;
     setRewardSaveMessage(null);
@@ -187,7 +198,7 @@ export default function ParentDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: shopTitle, description: shopDesc, icon: shopIcon,
-          starCost: shopCost, monthlyStock: shopStock, isGroup, imageURL }),
+          starCost: shopCost, monthlyStock: shopStock, isGroup, imageURL, category }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -318,7 +329,7 @@ export default function ParentDashboard() {
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
           {activeMenu === "task_approvals" && <ApprovalSections activeMenu={activeMenu} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />}
-          <TaskManagementSections activeMenu={activeMenu} tasks={tasks} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} schedTaskId={schedTaskId} setSchedTaskId={setSchedTaskId} schedDay={schedDay} setSchedDay={setSchedDay} schedInterval={schedInterval} setSchedInterval={setSchedInterval} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
+          <TaskManagementSections activeMenu={activeMenu} tasks={tasks} taskSaveError={taskSaveError} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} schedTaskId={schedTaskId} setSchedTaskId={setSchedTaskId} schedDay={schedDay} setSchedDay={setSchedDay} schedInterval={schedInterval} setSchedInterval={setSchedInterval} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
           <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} inventoryLoadFailed={inventoryLoadFailed} assignments={assignments} redemptionsHistory={redemptionsHistory} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} toggleRewardVisibility={toggleRewardVisibility} handleRefund={handleRefund} />
           <ChildManagementSections activeMenu={activeMenu} householdChildren={children} childName={childName} setChildName={setChildName} childAvatar={childAvatar} setChildAvatar={setChildAvatar} childDob={childDob} setChildDob={setChildDob} adjustChildId={adjustChildId} setAdjustChildId={setAdjustChildId} adjustAmount={adjustAmount} setAdjustAmount={setAdjustAmount} adjustReason={adjustReason} setAdjustReason={setAdjustReason} handleCreateChild={handleCreateChild} handleAdjustStars={handleAdjustStars} />
           <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />

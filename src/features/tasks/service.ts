@@ -14,6 +14,7 @@ export async function createTask(input: z.infer<typeof CreateTaskSchema>) {
     const task = await tx.task.create({
       data: {
         title: input.title,
+        category: input.category || null,
         icon: input.icon,
         imageURL: input.imageUrl || null,
         starValue: input.starValue,

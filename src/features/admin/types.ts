@@ -33,6 +33,7 @@ export interface SubStepItem {
 }
 
 export interface TaskItem {
+  category?: string | null;
   id: string;
   title: string;
   icon: string;
@@ -53,6 +54,7 @@ export interface TaskAssignmentItem {
 }
 
 export interface RewardItem {
+  category?: string | null;
   imageURL?: string | null;
   id: string;
   title: string;

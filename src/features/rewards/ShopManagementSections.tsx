@@ -1,6 +1,7 @@
 "use client";
 
 import { CreateDialog } from "@/features/admin/CreateDialog";
+import { groupByCategory } from "@/features/admin/groupByCategory";
 import Image from "next/image";
 import { useState } from "react";
 import type React from "react";
@@ -121,6 +122,10 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                 </div>
 
                 <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Category (optional)</span>
+                  <input name="category" maxLength={60} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2" />
+                </label>
+                <label className="block space-y-1 text-sm text-slate-300">
                   <span>Photo (optional)</span>
                   <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
                     className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
@@ -150,7 +155,10 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   <p className="rounded-2xl border border-dashed border-white/15 p-6 text-sm text-slate-300">Save your first prize to start stocking the shop.</p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {shopPrizes.map((rw) => {
+                  {groupByCategory(shopPrizes).map(([category, entries]) => (
+                <div className="contents" key={category}>
+                  <h4 className="col-span-full text-sm font-semibold text-slate-300">{category}</h4>
+                  {entries.map((rw) => {
                     const visible = visibilityUpdates[rw.id] ?? rw.isVisible;
                     return (
                       <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
@@ -172,6 +180,8 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                       </div>
                     );
                   })}
+                </div>
+                ))}
                 </div>
               </div>
             </div>
@@ -220,6 +230,10 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                 </div>
 
                 <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Category (optional)</span>
+                  <input name="category" maxLength={60} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2" />
+                </label>
+                <label className="block space-y-1 text-sm text-slate-300">
                   <span>Photo (optional)</span>
                   <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
                     className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
@@ -246,7 +260,10 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Family Group Goals ({rewards.filter((r) => r.isGroup).length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {orderedRewards.filter((r) => r.isGroup).map((rw) => (
+                  {groupByCategory(orderedRewards.filter((reward) => reward.isGroup)).map(([category, entries]) => (
+                <div className="contents" key={category}>
+                  <h4 className="col-span-full text-sm font-semibold text-slate-300">{category}</h4>
+                  {entries.map((rw) => (
                     <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-indigo-500/30 p-5 rounded-3xl space-y-2 shadow-lg">
                       <div className="flex justify-between items-start">
                         {rw.imageURL ? (
@@ -260,6 +277,8 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                       <p className="text-xs text-slate-400">Cooperative sibling target</p>
                     </div>
                   ))}
+                </div>
+                ))}
                 </div>
               </div>
             </div>

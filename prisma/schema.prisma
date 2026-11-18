@@ -57,6 +57,7 @@ model ChildBadge {
 }
 
 model Task {
+  category     String?
   id          String           @id @default(uuid())
   title       String
   icon        String           @default("⭐")
@@ -104,6 +105,7 @@ model Completion {
 }
 
 model Reward {
+  category     String?
   id           String             @id @default(uuid())
   title        String
   description  String?

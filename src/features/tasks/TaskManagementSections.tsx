@@ -1,5 +1,6 @@
 "use client";
 
+import { groupByCategory } from "@/features/admin/groupByCategory";
 import { CreateDialog } from "@/features/admin/CreateDialog";
 import { useState } from "react";
 import type React from "react";
@@ -9,6 +10,7 @@ import type { NavigationMenu, ChildProfile, TaskItem, TaskAssignmentItem } from 
 interface TaskManagementSectionsProps {
   activeMenu: NavigationMenu;
   tasks: TaskItem[];
+  taskSaveError: string;
   householdChildren: ChildProfile[];
   assignments: TaskAssignmentItem[];
   taskTitle: string;
@@ -32,7 +34,7 @@ interface TaskManagementSectionsProps {
   handleDeleteAssignment: (id: string) => Promise<void>;
 }
 
-export function TaskManagementSections({ activeMenu, tasks, householdChildren, assignments, taskTitle, setTaskTitle, taskIcon, setTaskIcon, taskStarValue, setTaskStarValue, taskSubSteps, setTaskSubSteps, schedChildId, setSchedChildId, schedTaskId, setSchedTaskId, schedDay, setSchedDay, schedInterval, setSchedInterval, handleCreateTask, handleScheduleTask, handleDeleteAssignment }: TaskManagementSectionsProps) {
+export function TaskManagementSections({ activeMenu, tasks, taskSaveError, householdChildren, assignments, taskTitle, setTaskTitle, taskIcon, setTaskIcon, taskStarValue, setTaskStarValue, taskSubSteps, setTaskSubSteps, schedChildId, setSchedChildId, schedTaskId, setSchedTaskId, schedDay, setSchedDay, schedInterval, setSchedInterval, handleCreateTask, handleScheduleTask, handleDeleteAssignment }: TaskManagementSectionsProps) {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
   const childAssignments = assignments.filter((assignment) => assignment.childId === schedChildId);
@@ -138,13 +140,21 @@ export function TaskManagementSections({ activeMenu, tasks, householdChildren, a
                 >
                   Save to Master Vault
                 </button>
+                <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Category (optional)</span>
+                  <input name="category" maxLength={60} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2" />
+                </label>
+                <output className="block text-sm text-amber-200">{taskSaveError}</output>
               </form>
               </CreateDialog>
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Master Chores ({tasks.length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {tasks.map((task) => (
+                  {groupByCategory(tasks).map(([category, entries]) => (
+                <div className="contents" key={category}>
+                  <h4 className="col-span-full text-sm font-semibold text-slate-300">{category}</h4>
+                  {entries.map((task) => (
                     <div key={task.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
                       <div className="flex justify-between items-start">
                         <span className="text-4xl">{task.icon}</span>
@@ -162,6 +172,8 @@ export function TaskManagementSections({ activeMenu, tasks, householdChildren, a
                       )}
                     </div>
                   ))}
+                </div>
+                ))}
                 </div>
               </div>
             </div>
