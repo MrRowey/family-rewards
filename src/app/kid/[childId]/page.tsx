@@ -1,7 +1,7 @@
 "use client";
 
 import { useKioskSettings } from "@/hooks/useKioskSettings";
-import { useState, useEffect, use, useCallback } from "react";
+import { useState, useEffect, use } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
@@ -40,32 +40,19 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   const [checkedSubsteps, setCheckedSubsteps] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
-  const resetTimer = useCallback(() => {
-    return setTimeout(() => router.push("/"), 45000);
-  }, [router]);
-
   useEffect(() => {
-    let timer = resetTimer();
-    const handleActivity = () => {
-      clearTimeout(timer);
-      timer = resetTimer();
-    };
-    window.addEventListener("pointerdown", handleActivity);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("pointerdown", handleActivity);
-    };
-  }, [resetTimer]);
-
-  useEffect(() => {
+    let version = 0;
     async function loadData() {
+      if (document.hidden) return;
+      const latestRequest = ++version;
       try {
         const [childRes, taskRes, compRes] = await Promise.all([
           fetch("/api/children"),
-          fetch(`/api/task-assignments?childId=${childId}&day=today`),
-          fetch(`/api/task-completions?childId=${childId}&date=today`),
+          fetch(`/api/task-assignments?childId=${childId}&day=today`, { cache: "no-store" }),
+          fetch(`/api/task-completions?childId=${childId}&date=today`, { cache: "no-store" }),
         ]);
 
+        if (latestRequest !== version) return;
         let completedOrPendingTaskIds: string[] = [];
         if (compRes.ok) {
           const completions = await compRes.json();
@@ -77,25 +64,34 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         if (childRes.ok) {
           const children: Child[] = await childRes.json();
           const current = children.find((c) => c.id === childId);
-          if (current) setChild(current);
+          if (current && version === latestRequest) setChild(current);
         }
 
         if (taskRes.ok) {
-          const assignments = await taskRes.json();
+          const assignments: { task: Task }[] = await taskRes.json();
           const availableTasks = assignments
             .map((a: { task: Task }) => a.task)
             .filter((t: Task) => t && !completedOrPendingTaskIds.includes(t.id));
 
-          setTasks(availableTasks);
+          if (latestRequest === version) setTasks([...new Map(availableTasks.map((task: Task) => [task.id, task] as const)).values()]);
         }
       } catch (err) {
         console.error("Failed to load kiosk data", err);
       } finally {
-        setLoading(false);
+        if (latestRequest === version) setLoading(false);
       }
     }
 
-    loadData();
+    void loadData();
+    const timer = window.setInterval(loadData, 10000);
+    window.addEventListener("focus", loadData);
+    document.addEventListener("visibilitychange", loadData);
+    return () => {
+      version++;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", loadData);
+      document.removeEventListener("visibilitychange", loadData);
+    };
   }, [childId]);
 
   const toggleSubstep = (substepId: string) => {
@@ -174,7 +170,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             <span className="text-3xl font-black text-amber-400">{child.stars}</span>
           </div>
           <button
-            onClick={() => router.push("/shop")}
+            onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
             className="min-h-24 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
           >
             <ShoppingBag className="w-6 h-6" /> Reward Shop

@@ -2,7 +2,7 @@
 
 import { ChildRefundRequests } from "@/features/rewards/ChildRefundRequests";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Lock, ShoppingBag, Sparkles, Clock, Star, Package } from "lucide-react";
@@ -28,24 +28,35 @@ export default function RewardShop() {
   const [pendingRedemptions, setPendingRedemptions] = useState<PendingApproval[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
+  const requestVersion = useRef(0);
+  const [rewardChildId, setRewardChildId] = useState<string | null>(null);
+
   const loadShopData = useCallback(async () => {
+    const version = ++requestVersion.current;
     try {
       const [rwRes, chRes, appRes] = await Promise.all([
-        fetch(selectedChildId ? `/api/rewards?childId=${encodeURIComponent(selectedChildId)}` : "/api/rewards"),
+        fetch(selectedChildId ? `/api/rewards?childId=${encodeURIComponent(selectedChildId)}` : "/api/rewards", { cache: "no-store" }),
         fetch("/api/children"),
         fetch("/api/kiosk/pending-rewards"),
       ]);
 
-      if (rwRes.ok) setRewards(await rwRes.json());
-
-      if (chRes.ok) {
-        const chData: Child[] = await chRes.json();
-        setChildren(chData);
-        setSelectedChildId((prev) => (prev ? prev : chData[0]?.id || ""));
+      const [nextRewards, chData, appData] = await Promise.all([
+        rwRes.ok ? rwRes.json() : null, chRes.ok ? chRes.json() as Promise<Child[]> : null, appRes.ok ? appRes.json() : null,
+      ]);
+      if (version !== requestVersion.current) return;
+      if (nextRewards) {
+        setRewards(nextRewards);
+        setRewardChildId(selectedChildId);
       }
 
-      if (appRes.ok) {
-        const appData = await appRes.json();
+      if (chData) {
+        setChildren(chData);
+        const requestedChild = new URLSearchParams(window.location.search).get("childId");
+        setSelectedChildId((prev) => chData.some((child) => child.id === prev) ? prev
+          : chData.find((child) => child.id === requestedChild)?.id ?? chData[0]?.id ?? "");
+      }
+
+      if (appData) {
         setPendingRedemptions(appData || []);
       }
     } catch (err) {
@@ -54,20 +65,22 @@ export default function RewardShop() {
   }, [selectedChildId]);
 
   useEffect(() => {
-    let isSubscribed = true;
-    async function fetchData() {
-      if (isSubscribed) await loadShopData();
-    }
-    fetchData();
+    const refresh = () => { if (!document.hidden) void loadShopData(); };
+    refresh();
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
-      isSubscribed = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, [loadShopData]);
 
   const activeChild = children.find((c) => c.id === selectedChildId);
   const activeChildAge = activeChild?.ageYears ?? 0;
 
-  const visibleRewards = rewards.filter((reward) => {
+  const visibleRewards = (rewardChildId === selectedChildId && activeChild ? rewards : []).filter((reward) => {
     if (reward.isGroup || reward.currentStock <= 0) return false;
     if (reward.targetMonth != null && reward.targetMonth !== new Date().getMonth() + 1) return false;
     if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
