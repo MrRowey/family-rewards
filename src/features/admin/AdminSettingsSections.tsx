@@ -10,12 +10,13 @@ interface AdminSettingsSectionsProps {
   confirmPin: string;
   setConfirmPin: (value: string) => void;
   kioskConfig: KioskConfig;
+  kioskSaveMessage: string;
   setKioskConfig: (value: KioskConfig) => void;
   handleResetPin: (event: React.FormEvent) => Promise<void>;
   handleSaveKioskConfig: (event: React.FormEvent) => Promise<void>;
 }
 
-export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPin, setConfirmPin, kioskConfig, setKioskConfig, handleResetPin, handleSaveKioskConfig }: AdminSettingsSectionsProps) {
+export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPin, setConfirmPin, kioskConfig, kioskSaveMessage, setKioskConfig, handleResetPin, handleSaveKioskConfig }: AdminSettingsSectionsProps) {
   return <>
 {/* 11. PIN RESET */}
           {activeMenu === "user_pin" && (
@@ -89,16 +90,25 @@ export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPi
                   </div>
                   <input
                     type="checkbox"
+                    aria-label="Audio sound effects"
                     checked={kioskConfig.soundEffects}
                     onChange={(e) => setKioskConfig({ ...kioskConfig, soundEffects: e.target.checked })}
                     className="w-5 h-5 accent-indigo-600 rounded"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-4 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 font-black rounded-2xl text-white shadow-lg shadow-indigo-600/30 transition min-h-[48px]"
-                >
+                <label className="flex min-h-11 items-center justify-between gap-4 text-sm">
+                  Reduce animation and celebrations
+                  <input type="checkbox" checked={kioskConfig.reducedMotion}
+                    onChange={(event) => setKioskConfig({ ...kioskConfig, reducedMotion: event.target.checked })} />
+                </label>
+                <label className="flex min-h-11 items-center justify-between gap-4 text-sm">
+                  Show star balances on the profile picker
+                  <input type="checkbox" checked={kioskConfig.showPickerStars}
+                    onChange={(event) => setKioskConfig({ ...kioskConfig, showPickerStars: event.target.checked })} />
+                </label>
+                <output className="block text-sm text-slate-300">{kioskSaveMessage}</output>
+                <button type="submit" className="min-h-11 w-full rounded-lg bg-slate-100 px-4 font-semibold text-slate-900">
                   Save Display Settings
                 </button>
               </form>

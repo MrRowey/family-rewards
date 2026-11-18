@@ -12,6 +12,8 @@ model FamilyConfig {
   isConfigured    Boolean   @default(false)
   maxDailyTasks   Int       @default(5)
   idleTimeoutSec  Int       @default(45)   // Kiosk auto-return timeout (seconds)
+  reducedMotion   Boolean   @default(false)
+  showPickerStars Boolean   @default(true)
   soundEffects    Boolean   @default(true) // Global kiosk SFX toggle
   updatedAt       DateTime  @updatedAt
 }

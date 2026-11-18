@@ -1,5 +1,6 @@
 "use client";
 
+import { useKioskSettings } from "@/hooks/useKioskSettings";
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -19,6 +20,7 @@ const getRewardDesc = (reward: Reward) => {
 };
 
 export default function RewardShop() {
+  const { config: kioskConfig } = useKioskSettings(true);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>("");
@@ -95,20 +97,21 @@ export default function RewardShop() {
       const data = await res.json();
 
       if (res.ok) {
-        sounds.playFanfare();
-        confetti({
+        if (kioskConfig.soundEffects) sounds.playFanfare();
+        if (!kioskConfig.reducedMotion) confetti({
+          disableForReducedMotion: true,
           particleCount: 90,
           spread: 80,
           origin: { y: 0.6 },
         });
         await loadShopData();
       } else {
-        sounds.playLockedBuzz();
+        if (kioskConfig.soundEffects) sounds.playLockedBuzz();
         alert(data.error || "Could not claim reward.");
       }
     } catch (err) {
       console.error("Claim error:", err);
-      sounds.playLockedBuzz();
+      if (kioskConfig.soundEffects) sounds.playLockedBuzz();
       alert("Network error processing claim.");
     } finally {
       setSubmittingId(null);
@@ -117,7 +120,7 @@ export default function RewardShop() {
 
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
+    <main data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 right-1/4 w-[600px] h-[350px] bg-amber-500/10 blur-[150px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 left-10 w-[500px] h-[300px] bg-indigo-600/15 blur-[140px] rounded-full" />
@@ -189,7 +192,7 @@ export default function RewardShop() {
                   key={c.id}
                   type="button"
                   onClick={() => {
-                    sounds.playPop();
+                    if (kioskConfig.soundEffects) sounds.playPop();
                    setSelectedChildId(c.id)
                   }}
                   className={`p-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 min-h-[48px] active:scale-95 ${
@@ -349,7 +352,7 @@ export default function RewardShop() {
                         <button
                           type="button"
                           aria-label={`Locked reward: ${reward.title}`}
-                          onClick={() => sounds.playLockedBuzz()}
+                          onClick={() => { if (kioskConfig.soundEffects) sounds.playLockedBuzz(); }}
                           className="absolute inset-0 z-10 rounded-3xl cursor-not-allowed focus-visible:outline-2 focus-visible:outline-indigo-400"
                         />
                         <div>

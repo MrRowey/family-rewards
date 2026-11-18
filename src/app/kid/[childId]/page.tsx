@@ -1,5 +1,6 @@
 "use client";
 
+import { useKioskSettings } from "@/hooks/useKioskSettings";
 import { useState, useEffect, use, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -29,6 +30,7 @@ interface Child {
 }
 
 export default function KidKioskPage({ params }: { params: Promise<{ childId: string }> }) {
+  const { config: kioskConfig } = useKioskSettings(true);
   const resolvedParams = use(params);
   const { childId } = resolvedParams;
   const router = useRouter();
@@ -97,7 +99,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   }, [childId]);
 
   const toggleSubstep = (substepId: string) => {
-    sounds.playPop();
+    if (kioskConfig.soundEffects) sounds.playPop();
     setCheckedSubsteps((prev) => ({ ...prev, [substepId]: !prev[substepId] }));
   };
 
@@ -110,8 +112,9 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       });
 
       if (res.ok) {
-        sounds.playSuccessChime();
-        confetti({
+        if (kioskConfig.soundEffects) sounds.playSuccessChime();
+        if (!kioskConfig.reducedMotion) confetti({
+          disableForReducedMotion: true,
           particleCount: 60,
           spread: 70,
           origin: { y: 0.7 },
@@ -133,7 +136,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   }
 
   return (
-    <main className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
+    <main data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
       <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800/80 bg-slate-900/40 p-6 rounded-3xl backdrop-blur-md">
         <div className="flex items-center gap-5">
           <button

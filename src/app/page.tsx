@@ -1,5 +1,6 @@
 "use client";
 
+import { useKioskSettings } from "@/hooks/useKioskSettings";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,7 @@ import PinPadModal from "@/components/ui/PinPadModal";
 import { Child } from "@/types";
 
 export default function HomePage() {
+  const { config: kioskConfig } = useKioskSettings(false);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [children, setChildren] = useState<Child[]>([]);
@@ -80,7 +82,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-6 sm:p-10 select-none touch-manipulation flex flex-col justify-between">
+    <main data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-6 sm:p-10 select-none touch-manipulation flex flex-col justify-between">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-indigo-600/15 blur-[140px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 right-10 w-[500px] h-[300px] bg-amber-500/10 blur-[130px] rounded-full" />
@@ -192,12 +194,12 @@ export default function HomePage() {
                   </h3>
 
                   {/* Star Badge */}
-                  <div className="mt-3 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-1.5 rounded-full shadow-inner">
+                   {kioskConfig.showPickerStars && (<div className="mt-3 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-1.5 rounded-full shadow-inner">
                     <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                     <span className="text-base font-black text-amber-300">
                       {child.stars} {child.stars === 1 ? "Star" : "Stars"}
                     </span>
-                  </div>
+                  </div>)}
                 </button>
               ))}
             </div>

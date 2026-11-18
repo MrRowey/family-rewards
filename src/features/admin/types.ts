@@ -92,6 +92,8 @@ export interface AuditLogRecord {
 export interface KioskConfig {
   idleTimeoutSec: number;
   soundEffects: boolean;
+  reducedMotion: boolean;
+  showPickerStars: boolean;
   maxDailyTasks: number;
 }
 

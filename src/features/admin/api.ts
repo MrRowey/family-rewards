@@ -35,6 +35,8 @@ function isKioskConfig(value: unknown): value is KioskConfig {
   const config = value as Record<string, unknown>;
   return typeof config.idleTimeoutSec === "number"
     && typeof config.soundEffects === "boolean"
+    && typeof config.reducedMotion === "boolean"
+    && typeof config.showPickerStars === "boolean"
     && typeof config.maxDailyTasks === "number";
 }
 
