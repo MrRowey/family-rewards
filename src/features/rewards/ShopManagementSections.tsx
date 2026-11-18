@@ -24,11 +24,13 @@ interface ShopManagementSectionsProps {
   setShopStock: (value: number) => void;
   setShopIsGroup: (value: boolean) => void;
   handleCreateReward: (event: React.FormEvent) => Promise<void>;
+  rewardSaving: boolean;
+  rewardSaveMessage: string | null;
   toggleRewardVisibility: (rewardId: string, childId: string, assigned: boolean) => Promise<void>;
   handleRefund: (id: string) => Promise<void>;
 }
 
-export function ShopManagementSections({ activeMenu, householdChildren, rewards, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, setShopIsGroup, handleCreateReward, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+export function ShopManagementSections({ activeMenu, householdChildren, rewards, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, setShopIsGroup, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
   return <>
 {/* 5. SHOP ITEMS CREATION */}
           {activeMenu === "shop_items" && (
@@ -91,11 +93,13 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </div>
 
+                {rewardSaveMessage && <p role="status" aria-live="polite" className="text-sm text-amber-200">{rewardSaveMessage}</p>}
                 <button
                   type="submit"
+                  disabled={rewardSaving}
                   className="w-full bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 font-black py-3 rounded-2xl text-xs text-slate-950 shadow-lg shadow-amber-500/20 transition min-h-[46px]"
                 >
-                  Save Prize to Shop
+                  {rewardSaving ? "Saving..." : "Save Prize to Shop"}
                 </button>
               </form>
 

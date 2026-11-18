@@ -92,6 +92,7 @@ export default function FirstTimeSetup() {
             <label htmlFor="a11y-setup-page-tsx-2" className="block text-xs font-bold text-slate-400 mb-1">Enter Parent PIN</label>
             <input id="a11y-setup-page-tsx-2"
               type="password"
+              autoComplete="new-password"
               inputMode="numeric"
               maxLength={pinLength}
               value={parentPin}
@@ -106,6 +107,7 @@ export default function FirstTimeSetup() {
             <label htmlFor="a11y-setup-page-tsx-3" className="block text-xs font-bold text-slate-400 mb-1">Confirm Parent PIN</label>
             <input id="a11y-setup-page-tsx-3"
               type="password"
+              autoComplete="new-password"
               inputMode="numeric"
               maxLength={pinLength}
               value={confirmPin}

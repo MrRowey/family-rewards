@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findRewards, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
+const { findRewards, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
   findRewards: vi.fn(),
   findChild: vi.fn(),
   updateChild: vi.fn(),
@@ -10,11 +10,12 @@ const { findRewards, findChild, updateChild, createAudit, transaction } = vi.hoi
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    reward: { findMany: findRewards },
+    reward: { findMany: findRewards, create: createReward },
     $transaction: transaction,
   },
 }));
 
+import { POST as createParentReward } from "@/app/api/parent/rewards/route";
 import { GET as getRewards } from "@/app/api/rewards/route";
 import { POST as adjustStars } from "@/app/api/children/adjust-stars/route";
 
@@ -96,5 +97,25 @@ describe("star adjustment integrity", () => {
     expect(updateChild).toHaveBeenCalledWith({ where: { id: "child1" }, data: { stars: 0 } });
     expect(createAudit).toHaveBeenCalledTimes(1);
     expect(transaction).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe("parent reward creation", () => {
+  const request = (body: unknown) => new Request("http://localhost/api/parent/rewards", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+  });
+  const valid = { title: "Movie night", description: "Friday", icon: "🎬", starCost: 10, monthlyStock: 2, isGroup: false };
+  it("creates a visible, stocked reward", async () => {
+    createReward.mockResolvedValue({ id: "reward1", ...valid, currentStock: 2 });
+    const response = await createParentReward(request(valid));
+    expect(response.status).toBe(201);
+    expect(createReward).toHaveBeenCalledWith({ data: expect.objectContaining({ title: "Movie night", starCost: 10, monthlyStock: 2, currentStock: 2, isGroup: false }) });
+  });
+  it("rejects invalid costs and stock without writing", async () => {
+    for (const data of [{ ...valid, starCost: -1 }, { ...valid, starCost: "10" }, { ...valid, monthlyStock: 0 }, { ...valid, title: "" }]) {
+      expect((await createParentReward(request(data))).status).toBe(400);
+    }
+    expect(createReward).not.toHaveBeenCalled();
   });
 });
