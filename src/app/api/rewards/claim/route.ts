@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (message.startsWith("NOT_FOUND")) {
       return NextResponse.json({ error: message }, { status: 404 });
     }
-    if (message.startsWith("INSUFFICIENT_STARS") || message.startsWith("OUT_OF_STOCK")) {
+    if (message.startsWith("INSUFFICIENT_STARS") || message.startsWith("OUT_OF_STOCK") || message.startsWith("NOT_ELIGIBLE")) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
     return NextResponse.json({ error: "Failed to submit reward claim" }, { status: 500 });

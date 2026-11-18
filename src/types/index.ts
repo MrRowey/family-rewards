@@ -6,6 +6,7 @@ export interface Child {
   avatar: string;
   stars: number;
   dob?: string;
+  ageYears?: number;
   ageTier?: AgeTier;
   stageName?: string;
 }

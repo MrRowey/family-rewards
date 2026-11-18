@@ -19,7 +19,7 @@ export async function GET(req: Request) {
             },
           },
         },
-        child: true,
+        child: { select: { id: true, name: true, avatar: true, stars: true } },
       },
       orderBy: { dayOfWeek: "asc" },
     });
