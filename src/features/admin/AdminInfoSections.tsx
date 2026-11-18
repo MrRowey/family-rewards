@@ -1,5 +1,6 @@
 "use client";
 
+import { FamilyTrends } from "./FamilyTrends";
 import { useState } from "react";
 import { AlertCircle, Database } from "lucide-react";
 import type { NavigationMenu, ChildProfile, TaskItem, RewardRedemptionRecord, AuditLogRecord } from "./types";
@@ -54,6 +55,8 @@ export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemp
               </div>
             </div>
           )}
+
+          {activeMenu === "admin_analytics" && <FamilyTrends profiles={householdChildren} />}
 
           {/* 14. BACKUP & RESTORE */}
           {activeMenu === "admin_backup" && (
