@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findRewards, setRewardVisibility, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
+const { findRewards, findShopPlan, setRewardVisibility, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
   findRewards: vi.fn(),
+  findShopPlan: vi.fn(),
   createReward: vi.fn(),
   setRewardVisibility: vi.fn(),
   findChild: vi.fn(),
@@ -12,6 +13,7 @@ const { findRewards, setRewardVisibility, createReward, findChild, updateChild, 
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    shopPlan: { findUnique: findShopPlan },
     reward: { findMany: findRewards, create: createReward, updateMany: setRewardVisibility },
     $transaction: transaction,
   },
@@ -24,6 +26,7 @@ import { POST as adjustStars } from "@/app/api/children/adjust-stars/route";
 beforeEach(() => {
   vi.clearAllMocks();
   findRewards.mockResolvedValue([]);
+  findShopPlan.mockResolvedValue(null);
   transaction.mockImplementation(async (callback: (tx: unknown) => unknown) =>
     callback({
       child: { findUnique: findChild, update: updateChild },
@@ -141,4 +144,11 @@ it("updates visibility only for an individual prize", async () => {
     where: { id: "prize", isGroup: false },
     data: { isVisible: false },
   });
+});
+
+it("uses a saved empty month plan instead of global rewards", async () => {
+  findRewards.mockResolvedValue([{ id: "global", assignments: [] }]);
+  findShopPlan.mockResolvedValue({ rewardIds: [] });
+  const response = await getRewards(new Request("http://localhost/api/rewards?childId=child1"));
+  expect(await response.json()).toEqual([]);
 });

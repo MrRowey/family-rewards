@@ -30,11 +30,15 @@ export async function claimReward(childId: string, rewardId: string) {
     if (age < reward.minAge || age > reward.maxAge) {
       throw new Error("NOT_ELIGIBLE: Reward is outside the child's age range");
     }
-    if (reward.targetMonth !== null && reward.targetMonth !== new Date().getMonth() + 1) {
+    const today = new Date();
+    if (reward.targetMonth !== null && reward.targetMonth !== today.getMonth() + 1) {
       throw new Error("NOT_ELIGIBLE: Reward is not available this month");
     }
-    const assignments = await tx.rewardAssignment.findMany({ where: { rewardId } });
-    if (assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId)) {
+    const plan = await tx.shopPlan.findUnique({
+      where: { childId_year_month: { childId, year: today.getFullYear(), month: today.getMonth() + 1 } },
+    });
+    const assignments = plan ? [] : await tx.rewardAssignment.findMany({ where: { rewardId } });
+    if (plan ? !plan.rewardIds.includes(rewardId) : assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId)) {
       throw new Error("NOT_ELIGIBLE: Reward is not assigned to this child");
     }
 

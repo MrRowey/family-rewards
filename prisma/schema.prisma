@@ -29,6 +29,7 @@ model Child {
   completions       Completion[]
   redemptions       RewardRedemption[]
   rewardAssignments RewardAssignment[]
+  shopPlans         ShopPlan[]
   groupPledges      GroupRewardPledge[]
   badges            ChildBadge[]
 }
@@ -164,4 +165,13 @@ model AuditLog {
   action    String   
   details   String
   createdAt DateTime @default(now())
+}
+model ShopPlan {
+  childId   String
+  year      Int
+  month     Int
+  rewardIds String[]
+  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@id([childId, year, month])
 }

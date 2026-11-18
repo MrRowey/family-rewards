@@ -13,6 +13,7 @@ const prismaMock = {
     update: vi.fn(),
     updateMany: vi.fn(),
   },
+  shopPlan: { findUnique: vi.fn() },
   rewardAssignment: { findMany: vi.fn() },
   rewardRedemption: {
     findFirst: vi.fn(),
@@ -38,6 +39,17 @@ describe("Redemption Domain Service", () => {
     vi.clearAllMocks();
     transactionMock.mockImplementation((callback) => callback(prismaMock));
     prismaMock.rewardAssignment.findMany.mockResolvedValue([]);
+    prismaMock.shopPlan.findUnique.mockResolvedValue(null);
+  });
+
+  it("rejects prizes outside a saved month plan before charging stars", async () => {
+    prismaMock.child.findUnique.mockResolvedValue({ id: "c1", dob: new Date("2016-01-01") });
+    prismaMock.reward.findUnique.mockResolvedValue({
+      id: "r1", isVisible: true, isGroup: false, minAge: 0, maxAge: 120, targetMonth: null,
+    });
+    prismaMock.shopPlan.findUnique.mockResolvedValue({ rewardIds: [] });
+    await expect(claimReward("c1", "r1")).rejects.toThrow("NOT_ELIGIBLE");
+    expect(prismaMock.child.updateMany).not.toHaveBeenCalled();
   });
 
   it("should deduct stars when claiming a reward", async () => {

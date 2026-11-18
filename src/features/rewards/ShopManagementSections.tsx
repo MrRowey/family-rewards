@@ -2,10 +2,11 @@
 
 import { CreateDialog } from "@/features/admin/CreateDialog";
 import { groupByCategory } from "@/features/admin/groupByCategory";
+import { ShopMonthPlanner } from "./ShopMonthPlanner";
 import Image from "next/image";
 import { useState } from "react";
 import type React from "react";
-import { RotateCcw, Eye, EyeOff } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import type { NavigationMenu, ChildProfile, RewardItem, TaskAssignmentItem, RewardRedemptionRecord } from "@/features/admin/types";
 
 interface ShopManagementSectionsProps {
@@ -15,8 +16,6 @@ interface ShopManagementSectionsProps {
   inventoryLoadFailed: boolean;
   assignments: TaskAssignmentItem[];
   redemptionsHistory: RewardRedemptionRecord[];
-  selectedMonth: number;
-  setSelectedMonth: (value: number) => void;
   shopTitle: string;
   setShopTitle: (value: string) => void;
   shopDesc: string;
@@ -30,11 +29,10 @@ interface ShopManagementSectionsProps {
   handleCreateReward: (event: React.FormEvent, isGroup: boolean) => Promise<void>;
   rewardSaving: boolean;
   rewardSaveMessage: string | null;
-  toggleRewardVisibility: (rewardId: string, childId: string, assigned: boolean) => Promise<void>;
   handleRefund: (id: string) => Promise<void>;
 }
 
-export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, redemptionsHistory, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, handleRefund }: ShopManagementSectionsProps) {
   const [costDescending, setCostDescending] = useState(false);
   const orderedRewards = rewards.toSorted((a, b) => costDescending ? b.starCost - a.starCost : a.starCost - b.starCost);
   const shopPrizes = orderedRewards.filter((reward) => !reward.isGroup);
@@ -287,6 +285,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
           {/* 7. SHOP VISIBILITY MATRIX */}
           {activeMenu === "shop_visibility" && (
             <div className="space-y-6">
+              <ShopMonthPlanner profiles={householdChildren} rewards={rewards} />
               <section className="space-y-3 rounded-xl border border-slate-800 p-4">
                 <h3 className="font-semibold">Shop visibility</h3>
                 <output className="block text-sm text-amber-200">{visibilityError}</output>
@@ -304,67 +303,9 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   );
                 })}
               </section>
-              <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-xl">
-                <div>
-                  <h3 className="text-lg font-black text-white">Shop Planner</h3>
-                  <p className="text-xs text-slate-400">Toggle whether each child can view and claim items</p>
-                </div>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="bg-slate-950/80 border border-white/10 text-slate-200 px-4 py-2.5 rounded-2xl text-xs font-bold"
-                >
-                  {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, idx) => (
-                    <option key={m} value={idx + 1}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 overflow-x-auto shadow-xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-white/10 text-slate-400">
-                      <th className="pb-4 font-bold">Reward</th>
-                      <th className="pb-4 font-bold">Cost</th>
-                      {householdChildren.map((c) => (
-                        <th key={c.id} className="pb-4 text-center font-bold">{c.name}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {rewards.filter((reward) => reward.targetMonth === null || reward.targetMonth === selectedMonth).map((reward) => (
-                      <tr key={reward.id}>
-                        <td className="py-4 font-black flex items-center gap-3 text-white text-sm">
-                          <span className="text-2xl">{reward.icon}</span>
-                          {reward.title}
-                        </td>
-                        <td className="py-4 text-amber-300 font-black text-sm">{reward.starCost} ⭐</td>
-                        {householdChildren.map((child) => {
-                          const isAssigned = reward.assignments?.some((a) => a.childId === child.id) ?? false;
-                          return (
-                            <td key={child.id} className="py-4 text-center">
-                              <button
-                                onClick={() => toggleRewardVisibility(reward.id, child.id, isAssigned)}
-                                className={`p-2.5 rounded-xl border transition min-h-[36px] min-w-[36px] ${
-                                  isAssigned
-                                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                                    : "bg-slate-950/60 border-white/5 text-slate-500"
-                                }`}
-                              >
-                                {isAssigned ? <Eye className="w-4 h-4 mx-auto" /> : <EyeOff className="w-4 h-4 mx-auto" />}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
           )}
 
-          {/* 8. SHOP REFUNDS */}
           {activeMenu === "shop_refunds" && (
             <div className="space-y-4">
               <h3 className="font-black text-lg text-white">Redemption Ledger & Refunds</h3>
