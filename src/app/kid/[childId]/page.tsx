@@ -60,8 +60,8 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       try {
         const [childRes, taskRes, compRes] = await Promise.all([
           fetch("/api/children"),
-          fetch(`/api/assignments?childId=${childId}&day=today`),
-          fetch(`/api/completions?childId=${childId}&date=today`),
+          fetch(`/api/task-assignments?childId=${childId}&day=today`),
+          fetch(`/api/task-completions?childId=${childId}&date=today`),
         ]);
 
         let completedOrPendingTaskIds: string[] = [];
@@ -103,7 +103,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
 
   const handleCompleteChore = async (taskId: string) => {
     try {
-      const res = await fetch("/api/completions", {
+      const res = await fetch("/api/task-completions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ childId, taskId }),
