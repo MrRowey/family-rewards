@@ -149,25 +149,20 @@ export default function ParentDashboard() {
     loadPortalData();
   };
 
-  const handleScheduleTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!schedChildId || !schedTaskId) return;
-    await fetch("/api/task-assignments", {
+  const handleScheduleTask = async (taskId: string, dayOfWeek: number) => {
+    const response = await fetch("/api/task-assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        childId: schedChildId,
-        taskId: schedTaskId,
-        dayOfWeek: schedDay,
-        repeatInterval: schedInterval,
-      }),
+      body: JSON.stringify({ childId: schedChildId, taskId, dayOfWeek, repeatInterval: schedInterval }),
     });
-    loadPortalData();
+    if (!response.ok) throw new Error("Could not schedule the chore.");
+    await loadPortalData();
   };
 
   const handleDeleteAssignment = async (id: string) => {
-    await fetch(`/api/task-assignments?id=${id}`, { method: "DELETE" });
-    loadPortalData();
+    const response = await fetch(`/api/task-assignments?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok) throw new Error("Could not remove the chore.");
+    await loadPortalData();
   };
 
   const handleCreateReward = async (e: React.FormEvent, isGroup: boolean) => {
