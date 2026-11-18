@@ -13,14 +13,20 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid month" }, { status: 400 });
     }
 
+    const today = new Date();
+    const plan = !parentView && childId ? await prisma.shopPlan.findUnique({
+      where: { childId_year_month: { childId, year: today.getFullYear(), month: today.getMonth() + 1 } },
+    }) : null;
+
     const rewards = await prisma.reward.findMany({
       where: parentView
-        ? (parsedMonth !== null ? { targetMonth: parsedMonth } : {})
+        ? (parsedMonth !== null ? { OR: [{ targetMonth: null }, { targetMonth: parsedMonth }] } : {})
         : {
-            isVisible: true,
+            ...(plan ? { id: { in: plan.rewardIds } } : { isVisible: true }),
             isGroup: false,
+            isArchived: false,
             currentStock: { gt: 0 },
-            OR: [{ targetMonth: null }, { targetMonth: new Date().getMonth() + 1 }],
+            OR: [{ targetMonth: null }, { targetMonth: today.getMonth() + 1 }],
           },
       include: { assignments: true },
     });
@@ -34,7 +40,7 @@ export async function GET(req: Request) {
     // Public clients need only assignment eligibility, not other children's IDs.
     // Unassigned rewards are available to every child.
     return NextResponse.json(rewards
-      .filter((r) => r.assignments.length === 0 || (childId !== null && r.assignments.some((a) => a.childId === childId)))
+      .filter((r) => plan ? plan.rewardIds.includes(r.id) : r.assignments.length === 0 || (childId !== null && r.assignments.some((a) => a.childId === childId)))
       .map((r) => ({
         ...r,
         assignments: childId && r.assignments.some((a) => a.childId === childId)

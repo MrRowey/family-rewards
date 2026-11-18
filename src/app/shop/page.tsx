@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { ChildRefundRequests } from "@/features/rewards/ChildRefundRequests";
+import { useKioskSettings } from "@/hooks/useKioskSettings";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Lock, ShoppingBag, Sparkles, Clock, Star, Package } from "lucide-react";
@@ -19,53 +21,70 @@ const getRewardDesc = (reward: Reward) => {
 };
 
 export default function RewardShop() {
+  const { config: kioskConfig } = useKioskSettings(true);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>("");
   const [pendingRedemptions, setPendingRedemptions] = useState<PendingApproval[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
+  const [shopError, setShopError] = useState(false);
+  const requestVersion = useRef(0);
+  const [rewardChildId, setRewardChildId] = useState<string | null>(null);
+
   const loadShopData = useCallback(async () => {
+    const version = ++requestVersion.current;
     try {
       const [rwRes, chRes, appRes] = await Promise.all([
-        fetch(selectedChildId ? `/api/rewards?childId=${encodeURIComponent(selectedChildId)}` : "/api/rewards"),
+        fetch(selectedChildId ? `/api/rewards?childId=${encodeURIComponent(selectedChildId)}` : "/api/rewards", { cache: "no-store" }),
         fetch("/api/children"),
         fetch("/api/kiosk/pending-rewards"),
       ]);
 
-      if (rwRes.ok) setRewards(await rwRes.json());
-
-      if (chRes.ok) {
-        const chData: Child[] = await chRes.json();
-        setChildren(chData);
-        setSelectedChildId((prev) => (prev ? prev : chData[0]?.id || ""));
+      const [nextRewards, chData, appData] = await Promise.all([
+        rwRes.ok ? rwRes.json() : null, chRes.ok ? chRes.json() as Promise<Child[]> : null, appRes.ok ? appRes.json() : null,
+      ]);
+      if (version !== requestVersion.current) return;
+      setShopError(!rwRes.ok || !chRes.ok || !appRes.ok);
+      if (nextRewards) {
+        setRewards(nextRewards);
+        setRewardChildId(selectedChildId);
       }
 
-      if (appRes.ok) {
-        const appData = await appRes.json();
+      if (chData) {
+        setChildren(chData);
+        const requestedChild = new URLSearchParams(window.location.search).get("childId");
+        setSelectedChildId((prev) => chData.some((child) => child.id === prev) ? prev
+          : chData.find((child) => child.id === requestedChild)?.id ?? chData[0]?.id ?? "");
+      }
+
+      if (appData) {
         setPendingRedemptions(appData || []);
       }
     } catch (err) {
+      if (version === requestVersion.current) setShopError(true);
       console.error("Failed to load shop data:", err);
     }
   }, [selectedChildId]);
 
   useEffect(() => {
-    let isSubscribed = true;
-    async function fetchData() {
-      if (isSubscribed) await loadShopData();
-    }
-    fetchData();
+    const refresh = () => { if (!document.hidden) void loadShopData(); };
+    refresh();
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
-      isSubscribed = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, [loadShopData]);
 
   const activeChild = children.find((c) => c.id === selectedChildId);
   const activeChildAge = activeChild?.ageYears ?? 0;
 
-  const visibleRewards = rewards.filter((reward) => {
-    if (!reward.isVisible || reward.isGroup || reward.currentStock <= 0) return false;
+  const visibleRewards = (rewardChildId === selectedChildId && activeChild ? rewards : []).filter((reward) => {
+    if (reward.isGroup || reward.currentStock <= 0) return false;
     if (reward.targetMonth != null && reward.targetMonth !== new Date().getMonth() + 1) return false;
     if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
     if (reward.assignments && reward.assignments.length > 0) {
@@ -81,7 +100,7 @@ export default function RewardShop() {
   const handleClaimReward = async (e: React.MouseEvent, rewardId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!selectedChildId) return;
+    if (!selectedChildId || submittingId || shopError || rewardChildId !== selectedChildId) return;
 
     setSubmittingId(rewardId);
 
@@ -95,20 +114,21 @@ export default function RewardShop() {
       const data = await res.json();
 
       if (res.ok) {
-        sounds.playFanfare();
-        confetti({
+        if (kioskConfig.soundEffects) sounds.playFanfare();
+        if (!kioskConfig.reducedMotion) confetti({
+          disableForReducedMotion: true,
           particleCount: 90,
           spread: 80,
           origin: { y: 0.6 },
         });
         await loadShopData();
       } else {
-        sounds.playLockedBuzz();
+        if (kioskConfig.soundEffects) sounds.playLockedBuzz();
         alert(data.error || "Could not claim reward.");
       }
     } catch (err) {
       console.error("Claim error:", err);
-      sounds.playLockedBuzz();
+      if (kioskConfig.soundEffects) sounds.playLockedBuzz();
       alert("Network error processing claim.");
     } finally {
       setSubmittingId(null);
@@ -117,7 +137,7 @@ export default function RewardShop() {
 
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 right-1/4 w-[600px] h-[350px] bg-amber-500/10 blur-[150px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 left-10 w-[500px] h-[300px] bg-indigo-600/15 blur-[140px] rounded-full" />
@@ -189,7 +209,7 @@ export default function RewardShop() {
                   key={c.id}
                   type="button"
                   onClick={() => {
-                    sounds.playPop();
+                    if (kioskConfig.soundEffects) sounds.playPop();
                    setSelectedChildId(c.id)
                   }}
                   className={`p-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 min-h-[48px] active:scale-95 ${
@@ -209,7 +229,11 @@ export default function RewardShop() {
 
       {/* Right Area: Storefront Shelves */}
       <section className="relative z-10 flex-1 overflow-y-auto space-y-8 pr-1">
-        {visibleRewards.length === 0 ? (
+        {shopError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-sm text-amber-200">Could not refresh the shop. Trying again automatically.</p>}
+        {activeChild && <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />}
+        {rewardChildId !== selectedChildId || (shopError && visibleRewards.length === 0) ? (
+          !shopError && <output className="block text-sm text-slate-300">Loading shop…</output>
+        ) : visibleRewards.length === 0 ? (
           <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-16 text-center max-w-xl mx-auto shadow-2xl mt-12">
             <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/30 rounded-3xl flex items-center justify-center mx-auto mb-5 text-4xl">
               🎁
@@ -306,7 +330,7 @@ export default function RewardShop() {
                           ) : (
                             <button
                               type="button"
-                              disabled={isSubmitting}
+                              disabled={submittingId !== null || shopError}
                               onClick={(e) => handleClaimReward(e, reward.id)}
                               className="w-full min-h-[48px] bg-linear-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-[0.98] transition cursor-pointer text-sm"
                             >
@@ -349,7 +373,7 @@ export default function RewardShop() {
                         <button
                           type="button"
                           aria-label={`Locked reward: ${reward.title}`}
-                          onClick={() => sounds.playLockedBuzz()}
+                          onClick={() => { if (kioskConfig.soundEffects) sounds.playLockedBuzz(); }}
                           className="absolute inset-0 z-10 rounded-3xl cursor-not-allowed focus-visible:outline-2 focus-visible:outline-indigo-400"
                         />
                         <div>

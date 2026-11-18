@@ -3,13 +3,17 @@ import { refundReward } from "@/lib/domain/redemptions";
 
 export async function POST(req: Request) {
   try {
-    const { redemptionId } = await req.json();
+    const body = await req.json().catch(() => null);
+    const { redemptionId, decision, returnToStock } = body ?? {};
 
-    if (!redemptionId) {
-      return NextResponse.json({ error: "redemptionId is required" }, { status: 400 });
+    if (typeof redemptionId !== "string" || !redemptionId || (decision !== "APPROVE" && decision !== "DECLINE")) {
+      return NextResponse.json({ error: "A redemption and an approval or decline decision are required" }, { status: 400 });
     }
 
-    const res = await refundReward(redemptionId);
+    if (returnToStock !== undefined && typeof returnToStock !== "boolean") {
+      return NextResponse.json({ error: "Return to stock must be true or false" }, { status: 400 });
+    }
+    const res = await refundReward(redemptionId, decision, returnToStock);
     return NextResponse.json(res);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to refund reward";

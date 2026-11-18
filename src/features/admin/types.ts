@@ -8,11 +8,8 @@ export type NavigationMenu =
   | "shop_visibility"
   | "shop_refunds"
   | "user_children"
-  | "user_adjust"
-  | "user_pin"
-  | "admin_display"
+  | "admin_settings"
   | "admin_analytics"
-  | "admin_backup"
   | "admin_audit";
 
 export type SidebarCategory = "approvals" | "vault" | "shop" | "users" | "admin";
@@ -21,6 +18,8 @@ export interface ChildProfile {
   id: string;
   name: string;
   avatar: string;
+  avatarTheme?: string | null;
+  avatarConfig?: string | null;
   stars: number;
   dob: string;
 }
@@ -31,6 +30,7 @@ export interface SubStepItem {
 }
 
 export interface TaskItem {
+  category?: string | null;
   id: string;
   title: string;
   icon: string;
@@ -51,6 +51,8 @@ export interface TaskAssignmentItem {
 }
 
 export interface RewardItem {
+  category?: string | null;
+  imageURL?: string | null;
   id: string;
   title: string;
   description?: string | null;
@@ -59,6 +61,11 @@ export interface RewardItem {
   monthlyStock: number;
   currentStock: number;
   isGroup: boolean;
+  isVisible: boolean;
+  isArchived?: boolean;
+  targetMonth: number | null;
+  minAge?: number;
+  maxAge?: number;
   assignments?: { childId: string }[];
 }
 
@@ -69,6 +76,9 @@ export interface TaskCompletionRecord {
 }
 
 export interface RewardRedemptionRecord {
+  refundState: string | null;
+  status?: string;
+  starCostAtClaim: number | null;
   id: string;
   reward?: RewardItem;
   child?: ChildProfile;
@@ -77,6 +87,7 @@ export interface RewardRedemptionRecord {
 export interface AuditLogRecord {
   id: string;
   actor: string;
+  action: string;
   details: string;
   createdAt: string;
 }
@@ -84,6 +95,9 @@ export interface AuditLogRecord {
 export interface KioskConfig {
   idleTimeoutSec: number;
   soundEffects: boolean;
+  reducedMotion: boolean;
+  largeKioskText: boolean;
+  showPickerStars: boolean;
   maxDailyTasks: number;
 }
 

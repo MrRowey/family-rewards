@@ -23,18 +23,22 @@ export async function claimReward(childId: string, rewardId: string) {
     }
 
     // Eligibility must be validated before returning an existing pending claim.
-    if (!reward.isVisible || reward.isGroup) {
+    if (reward.isGroup || reward.isArchived) {
       throw new Error("NOT_ELIGIBLE: Reward is not available for individual claims");
     }
     const age = calculateAgeProfile(child.dob).ageYears;
     if (age < reward.minAge || age > reward.maxAge) {
       throw new Error("NOT_ELIGIBLE: Reward is outside the child's age range");
     }
-    if (reward.targetMonth !== null && reward.targetMonth !== new Date().getMonth() + 1) {
+    const today = new Date();
+    if (reward.targetMonth !== null && reward.targetMonth !== today.getMonth() + 1) {
       throw new Error("NOT_ELIGIBLE: Reward is not available this month");
     }
-    const assignments = await tx.rewardAssignment.findMany({ where: { rewardId } });
-    if (assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId)) {
+    const plan = await tx.shopPlan.findUnique({
+      where: { childId_year_month: { childId, year: today.getFullYear(), month: today.getMonth() + 1 } },
+    });
+    const assignments = plan ? [] : await tx.rewardAssignment.findMany({ where: { rewardId } });
+    if (plan ? !plan.rewardIds.includes(rewardId) : !reward.isVisible || (assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId))) {
       throw new Error("NOT_ELIGIBLE: Reward is not assigned to this child");
     }
 
@@ -186,7 +190,7 @@ export async function declineReward(redemptionId: string) {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
-export async function refundReward(redemptionId: string) {
+export async function refundReward(redemptionId: string, decision?: "APPROVE" | "DECLINE", returnToStock = true) {
   return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
@@ -201,14 +205,30 @@ export async function refundReward(redemptionId: string) {
       throw new Error("INVALID_STATE: Only APPROVED redemptions can be refunded");
     }
 
-    // Atomically transition APPROVED -> REFUNDED
+    if (decision && redemption.refundState !== "PENDING") {
+      throw new Error("INVALID_STATE: No pending refund request");
+    }
+
+    // Update the request and redemption together before touching balances.
     const updatedRedemption = await tx.rewardRedemption.updateMany({
-      where: { id: redemptionId, status: "APPROVED" },
-      data: { status: "REFUNDED" },
+      where: { id: redemptionId, status: "APPROVED", ...(decision && { refundState: "PENDING" }) },
+      data: decision === "DECLINE"
+        ? { refundState: "DECLINED" }
+        : { status: "REFUNDED", ...(decision && { refundState: "APPROVED" }) },
     });
 
     if (updatedRedemption.count === 0) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
+    }
+
+    if (decision === "DECLINE") {
+      await tx.auditLog.create({
+        data: {
+          actor: "Parent", actorType: "PARENT", action: "DECLINED_REFUND",
+          details: `Declined the refund for "${redemption.reward.title}" for ${redemption.child.name}.`,
+        },
+      });
+      return { success: true };
     }
 
     // Refund stars & increment stock
@@ -217,17 +237,18 @@ export async function refundReward(redemptionId: string) {
       data: { stars: { increment: (redemption.starCostAtClaim ?? redemption.reward.starCost) } },
     });
 
-    await tx.reward.update({
-      where: { id: redemption.rewardId },
-      data: { currentStock: { increment: 1 } },
-    });
+    if (returnToStock) {
+      await tx.reward.update({
+        where: { id: redemption.rewardId }, data: { currentStock: { increment: 1 } },
+      });
+    }
 
     await tx.auditLog.create({
       data: {
         actor: "Parent",
         actorType: "PARENT",
         action: "REFUNDED_REWARD",
-        details: `Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". Stock restored.`,
+        details: `Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". ${returnToStock ? "Stock restored." : "Stock unchanged."}`,
       },
     });
 

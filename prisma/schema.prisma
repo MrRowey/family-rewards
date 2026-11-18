@@ -12,6 +12,9 @@ model FamilyConfig {
   isConfigured    Boolean   @default(false)
   maxDailyTasks   Int       @default(5)
   idleTimeoutSec  Int       @default(45)   // Kiosk auto-return timeout (seconds)
+  largeKioskText  Boolean   @default(false)
+  reducedMotion   Boolean   @default(false)
+  showPickerStars Boolean   @default(true)
   soundEffects    Boolean   @default(true) // Global kiosk SFX toggle
   updatedAt       DateTime  @updatedAt
 }
@@ -29,6 +32,7 @@ model Child {
   completions       Completion[]
   redemptions       RewardRedemption[]
   rewardAssignments RewardAssignment[]
+  shopPlans         ShopPlan[]
   groupPledges      GroupRewardPledge[]
   badges            ChildBadge[]
 }
@@ -57,6 +61,7 @@ model ChildBadge {
 }
 
 model Task {
+  category     String?
   id          String           @id @default(uuid())
   title       String
   icon        String           @default("⭐")
@@ -99,11 +104,13 @@ model Completion {
   status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
   forDate     DateTime @db.Date
   completedAt DateTime @default(now())
+  starsAwarded Int?
 
   @@unique([childId, taskId, forDate])
 }
 
 model Reward {
+  category     String?
   id           String             @id @default(uuid())
   title        String
   description  String?
@@ -114,6 +121,7 @@ model Reward {
   currentStock Int                @default(1)
   minAge       Int                @default(2)
   maxAge       Int                @default(18)
+  isArchived   Boolean            @default(false)
   isVisible    Boolean            @default(true)
   isGroup      Boolean            @default(false) 
   targetMonth  Int?               
@@ -151,6 +159,7 @@ model RewardRedemption {
   reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   status      String   @default("PENDING") // PENDING, APPROVED, DECLINED
   stockReserved Boolean @default(false) // Legacy claims did not reserve stock on creation
+  refundState     String? // PENDING, APPROVED, DECLINED
   starCostAtClaim Int? // Null for legacy claims created before price snapshots
   requestedAt DateTime @default(now())
 }
@@ -162,4 +171,13 @@ model AuditLog {
   action    String   
   details   String
   createdAt DateTime @default(now())
+}
+model ShopPlan {
+  childId   String
+  year      Int
+  month     Int
+  rewardIds String[]
+  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@id([childId, year, month])
 }

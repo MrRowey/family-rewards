@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, use, useCallback } from "react";
+import { useKioskSettings } from "@/hooks/useKioskSettings";
+import { useState, useEffect, useRef, use } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
@@ -29,6 +30,7 @@ interface Child {
 }
 
 export default function KidKioskPage({ params }: { params: Promise<{ childId: string }> }) {
+  const { config: kioskConfig } = useKioskSettings(true);
   const resolvedParams = use(params);
   const { childId } = resolvedParams;
   const router = useRouter();
@@ -36,72 +38,70 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   const [child, setChild] = useState<Child | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [checkedSubsteps, setCheckedSubsteps] = useState<Record<string, boolean>>({});
+  const submission = useRef(false);
+  const completionVersion = useRef(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState("");
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncError, setSyncError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const resetTimer = useCallback(() => {
-    return setTimeout(() => router.push("/"), 45000);
-  }, [router]);
-
   useEffect(() => {
-    let timer = resetTimer();
-    const handleActivity = () => {
-      clearTimeout(timer);
-      timer = resetTimer();
-    };
-    window.addEventListener("pointerdown", handleActivity);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("pointerdown", handleActivity);
-    };
-  }, [resetTimer]);
-
-  useEffect(() => {
+    let version = 0;
     async function loadData() {
+      if (document.hidden) return;
+      const latestRequest = ++version;
+      const completionAtStart = completionVersion.current;
       try {
         const [childRes, taskRes, compRes] = await Promise.all([
           fetch("/api/children"),
-          fetch(`/api/task-assignments?childId=${childId}&day=today`),
-          fetch(`/api/task-completions?childId=${childId}&date=today`),
+          fetch(`/api/task-assignments?childId=${childId}&day=today`, { cache: "no-store" }),
+          fetch(`/api/task-completions?childId=${childId}&date=today`, { cache: "no-store" }),
         ]);
 
-        let completedOrPendingTaskIds: string[] = [];
-        if (compRes.ok) {
-          const completions = await compRes.json();
-          completedOrPendingTaskIds = completions
-            .filter((c: { status: string }) => c.status === "PENDING" || c.status === "APPROVED")
-            .map((c: { taskId: string }) => c.taskId);
-        }
+        if (!childRes.ok || !taskRes.ok || !compRes.ok) throw new Error("Could not refresh chores.");
+        const [children, assignments, completions]: [
+          Child[], { task: Task }[], { status: string; taskId: string }[],
+        ] = await Promise.all([childRes.json(), taskRes.json(), compRes.json()]);
+        if (latestRequest !== version || completionAtStart !== completionVersion.current) return;
 
-        if (childRes.ok) {
-          const children: Child[] = await childRes.json();
-          const current = children.find((c) => c.id === childId);
-          if (current) setChild(current);
-        }
-
-        if (taskRes.ok) {
-          const assignments = await taskRes.json();
-          const availableTasks = assignments
-            .map((a: { task: Task }) => a.task)
-            .filter((t: Task) => t && !completedOrPendingTaskIds.includes(t.id));
-
-          setTasks(availableTasks);
-        }
+        const pending = new Set(completions.filter((item) => item.status === "PENDING").map((item) => item.taskId));
+        const approved = new Set(completions.filter((item) => item.status === "APPROVED").map((item) => item.taskId));
+        const scheduled = new Map(assignments.map(({ task }) => [task.id, task]));
+        setChild(children.find((item) => item.id === childId) ?? null);
+        setPendingCount(pending.size);
+        setTasks([...scheduled.values()].filter((task) => !pending.has(task.id) && !approved.has(task.id)));
+        setSyncError(false);
       } catch (err) {
+        if (latestRequest === version) setSyncError(true);
         console.error("Failed to load kiosk data", err);
       } finally {
-        setLoading(false);
+        if (latestRequest === version) setLoading(false);
       }
     }
 
-    loadData();
+    void loadData();
+    const timer = window.setInterval(loadData, 10000);
+    window.addEventListener("focus", loadData);
+    document.addEventListener("visibilitychange", loadData);
+    return () => {
+      version++;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", loadData);
+      document.removeEventListener("visibilitychange", loadData);
+    };
   }, [childId]);
 
   const toggleSubstep = (substepId: string) => {
-    sounds.playPop();
+    if (kioskConfig.soundEffects) sounds.playPop();
     setCheckedSubsteps((prev) => ({ ...prev, [substepId]: !prev[substepId] }));
   };
 
   const handleCompleteChore = async (taskId: string) => {
+    if (submission.current) return;
+    submission.current = true;
+    setSubmitting(true);
+    setCompletionMessage("");
     try {
       const res = await fetch("/api/task-completions", {
         method: "POST",
@@ -109,9 +109,13 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         body: JSON.stringify({ childId, taskId }),
       });
 
+      if (!res.ok) throw new Error("Could not submit chore.");
       if (res.ok) {
-        sounds.playSuccessChime();
-        confetti({
+        completionVersion.current++;
+        setCompletionMessage("Chore sent for approval.");
+        if (kioskConfig.soundEffects) sounds.playSuccessChime();
+        if (!kioskConfig.reducedMotion) confetti({
+          disableForReducedMotion: true,
           particleCount: 60,
           spread: 70,
           origin: { y: 0.7 },
@@ -119,7 +123,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         setTasks((prev) => prev.filter((t) => t.id !== taskId));
       }
     } catch {
-      console.error("Failed to submit chore completion");
+      setCompletionMessage("Could not submit this chore. Try again.");
+    } finally {
+      submission.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -127,13 +134,13 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100">
         <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="font-bold text-slate-400">Opening Dashboard...</p>
+        <p className="font-bold text-slate-400">{syncError ? "Could not load chores. Trying again…" : !loading ? "Child profile unavailable" : "Opening Dashboard…"}</p>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
       <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800/80 bg-slate-900/40 p-6 rounded-3xl backdrop-blur-md">
         <div className="flex items-center gap-5">
           <button
@@ -171,7 +178,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             <span className="text-3xl font-black text-amber-400">{child.stars}</span>
           </div>
           <button
-            onClick={() => router.push("/shop")}
+            onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
             className="min-h-24 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
           >
             <ShoppingBag className="w-6 h-6" /> Reward Shop
@@ -189,6 +196,9 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </span>
         </div>
 
+        <output className="block text-sm text-slate-300">{completionMessage}</output>
+        {pendingCount > 0 && <p className="text-sm text-slate-300">{pendingCount} waiting for parent approval</p>}
+        {syncError && <p role="alert" className="text-sm text-amber-200">Could not refresh chores. Trying again automatically.</p>}
         {tasks.length === 0 ? (
           <div className="bg-slate-900/60 border border-slate-800/80 p-16 rounded-3xl text-center space-y-3">
             <div className="text-6xl">🎉</div>
@@ -267,7 +277,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                   <div className="mt-6 pt-4 border-t border-slate-800/60 flex justify-end">
                     <button
                       onClick={() => handleCompleteChore(task.id)}
-                      disabled={!allSubstepsDone}
+                      disabled={!allSubstepsDone || submitting || syncError}
                       className={`w-full min-h-24 font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
                         allSubstepsDone
                           ? "bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer"

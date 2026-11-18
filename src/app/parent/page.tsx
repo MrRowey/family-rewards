@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 
-import { fetchParentPortalData } from "@/features/admin/api";
+import { fetchParentPortalData, fetchParentQueues } from "@/features/admin/api";
 import { ParentSidebar } from "@/features/admin/ParentSidebar";
 import { AdminInfoSections } from "@/features/admin/AdminInfoSections";
 import { AdminSettingsSections } from "@/features/admin/AdminSettingsSections";
@@ -40,10 +40,10 @@ export default function ParentDashboard() {
   const [pendingRedemptions, setPendingRedemptions] = useState<RewardRedemptionRecord[]>([]);
   const [redemptionsHistory, setRedemptionsHistory] = useState<RewardRedemptionRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
-  const [kioskConfig, setKioskConfig] = useState<KioskConfig>({ idleTimeoutSec: 45, soundEffects: true, maxDailyTasks: 5 });
-  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
+  const [kioskConfig, setKioskConfig] = useState<KioskConfig>({ idleTimeoutSec: 45, soundEffects: true, reducedMotion: false, largeKioskText: false, showPickerStars: true, maxDailyTasks: 5 });
 
   // Forms: Task Creation
+  const [taskSaveError, setTaskSaveError] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
   const [taskIcon, setTaskIcon] = useState("⭐");
   const [taskStarValue, setTaskStarValue] = useState(1);
@@ -51,9 +51,6 @@ export default function ParentDashboard() {
 
   // Forms: Scheduler
   const [schedChildId, setSchedChildId] = useState("");
-  const [schedTaskId, setSchedTaskId] = useState("");
-  const [schedDay, setSchedDay] = useState(1);
-  const [schedInterval, setSchedInterval] = useState(1);
 
   // Forms: Shop Item Creation
   const [shopTitle, setShopTitle] = useState("");
@@ -61,7 +58,10 @@ export default function ParentDashboard() {
   const [shopIcon, setShopIcon] = useState("🎁");
   const [shopCost, setShopCost] = useState(5);
   const [shopStock, setShopStock] = useState(2);
-  const [shopIsGroup, setShopIsGroup] = useState(false);
+  const rewardSaveInFlight = useRef(false);
+  const [inventoryLoadFailed, setInventoryLoadFailed] = useState(false);
+  const [rewardSaving, setRewardSaving] = useState(false);
+  const [rewardSaveMessage, setRewardSaveMessage] = useState<string | null>(null);
 
   // Forms: Child Creation
   const [childName, setChildName] = useState("");
@@ -77,8 +77,14 @@ export default function ParentDashboard() {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
 
+  const approvalInFlight = useRef(false);
+  const queueRevision = useRef(0);
+  const [approvalMessage, setApprovalMessage] = useState("");
+  const [approvalBusy, setApprovalBusy] = useState(false);
+
   const loadPortalData = useCallback(async () => {
-    const data = await fetchParentPortalData(selectedMonth);
+    const revision = ++queueRevision.current;
+    const data = await fetchParentPortalData();
     if (data.children) {
       setChildren(data.children);
       if (data.children.length > 0) {
@@ -88,13 +94,16 @@ export default function ParentDashboard() {
     }
     if (data.tasks) setTasks(data.tasks);
     if (data.rewards) setRewards(data.rewards);
+    setInventoryLoadFailed(!data.rewards);
     if (data.assignments) setAssignments(data.assignments);
-    if (data.pendingTasks) setPendingTasks(data.pendingTasks);
-    if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
-    if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
+    if (revision === queueRevision.current) {
+      if (data.pendingTasks) setPendingTasks(data.pendingTasks);
+      if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
+      if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
+    }
     if (data.auditLogs) setAuditLogs(data.auditLogs);
     if (data.kioskConfig) setKioskConfig(data.kioskConfig);
-  }, [selectedMonth]);
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -107,103 +116,149 @@ export default function ParentDashboard() {
     };
   }, [loadPortalData]);
 
+  useEffect(() => {
+    let active = true;
+    async function refreshQueues() {
+      if (document.hidden || approvalInFlight.current) return;
+      const revision = ++queueRevision.current;
+      const data = await fetchParentQueues();
+      if (!active || revision !== queueRevision.current || approvalInFlight.current) return;
+      if (data.pendingTasks) setPendingTasks(data.pendingTasks);
+      if (data.pendingRedemptions) setPendingRedemptions(data.pendingRedemptions);
+      if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
+    }
+    const timer = window.setInterval(refreshQueues, 10000);
+    window.addEventListener("focus", refreshQueues);
+    document.addEventListener("visibilitychange", refreshQueues);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshQueues);
+      document.removeEventListener("visibilitychange", refreshQueues);
+    };
+  }, []);
+
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
   };
 
-  const handleTaskApproval = async (completionId: string, action: "APPROVE" | "DECLINE") => {
-    setPendingTasks((prev) => prev.filter((t) => t.id !== completionId));
-    await fetch("/api/task-completions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completionId, action }),
-    });
-    loadPortalData();
+  const decideApproval = async (url: string, method: string, body: Record<string, string>) => {
+    if (approvalInFlight.current) return;
+    approvalInFlight.current = true;
+    queueRevision.current++;
+    setApprovalBusy(true);
+    setApprovalMessage("");
+    try {
+      const response = await fetch(url, {
+        method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error();
+      setApprovalMessage("Decision saved.");
+    } catch {
+      setApprovalMessage("Could not save the decision. Try again.");
+    } finally {
+      await loadPortalData();
+      approvalInFlight.current = false;
+      setApprovalBusy(false);
+    }
   };
 
-  const handleShopApproval = async (redemptionId: string, action: "APPROVE" | "DECLINE") => {
-    setPendingRedemptions((prev) => prev.filter((r) => r.id !== redemptionId));
-    await fetch("/api/redemptions/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ redemptionId, action }),
-    });
-    loadPortalData();
-  };
+  const handleTaskApproval = (completionId: string, action: "APPROVE" | "DECLINE") =>
+    decideApproval("/api/task-completions", "PATCH", { completionId, action });
+
+  const handleShopApproval = (redemptionId: string, action: "APPROVE" | "DECLINE") =>
+    decideApproval("/api/redemptions/approve", "POST", { redemptionId, action });
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const category = String(new FormData(form).get("category") ?? "");
     const cleanSteps = taskSubSteps.filter((s) => s.trim() !== "");
-    await fetch("/api/tasks", {
+    const response = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: taskTitle, icon: taskIcon, starValue: taskStarValue, subSteps: cleanSteps }),
+      body: JSON.stringify({ title: taskTitle, category, icon: taskIcon, starValue: taskStarValue, subSteps: cleanSteps }),
     });
+    if (!response.ok) {
+      setTaskSaveError("Could not save the chore.");
+      return;
+    }
+    setTaskSaveError("");
+    form.reset();
     setTaskTitle("");
     setTaskSubSteps([""]);
     loadPortalData();
   };
 
-  const handleScheduleTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!schedChildId || !schedTaskId) return;
-    await fetch("/api/task-assignments", {
+  const handleScheduleTask = async (taskId: string, dayOfWeek: number, date?: string) => {
+    const response = await fetch("/api/task-assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        childId: schedChildId,
-        taskId: schedTaskId,
-        dayOfWeek: schedDay,
-        repeatInterval: schedInterval,
-      }),
+      body: JSON.stringify({ childId: schedChildId, taskId, dayOfWeek, repeatInterval: 1, ...(date && { startDate: date, endDate: date }) }),
     });
-    loadPortalData();
+    if (!response.ok) throw new Error("Could not schedule the chore.");
+    await loadPortalData();
   };
 
   const handleDeleteAssignment = async (id: string) => {
-    await fetch(`/api/task-assignments?id=${id}`, { method: "DELETE" });
-    loadPortalData();
+    const response = await fetch(`/api/task-assignments?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok) throw new Error("Could not remove the chore.");
+    await loadPortalData();
   };
 
-  const handleCreateReward = async (e: React.FormEvent) => {
+  const handleCreateReward = async (e: React.FormEvent, isGroup: boolean) => {
     e.preventDefault();
-    await fetch("/api/rewards", {
+    const form = e.currentTarget as HTMLFormElement;
+    const fields = new FormData(form);
+    const photo = fields.get("photo");
+    const category = String(fields.get("category") ?? "");
+    if (rewardSaveInFlight.current) return;
+    rewardSaveInFlight.current = true;
+    setRewardSaveMessage(null);
+    setRewardSaving(true);
+    try {
+      let imageURL: string | undefined;
+      if (photo instanceof File && photo.size > 0) {
+        const data = new FormData();
+        data.set("file", photo);
+        const upload = await fetch("/api/upload", { method: "POST", body: data });
+        const result = await upload.json();
+        if (!upload.ok) throw new Error(result.error || "Unable to upload photo.");
+        imageURL = result.imageUrl;
+      }
+      const response = await fetch("/api/parent/rewards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: shopTitle, description: shopDesc, icon: shopIcon,
+          starCost: shopCost, monthlyStock: shopStock, isGroup, imageURL, category }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Unable to save prize (HTTP ${response.status})`);
+      }
+      form.reset();
+      setShopTitle("");
+      setShopDesc("");
+      setRewardSaveMessage("Prize saved successfully.");
+      await loadPortalData();
+    } catch (error) {
+      setRewardSaveMessage(error instanceof Error ? error.message : "Unable to save prize.");
+    } finally {
+      rewardSaveInFlight.current = false;
+      setRewardSaving(false);
+    }
+  };
+
+  const handleRefund = async (redemptionId: string, decision: "APPROVE" | "DECLINE", returnToStock: boolean) => {
+    const response = await fetch("/api/redemptions/refund", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: shopTitle,
-        description: shopDesc,
-        icon: shopIcon,
-        starCost: shopCost,
-        monthlyStock: shopStock,
-        isGroup: shopIsGroup,
-      }),
+      body: JSON.stringify({ redemptionId, decision, returnToStock }),
     });
-    setShopTitle("");
-    setShopDesc("");
-    loadPortalData();
+    if (!response.ok) throw new Error("Could not update the refund request.");
+    await loadPortalData();
   };
-
-  const toggleRewardVisibility = async (rewardId: string, childId: string, currentlyAssigned: boolean) => {
-    await fetch("/api/reward-assignments", {
-      method: currentlyAssigned ? "DELETE" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rewardId, childId }),
-    });
-    loadPortalData();
-  };
-
-  const handleRefund = async (redemptionId: string) => {
-    if (!confirm("Refund stars back to child?")) return;
-    await fetch("/api/redemptions/refund", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ redemptionId }),
-    });
-    loadPortalData();
-  };
-
   const handleCreateChild = async (e: React.FormEvent) => {
     e.preventDefault();
     await fetch("/api/children", {
@@ -217,9 +272,10 @@ export default function ParentDashboard() {
 
   const handleAdjustStars = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetChildId = adjustChildId || children[0]?.id;
-    if (!targetChildId || !adjustReason) {
-      alert("Please select a Child and enter a reason.");
+    const targetChildId = adjustChildId;
+    const amount = Number(adjustAmount);
+    if (!targetChildId || !adjustReason.trim() || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) > 100000) {
+      alert("Select a child, enter a nonzero whole number up to 100,000, and add a reason.");
       return;
     }
 
@@ -229,13 +285,13 @@ export default function ParentDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         childId: targetChildId,
-        amount: adjustAmount,
+        amount,
         reason: adjustReason
         }),
       });
 
       if (res.ok) {
-        alert("Start Balance updated Successfully!");
+        alert("Star balance updated.");
         setAdjustReason("");
         setAdjustAmount("1");
         await loadPortalData();
@@ -244,7 +300,7 @@ export default function ParentDashboard() {
         alert(err.error || "Failed to adjust Balance");
       }
     } catch {
-      alert("Network Error adjusting starts.");
+      alert("Could not update the star balance. Try again.");
     }
   };
 
@@ -269,43 +325,46 @@ export default function ParentDashboard() {
     }
   };
 
+  const [kioskSaveMessage, setKioskSaveMessage] = useState("");
+
   const handleSaveKioskConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/kiosk/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(kioskConfig),
-    });
-    alert("Kiosk settings saved!");
-    loadPortalData();
+    setKioskSaveMessage("");
+    try {
+      const response = await fetch("/api/kiosk/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(kioskConfig),
+      });
+      if (!response.ok) throw new Error();
+      setKioskSaveMessage("Kiosk settings saved.");
+    } catch {
+      setKioskSaveMessage("Could not save kiosk settings. Try again.");
+    }
   };
 
   const totalPending = pendingTasks.length + pendingRedemptions.length;
 
   return (
-    <div className="flex h-screen relative overflow-hidden bg-slate-950 text-slate-100 font-sans select-none touch-manipulation">
-      {/* Ambient background glows */}
-      <div className="pointer-events-none absolute -top-40 right-1/4 w-[600px] h-[350px] bg-indigo-600/10 blur-[150px] rounded-full" />
-      <div className="pointer-events-none absolute -bottom-40 left-10 w-[500px] h-[300px] bg-violet-600/10 blur-[140px] rounded-full" />
-
+    <div className="flex h-dvh bg-slate-950 text-slate-100 font-sans">
       {/* SIDEBAR NAVIGATION */}
-      <ParentSidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} collapsedCategories={collapsedCategories} toggleCategory={toggleCategory} pendingTasksCount={pendingTasks.length} pendingRedemptionsCount={pendingRedemptions.length} totalPending={totalPending} loadPortalData={loadPortalData} handleLogout={handleLogout} />
+      <ParentSidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} collapsedCategories={collapsedCategories} toggleCategory={toggleCategory} totalPending={totalPending} pendingRefunds={redemptionsHistory.filter((item) => item.refundState === "PENDING").length} loadPortalData={loadPortalData} handleLogout={handleLogout} />
 
       {/* MAIN VIEWPORT */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-        <header className="h-16 border-b border-white/10 bg-slate-900/60 backdrop-blur-xl px-8 flex items-center justify-between">
-          <h2 className="font-black text-lg text-white capitalize tracking-tight">
-            {activeMenu.replace(/_/g, " ")}
+        <header className="min-h-16 border-b border-slate-800 bg-slate-900 px-4 sm:px-8 flex items-center justify-between">
+          <h2 className="font-semibold text-xl text-white capitalize tracking-tight">
+            {({ task_approvals: "Approvals", task_vault: "Chore Library", task_scheduler: "Chore Scheduler", shop_visibility: "Shop Planner", admin_settings: "Settings" } as Partial<Record<NavigationMenu, string>>)[activeMenu] ?? activeMenu.replace(/_/g, " ")}
           </h2>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8 space-y-6">
-          <ApprovalSections activeMenu={activeMenu} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />
-          <TaskManagementSections activeMenu={activeMenu} tasks={tasks} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} schedTaskId={schedTaskId} setSchedTaskId={setSchedTaskId} schedDay={schedDay} setSchedDay={setSchedDay} schedInterval={schedInterval} setSchedInterval={setSchedInterval} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
-          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} assignments={assignments} redemptionsHistory={redemptionsHistory} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} setShopIsGroup={setShopIsGroup} handleCreateReward={handleCreateReward} toggleRewardVisibility={toggleRewardVisibility} handleRefund={handleRefund} />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
+          {activeMenu === "task_approvals" && <ApprovalSections activeMenu={activeMenu} busy={approvalBusy} message={approvalMessage} pendingTasks={pendingTasks} pendingRedemptions={pendingRedemptions} handleTaskApproval={handleTaskApproval} handleShopApproval={handleShopApproval} />}
+          <TaskManagementSections activeMenu={activeMenu} tasks={tasks} taskSaveError={taskSaveError} householdChildren={children} assignments={assignments} taskTitle={taskTitle} setTaskTitle={setTaskTitle} taskIcon={taskIcon} setTaskIcon={setTaskIcon} taskStarValue={taskStarValue} setTaskStarValue={setTaskStarValue} taskSubSteps={taskSubSteps} setTaskSubSteps={setTaskSubSteps} schedChildId={schedChildId} setSchedChildId={setSchedChildId} handleCreateTask={handleCreateTask} handleScheduleTask={handleScheduleTask} handleDeleteAssignment={handleDeleteAssignment} />
+          <ShopManagementSections activeMenu={activeMenu} householdChildren={children} rewards={rewards} inventoryLoadFailed={inventoryLoadFailed} refresh={loadPortalData} assignments={assignments} redemptionsHistory={redemptionsHistory} shopTitle={shopTitle} setShopTitle={setShopTitle} shopDesc={shopDesc} setShopDesc={setShopDesc} shopIcon={shopIcon} setShopIcon={setShopIcon} shopCost={shopCost} setShopCost={setShopCost} shopStock={shopStock} setShopStock={setShopStock} handleCreateReward={handleCreateReward} rewardSaving={rewardSaving} rewardSaveMessage={rewardSaveMessage} handleRefund={handleRefund} />
           <ChildManagementSections activeMenu={activeMenu} householdChildren={children} childName={childName} setChildName={setChildName} childAvatar={childAvatar} setChildAvatar={setChildAvatar} childDob={childDob} setChildDob={setChildDob} adjustChildId={adjustChildId} setAdjustChildId={setAdjustChildId} adjustAmount={adjustAmount} setAdjustAmount={setAdjustAmount} adjustReason={adjustReason} setAdjustReason={setAdjustReason} handleCreateChild={handleCreateChild} handleAdjustStars={handleAdjustStars} />
-          <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />
-          <AdminInfoSections activeMenu={activeMenu} householdChildren={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} />
+          <AdminSettingsSections activeMenu={activeMenu} newPin={newPin} setNewPin={setNewPin} confirmPin={confirmPin} setConfirmPin={setConfirmPin} kioskConfig={kioskConfig} kioskSaveMessage={kioskSaveMessage} setKioskConfig={setKioskConfig} handleResetPin={handleResetPin} handleSaveKioskConfig={handleSaveKioskConfig} />
+          <AdminInfoSections activeMenu={activeMenu} householdChildren={children} tasks={tasks} redemptionsHistory={redemptionsHistory} auditLogs={auditLogs} onRestore={loadPortalData} />
         </main>
       </div>
     </div>

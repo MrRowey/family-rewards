@@ -6,9 +6,22 @@
 - PR #18 adds privacy regression coverage for public rewards and removes the parent PIN hash from backups.
 - Passing CI does **not** establish that an existing family database can be upgraded safely.
 
-## Database policy: fresh installation only
+## Fresh installation and updates in PowerShell
 
 There is currently no live Family Rewards installation and no production data to preserve. The first deployment can initialize an empty PostgreSQL volume directly from the current `prisma/schema.prisma` using the existing Compose `prisma db push` migration service. This is intentional for the initial fresh install; the historical migration baseline is **not** an accurate representation of the current schema and must not be applied with `prisma migrate deploy`.
+
+From the repository root, create the environment file on a fresh checkout and replace its example secrets before starting Compose:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build -d
+docker compose ps
+Invoke-RestMethod http://localhost:3000/api/health
+```
+
+Open the app on port 3000, follow the first-run parent PIN setup, and open the parent dashboard. Create a child, create and assign a chore, and add a prize with a star cost and starting stock. Confirm the prize appears in the parent inventory and the eligible child's shop. Create a group goal and confirm it appears under Family Group Goals.
+
+For a code-only update, first verify that the incoming release has no schema changes. Back up PostgreSQL and the uploads volume and test restoration on a separate installation. Retain the same Compose project name, environment file, and volume configuration. From the verified release checkout, run `docker compose up --build -d`, check health, and confirm existing records and uploads are present. A restart (`docker compose restart`) reuses both volumes.
 
 For a disposable local installation only, to erase all existing Family Rewards database records **and uploaded images**, run:
 

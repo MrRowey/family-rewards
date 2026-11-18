@@ -82,7 +82,7 @@ export async function approveCompletion(completionId: string) {
 
     const updated = await tx.completion.updateMany({
       where: { id: completionId, status: "PENDING" },
-      data: { status: "APPROVED" },
+      data: { status: "APPROVED", starsAwarded: completion.task.starValue },
     });
 
     if (updated.count === 0) {

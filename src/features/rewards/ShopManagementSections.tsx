@@ -1,17 +1,22 @@
 "use client";
 
+import { CreateDialog } from "@/features/admin/CreateDialog";
+import { groupByCategory } from "@/features/admin/groupByCategory";
+import { EditReward } from "./EditReward";
+import { ShopMonthPlanner } from "./ShopMonthPlanner";
+import Image from "next/image";
+import { useState } from "react";
 import type React from "react";
-import { Gift, RotateCcw, Eye, EyeOff, Users2 } from "lucide-react";
 import type { NavigationMenu, ChildProfile, RewardItem, TaskAssignmentItem, RewardRedemptionRecord } from "@/features/admin/types";
 
 interface ShopManagementSectionsProps {
   activeMenu: NavigationMenu;
   householdChildren: ChildProfile[];
   rewards: RewardItem[];
+  inventoryLoadFailed: boolean;
+  refresh: () => Promise<void>;
   assignments: TaskAssignmentItem[];
   redemptionsHistory: RewardRedemptionRecord[];
-  selectedMonth: number;
-  setSelectedMonth: (value: number) => void;
   shopTitle: string;
   setShopTitle: (value: string) => void;
   shopDesc: string;
@@ -22,21 +27,42 @@ interface ShopManagementSectionsProps {
   setShopCost: (value: number) => void;
   shopStock: number;
   setShopStock: (value: number) => void;
-  setShopIsGroup: (value: boolean) => void;
-  handleCreateReward: (event: React.FormEvent) => Promise<void>;
-  toggleRewardVisibility: (rewardId: string, childId: string, assigned: boolean) => Promise<void>;
-  handleRefund: (id: string) => Promise<void>;
+  handleCreateReward: (event: React.FormEvent, isGroup: boolean) => Promise<void>;
+  rewardSaving: boolean;
+  rewardSaveMessage: string | null;
+  handleRefund: (id: string, decision: "APPROVE" | "DECLINE", returnToStock: boolean) => Promise<void>;
 }
 
-export function ShopManagementSections({ activeMenu, householdChildren, rewards, redemptionsHistory, selectedMonth, setSelectedMonth, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, setShopIsGroup, handleCreateReward, toggleRewardVisibility, handleRefund }: ShopManagementSectionsProps) {
+export function ShopManagementSections({ activeMenu, householdChildren, rewards, inventoryLoadFailed, refresh, redemptionsHistory, shopTitle, setShopTitle, shopDesc, setShopDesc, shopIcon, setShopIcon, shopCost, setShopCost, shopStock, setShopStock, handleCreateReward, rewardSaving, rewardSaveMessage, handleRefund }: ShopManagementSectionsProps) {
+  const [skipStock, setSkipStock] = useState<Record<string, boolean>>({});
+  const [refundPending, setRefundPending] = useState(false);
+  const [refundMessage, setRefundMessage] = useState("");
+  const refundHistory = redemptionsHistory.filter((item) => item.status === "REFUNDED" || item.refundState === "DECLINED");
+  const refundRequests = redemptionsHistory.filter((item) => item.refundState === "PENDING").toReversed();
+
+  async function reviewRefund(id: string, decision: "APPROVE" | "DECLINE") {
+    if (refundPending) return;
+    setRefundPending(true);
+    setRefundMessage("");
+    try {
+      await handleRefund(id, decision, !skipStock[id]);
+      setRefundMessage(decision === "APPROVE" ? "Refund approved." : "Refund declined.");
+    } catch {
+      setRefundMessage("Could not update the refund request. Try again.");
+    } finally {
+      setRefundPending(false);
+    }
+  }
+
+  const [costDescending, setCostDescending] = useState(false);
+  const orderedRewards = rewards.toSorted((a, b) => costDescending ? b.starCost - a.starCost : a.starCost - b.starCost);
+  const shopPrizes = orderedRewards.filter((reward) => !reward.isGroup);
   return <>
 {/* 5. SHOP ITEMS CREATION */}
           {activeMenu === "shop_items" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={handleCreateReward} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
-                <h3 className="text-base font-black flex items-center gap-2 text-white">
-                  <Gift className="w-4 h-4 text-amber-400" /> Create Shop Prize
-                </h3>
+            <div className="space-y-5">
+              <CreateDialog label="Add Prize">
+              <form onSubmit={(event) => handleCreateReward(event, false)} className="space-y-4">
 
                 <div>
                   <label htmlFor="a11y-parent-page-tsx-8" className="block text-xs font-bold text-slate-400 mb-1">Prize Title</label>
@@ -91,29 +117,65 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </div>
 
+                <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Category (optional)</span>
+                  <input name="category" maxLength={60} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2" />
+                </label>
+                <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Photo (optional)</span>
+                  <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
+                    className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
+                  <span className="block text-xs text-slate-400">PNG, JPEG or WebP, up to 2 MB.</span>
+                </label>
+                <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
                 <button
                   type="submit"
+                  disabled={rewardSaving}
                   className="w-full bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-400 font-black py-3 rounded-2xl text-xs text-slate-950 shadow-lg shadow-amber-500/20 transition min-h-[46px]"
                 >
-                  Save Prize to Shop
+                  {rewardSaving ? "Saving..." : "Save Prize to Shop"}
                 </button>
               </form>
+              </CreateDialog>
+              <label className="ml-4 inline-flex items-center gap-2 text-sm">Star cost
+                <select className="min-h-11 rounded-lg bg-slate-900 px-3" value={String(costDescending)} onChange={(event) => setCostDescending(event.target.value === "true")}>
+                  <option value="false">Lowest first</option>
+                  <option value="true">Highest first</option>
+                </select>
+              </label>
 
               <div className="lg:col-span-2 space-y-4">
-                <h3 className="font-black text-lg text-white">Active Shop Inventory ({rewards.filter((r) => !r.isGroup).length})</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {rewards.filter((r) => !r.isGroup).map((rw) => (
-                    <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
-                      <div className="flex justify-between items-start">
-                        <span className="text-4xl">{rw.icon}</span>
-                        <span className="text-xs font-black bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
-                          ⭐ {rw.starCost}
-                        </span>
+                <h3 className="font-black text-lg text-white">Shop Inventory ({shopPrizes.length})</h3>
+                {inventoryLoadFailed && <p role="alert">Could not load prizes. Select Refresh Data to retry.</p>}
+                {!inventoryLoadFailed && shopPrizes.length === 0 && (
+                  <p className="rounded-2xl border border-dashed border-white/15 p-6 text-sm text-slate-300">Save your first prize to start stocking the shop.</p>
+                )}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {groupByCategory(shopPrizes).map(([category, entries]) => (
+                <div className="contents" key={category}>
+                  <h4 className="col-span-full text-sm font-semibold text-slate-300">{category}</h4>
+                  {entries.map((rw) => {
+                    return (
+                      <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
+                        <div className="flex justify-between items-start">
+                          {rw.imageURL ? (
+                          <Image src={rw.imageURL} alt="" width={96} height={72} unoptimized className="h-[72px] w-24 rounded-lg object-cover" />
+                        ) : <span className="text-4xl">{rw.icon}</span>}
+                          <span className="text-xs font-black bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
+                            ⭐ {rw.starCost}
+                          </span>
+                        </div>
+                        <h4 className="wrap-break-word font-black text-base text-white">{rw.title}</h4>
+                      {rw.isArchived && <p className="text-sm text-slate-400">Archived</p>}
+                      <EditReward reward={rw} refresh={refresh} />
+                        {rw.description && <p className="wrap-break-word text-sm text-slate-300">{rw.description}</p>}
+                        <p className="text-xs text-slate-400">{rw.currentStock === 0 ? "Out of stock" : `${rw.currentStock} in stock`} · Monthly stock: {rw.monthlyStock}</p>
+
                       </div>
-                      <h4 className="font-black text-base text-white">{rw.title}</h4>
-                      <p className="text-xs text-slate-400">Stock: {rw.currentStock} / {rw.monthlyStock} monthly</p>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+                ))}
                 </div>
               </div>
             </div>
@@ -121,11 +183,9 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
 
           {/* 6. GROUP GOALS */}
           {activeMenu === "shop_group" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <form onSubmit={(e) => { setShopIsGroup(true); handleCreateReward(e); }} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl h-fit">
-                <h3 className="text-base font-black flex items-center gap-2 text-white">
-                  <Users2 className="w-4 h-4 text-indigo-400" /> Create Collaborative Goal
-                </h3>
+            <div className="space-y-5">
+              <CreateDialog label="Add Group Goal">
+              <form onSubmit={(event) => handleCreateReward(event, true)} className="space-y-4">
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Group goals allow siblings to combine their earned stars toward shared experiences (e.g. Water Park, Pizza Party).
                 </p>
@@ -163,29 +223,58 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   </div>
                 </div>
 
+                <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Category (optional)</span>
+                  <input name="category" maxLength={60} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2" />
+                </label>
+                <label className="block space-y-1 text-sm text-slate-300">
+                  <span>Photo (optional)</span>
+                  <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
+                    className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
+                  <span className="block text-xs text-slate-400">PNG, JPEG or WebP, up to 2 MB.</span>
+                </label>
+                <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
+
                 <button
                   type="submit"
+                  disabled={rewardSaving}
                   className="w-full bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 font-black py-3 rounded-2xl text-xs text-white shadow-lg shadow-indigo-600/30 transition min-h-[46px]"
                 >
                   Create Group Goal
                 </button>
               </form>
+              </CreateDialog>
+              <label className="ml-4 inline-flex items-center gap-2 text-sm">Star cost
+                <select className="min-h-11 rounded-lg bg-slate-900 px-3" value={String(costDescending)} onChange={(event) => setCostDescending(event.target.value === "true")}>
+                  <option value="false">Lowest first</option>
+                  <option value="true">Highest first</option>
+                </select>
+              </label>
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Family Group Goals ({rewards.filter((r) => r.isGroup).length})</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {rewards.filter((r) => r.isGroup).map((rw) => (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {groupByCategory(orderedRewards.filter((reward) => reward.isGroup)).map(([category, entries]) => (
+                <div className="contents" key={category}>
+                  <h4 className="col-span-full text-sm font-semibold text-slate-300">{category}</h4>
+                  {entries.map((rw) => (
                     <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-indigo-500/30 p-5 rounded-3xl space-y-2 shadow-lg">
                       <div className="flex justify-between items-start">
-                        <span className="text-4xl">{rw.icon}</span>
+                        {rw.imageURL ? (
+                          <Image src={rw.imageURL} alt="" width={96} height={72} unoptimized className="h-[72px] w-24 rounded-lg object-cover" />
+                        ) : <span className="text-4xl">{rw.icon}</span>}
                         <span className="text-xs font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full">
                           Target: {rw.starCost} ⭐
                         </span>
                       </div>
                       <h4 className="font-black text-base text-white">{rw.title}</h4>
+                      {rw.isArchived && <p className="text-sm text-slate-400">Archived</p>}
+                      <EditReward reward={rw} refresh={refresh} />
                       <p className="text-xs text-slate-400">Cooperative sibling target</p>
                     </div>
                   ))}
+                </div>
+                ))}
                 </div>
               </div>
             </div>
@@ -194,97 +283,47 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
           {/* 7. SHOP VISIBILITY MATRIX */}
           {activeMenu === "shop_visibility" && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-xl">
-                <div>
-                  <h3 className="text-lg font-black text-white">Monthly Visibility Matrix</h3>
-                  <p className="text-xs text-slate-400">Toggle whether each child can view and claim items</p>
-                </div>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="bg-slate-950/80 border border-white/10 text-slate-200 px-4 py-2.5 rounded-2xl text-xs font-bold"
-                >
-                  {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, idx) => (
-                    <option key={m} value={idx + 1}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 overflow-x-auto shadow-xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-white/10 text-slate-400">
-                      <th className="pb-4 font-bold">Reward</th>
-                      <th className="pb-4 font-bold">Cost</th>
-                      {householdChildren.map((c) => (
-                        <th key={c.id} className="pb-4 text-center font-bold">{c.name}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {rewards.map((reward) => (
-                      <tr key={reward.id}>
-                        <td className="py-4 font-black flex items-center gap-3 text-white text-sm">
-                          <span className="text-2xl">{reward.icon}</span>
-                          {reward.title}
-                        </td>
-                        <td className="py-4 text-amber-300 font-black text-sm">{reward.starCost} ⭐</td>
-                        {householdChildren.map((child) => {
-                          const isAssigned = reward.assignments?.some((a) => a.childId === child.id) ?? false;
-                          return (
-                            <td key={child.id} className="py-4 text-center">
-                              <button
-                                onClick={() => toggleRewardVisibility(reward.id, child.id, isAssigned)}
-                                className={`p-2.5 rounded-xl border transition min-h-[36px] min-w-[36px] ${
-                                  isAssigned
-                                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                                    : "bg-slate-950/60 border-white/5 text-slate-500"
-                                }`}
-                              >
-                                {isAssigned ? <Eye className="w-4 h-4 mx-auto" /> : <EyeOff className="w-4 h-4 mx-auto" />}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ShopMonthPlanner profiles={householdChildren} rewards={rewards} />
             </div>
           )}
 
-          {/* 8. SHOP REFUNDS */}
           {activeMenu === "shop_refunds" && (
-            <div className="space-y-4">
-              <h3 className="font-black text-lg text-white">Redemption Ledger & Refunds</h3>
-              <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-xl">
-                {redemptionsHistory.length === 0 ? (
-                  <p className="text-slate-500 text-center py-8 text-xs font-semibold">No redemption transactions recorded.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {redemptionsHistory.map((red) => (
-                      <div key={red.id} className="bg-slate-950/80 border border-white/5 p-4 rounded-2xl flex justify-between items-center text-xs">
-                        <div>
-                          <h4 className="font-black text-sm text-white">{red.reward?.title}</h4>
-                          <p className="text-slate-400 mt-0.5">
-                            Child: <strong className="text-slate-200">{red.child?.name}</strong> • Cost: {red.reward?.starCost} Stars
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRefund(red.id)}
-                          className="bg-rose-500/10 border border-rose-500/20 text-rose-300 font-black px-4 py-2 rounded-xl hover:bg-rose-500/20 transition flex items-center gap-1.5"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" /> Refund Stars
-                        </button>
-                      </div>
-                    ))}
+            <section className="space-y-4">
+              <h3 className="text-lg font-semibold">Pending refund requests</h3>
+              <output className="block text-sm text-slate-300">{refundMessage}</output>
+              {refundRequests.length === 0 && (
+                <p className="rounded-xl border border-slate-800 p-5 text-slate-300">No refund requests to review.</p>
+              )}
+              {refundRequests.map((request) => (
+                <article key={request.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                  <div>
+                    <h4 className="font-semibold">{request.reward?.title}</h4>
+                    <p className="text-sm text-slate-300">{request.child?.name} · {request.starCostAtClaim ?? request.reward?.starCost} stars</p>
                   </div>
-                )}
-              </div>
-            </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={!skipStock[request.id]} disabled={refundPending}
+                        onChange={(event) => setSkipStock({ ...skipStock, [request.id]: !event.target.checked })} />
+                      Return to stock
+                    </label>
+                    <button type="button" disabled={refundPending} onClick={() => reviewRefund(request.id, "APPROVE")}
+                      className="min-h-11 rounded-lg bg-emerald-100 px-4 font-semibold text-emerald-950 disabled:opacity-50">Approve</button>
+                    <button type="button" disabled={refundPending} onClick={() => reviewRefund(request.id, "DECLINE")}
+                      className="min-h-11 rounded-lg border border-slate-700 px-4 font-semibold disabled:opacity-50">Decline</button>
+                  </div>
+                </article>
+              ))}
+              <details className="rounded-xl border border-slate-800 p-4">
+                <summary className="cursor-pointer font-semibold">Refund history ({refundHistory.length})</summary>
+                {refundHistory.length === 0 && <p className="mt-2 text-sm text-slate-300">No completed refund decisions.</p>}
+                <ul className="mt-2 divide-y divide-slate-800 text-sm">
+                  {refundHistory.map((item) => <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3">
+                    <span>{item.reward?.title} · {item.child?.name}</span>
+                    <span className="text-slate-300">{item.status === "REFUNDED" ? "Refunded" : "Declined"}</span>
+                  </li>)}
+                </ul>
+              </details>
+            </section>
           )}
-
-          
   </>;
 }
