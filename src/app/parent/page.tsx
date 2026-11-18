@@ -272,9 +272,10 @@ export default function ParentDashboard() {
 
   const handleAdjustStars = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetChildId = adjustChildId || children[0]?.id;
-    if (!targetChildId || !adjustReason) {
-      alert("Please select a Child and enter a reason.");
+    const targetChildId = adjustChildId;
+    const amount = Number(adjustAmount);
+    if (!targetChildId || !adjustReason.trim() || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) > 100000) {
+      alert("Select a child, enter a nonzero whole number up to 100,000, and add a reason.");
       return;
     }
 
@@ -284,13 +285,13 @@ export default function ParentDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         childId: targetChildId,
-        amount: adjustAmount,
+        amount,
         reason: adjustReason
         }),
       });
 
       if (res.ok) {
-        alert("Start Balance updated Successfully!");
+        alert("Star balance updated.");
         setAdjustReason("");
         setAdjustAmount("1");
         await loadPortalData();
@@ -299,7 +300,7 @@ export default function ParentDashboard() {
         alert(err.error || "Failed to adjust Balance");
       }
     } catch {
-      alert("Network Error adjusting starts.");
+      alert("Could not update the star balance. Try again.");
     }
   };
 
