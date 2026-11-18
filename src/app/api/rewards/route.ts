@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     // Public clients need only assignment eligibility, not other children's IDs.
     // Unassigned rewards are available to every child.
     return NextResponse.json(rewards
-      .filter((r) => !childId || r.assignments.length === 0 || r.assignments.some((a) => a.childId === childId))
+      .filter((r) => r.assignments.length === 0 || (childId !== null && r.assignments.some((a) => a.childId === childId)))
       .map((r) => ({
         ...r,
         assignments: childId && r.assignments.some((a) => a.childId === childId)
