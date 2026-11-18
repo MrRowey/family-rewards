@@ -20,7 +20,8 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       version: "1.0",
       data: {
-        config,
+        // Never export the parent authentication credential hash.
+        config: config ? { ...config, parentPin: null } : null,
         children,
         tasks,
         subSteps,

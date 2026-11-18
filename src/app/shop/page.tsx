@@ -28,7 +28,7 @@ export default function RewardShop() {
   const loadShopData = useCallback(async () => {
     try {
       const [rwRes, chRes, appRes] = await Promise.all([
-        fetch("/api/rewards"),
+        fetch(selectedChildId ? `/api/rewards?childId=${encodeURIComponent(selectedChildId)}` : "/api/rewards"),
         fetch("/api/children"),
         fetch("/api/kiosk/pending-rewards"),
       ]);
@@ -48,7 +48,7 @@ export default function RewardShop() {
     } catch (err) {
       console.error("Failed to load shop data:", err);
     }
-  }, []);
+  }, [selectedChildId]);
 
   useEffect(() => {
     let isSubscribed = true;
