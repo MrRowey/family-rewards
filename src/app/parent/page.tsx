@@ -319,7 +319,7 @@ export default function ParentDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         <header className="min-h-16 border-b border-slate-800 bg-slate-900 px-4 sm:px-8 flex items-center justify-between">
           <h2 className="font-semibold text-xl text-white capitalize tracking-tight">
-            {({ task_approvals: "Approvals", task_vault: "Chore Library", task_scheduler: "Chore Scheduler", shop_visibility: "Shop Planner" } as Partial<Record<NavigationMenu, string>>)[activeMenu] ?? activeMenu.replace(/_/g, " ")}
+            {({ task_approvals: "Approvals", task_vault: "Chore Library", task_scheduler: "Chore Scheduler", shop_visibility: "Shop Planner", admin_settings: "Settings" } as Partial<Record<NavigationMenu, string>>)[activeMenu] ?? activeMenu.replace(/_/g, " ")}
           </h2>
         </header>
 

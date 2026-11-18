@@ -53,29 +53,6 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
   const [costDescending, setCostDescending] = useState(false);
   const orderedRewards = rewards.toSorted((a, b) => costDescending ? b.starCost - a.starCost : a.starCost - b.starCost);
   const shopPrizes = orderedRewards.filter((reward) => !reward.isGroup);
-  const [visibilityUpdates, setVisibilityUpdates] = useState<Record<string, boolean>>({});
-  const [visibilityPending, setVisibilityPending] = useState<string | null>(null);
-  const [visibilityError, setVisibilityError] = useState<string | null>(null);
-
-  async function updateVisibility(id: string, isVisible: boolean) {
-    if (visibilityPending) return;
-    setVisibilityPending(id);
-    setVisibilityError(null);
-    try {
-      const response = await fetch("/api/parent/rewards", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, isVisible }),
-      });
-      if (!response.ok) throw new Error("Unable to update prize visibility.");
-      setVisibilityUpdates((previous) => ({ ...previous, [id]: isVisible }));
-    } catch {
-      setVisibilityError("Unable to update prize visibility. Try again.");
-    } finally {
-      setVisibilityPending(null);
-    }
-  }
-
   return <>
 {/* 5. SHOP ITEMS CREATION */}
           {activeMenu === "shop_items" && (
@@ -169,12 +146,11 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                 {!inventoryLoadFailed && shopPrizes.length === 0 && (
                   <p className="rounded-2xl border border-dashed border-white/15 p-6 text-sm text-slate-300">Save your first prize to start stocking the shop.</p>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {groupByCategory(shopPrizes).map(([category, entries]) => (
                 <div className="contents" key={category}>
                   <h4 className="col-span-full text-sm font-semibold text-slate-300">{category}</h4>
                   {entries.map((rw) => {
-                    const visible = visibilityUpdates[rw.id] ?? rw.isVisible;
                     return (
                       <div key={rw.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl space-y-2 shadow-lg">
                         <div className="flex justify-between items-start">
@@ -187,9 +163,6 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                         </div>
                         <h4 className="wrap-break-word font-black text-base text-white">{rw.title}</h4>
                         {rw.description && <p className="wrap-break-word text-sm text-slate-300">{rw.description}</p>}
-                        <p className={visible ? "text-sm text-emerald-300" : "text-sm text-slate-300"}>
-                          {visible ? "Shown in shop" : "Hidden from shop"}
-                        </p>
                         <p className="text-xs text-slate-400">{rw.currentStock === 0 ? "Out of stock" : `${rw.currentStock} in stock`} · Monthly stock: {rw.monthlyStock}</p>
 
                       </div>
@@ -274,7 +247,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Family Group Goals ({rewards.filter((r) => r.isGroup).length})</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {groupByCategory(orderedRewards.filter((reward) => reward.isGroup)).map(([category, entries]) => (
                 <div className="contents" key={category}>
                   <h4 className="col-span-full text-sm font-semibold text-slate-300">{category}</h4>
@@ -303,23 +276,6 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
           {activeMenu === "shop_visibility" && (
             <div className="space-y-6">
               <ShopMonthPlanner profiles={householdChildren} rewards={rewards} />
-              <section className="space-y-3 rounded-xl border border-slate-800 p-4">
-                <h3 className="font-semibold">Shop visibility</h3>
-                <output className="block text-sm text-amber-200">{visibilityError}</output>
-                {shopPrizes.map((prize) => {
-                  const visible = visibilityUpdates[prize.id] ?? prize.isVisible;
-                  return (
-                    <div key={prize.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3">
-                      <span>{prize.title}</span>
-                      <button type="button" disabled={visibilityPending !== null}
-                        onClick={() => updateVisibility(prize.id, !visible)}
-                        className="min-h-11 rounded-lg border border-slate-700 px-3 text-sm">
-                        {visibilityPending === prize.id ? "Saving…" : visible ? "Hide from shop" : "Show in shop"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </section>
             </div>
           )}
 

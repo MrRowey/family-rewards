@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import { CreateDialog } from "@/features/admin/CreateDialog";
 import type React from "react";
@@ -26,6 +27,7 @@ interface ChildManagementSectionsProps {
 }
 
 export function ChildManagementSections({ activeMenu, householdChildren, childName, setChildName, childAvatar, setChildAvatar, childDob, setChildDob, adjustChildId, setAdjustChildId, adjustAmount, setAdjustAmount, adjustReason, setAdjustReason, handleCreateChild, handleAdjustStars }: ChildManagementSectionsProps) {
+  const [adjusting, setAdjusting] = useState(false);
   const selectedChild = householdChildren.find((child) => child.id === adjustChildId);
   const adjustment = Number(adjustAmount);
   return <>
@@ -87,6 +89,10 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                           <p className="text-xs text-amber-300 font-black mt-0.5">⭐ {child.stars} Stars</p>
                         </div>
                       </div>
+                      <button type="button" onClick={() => { setAdjustChildId(child.id); setAdjustAmount("1"); setAdjustReason(""); setAdjusting(true); }}
+                        className="min-h-11 rounded-lg border border-slate-700 px-3 text-sm">
+                        Adjust stars
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -95,29 +101,14 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
           )}
 
           {/* 10. BALANCE ADJUSTMENT */}
-          {activeMenu === "user_adjust" && (
+          {activeMenu === "user_children" && adjusting && selectedChild && (
             <div className="max-w-xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
               <div>
-                <h3 className="font-black text-xl text-white">Manual Star Adjustment</h3>
+                <h3 className="font-black text-xl text-white">Adjust stars for {selectedChild?.name}</h3>
                 <p className="text-xs text-slate-400 mt-1">Directly grant or deduct stars with an audit trail</p>
               </div>
 
               <form onSubmit={handleAdjustStars} className="space-y-4 text-xs">
-                <div>
-                  <label htmlFor="a11y-parent-page-tsx-19" className="block text-slate-400 font-bold mb-1">Select Child</label>
-                  <select id="a11y-parent-page-tsx-19"
-                    value={adjustChildId}
-                    onChange={(e) => setAdjustChildId(e.target.value)}
-                    required
-                    className="w-full bg-slate-950/80 border border-white/10 p-3.5 rounded-2xl text-white"
-                  >
-                    <option value="">-- Choose Child --</option>
-                    {householdChildren.map((c) => (
-                      <option key={c.id} value={c.id}>{c.avatar} {c.name} ({c.stars} ⭐ currently)</option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
                   <label htmlFor="a11y-parent-page-tsx-20" className="block text-slate-400 font-bold mb-1">
                     Stars to add or remove
@@ -164,6 +155,7 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                 >
                   Apply Star Adjustment
                 </button>
+                <button type="button" onClick={() => setAdjusting(false)} className="min-h-11 rounded-lg border border-slate-700 px-4">Close</button>
               </form>
             </div>
           )}

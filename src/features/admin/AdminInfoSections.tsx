@@ -61,7 +61,7 @@ export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemp
           {activeMenu === "admin_analytics" && <FamilyTrends profiles={householdChildren} />}
 
           {/* 14. BACKUP & RESTORE */}
-          {activeMenu === "admin_backup" && (
+          {activeMenu === "admin_settings" && (
             <div className="max-w-xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
               <div>
                 <h3 className="font-black text-xl text-white">Database Backup & Export</h3>
@@ -83,7 +83,7 @@ export function AdminInfoSections({ activeMenu, householdChildren, tasks, redemp
             </div>
           )}
 
-          {activeMenu === "admin_backup" && <RestoreBackup onRestore={onRestore} />}
+          {activeMenu === "admin_settings" && <RestoreBackup onRestore={onRestore} />}
 
           {activeMenu === "admin_audit" && (
             <section className="space-y-4">

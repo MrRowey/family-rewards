@@ -14,11 +14,15 @@ export async function GET(req: Request) {
     }
 
     const today = new Date();
+    const plan = !parentView && childId ? await prisma.shopPlan.findUnique({
+      where: { childId_year_month: { childId, year: today.getFullYear(), month: today.getMonth() + 1 } },
+    }) : null;
+
     const rewards = await prisma.reward.findMany({
       where: parentView
         ? (parsedMonth !== null ? { OR: [{ targetMonth: null }, { targetMonth: parsedMonth }] } : {})
         : {
-            isVisible: true,
+            ...(plan ? { id: { in: plan.rewardIds } } : { isVisible: true }),
             isGroup: false,
             currentStock: { gt: 0 },
             OR: [{ targetMonth: null }, { targetMonth: today.getMonth() + 1 }],
@@ -31,10 +35,6 @@ export async function GET(req: Request) {
         ? rewards.filter((r) => r.assignments.some((a) => a.childId === childId))
         : rewards);
     }
-
-    const plan = childId ? await prisma.shopPlan.findUnique({
-      where: { childId_year_month: { childId, year: today.getFullYear(), month: today.getMonth() + 1 } },
-    }) : null;
 
     // Public clients need only assignment eligibility, not other children's IDs.
     // Unassigned rewards are available to every child.

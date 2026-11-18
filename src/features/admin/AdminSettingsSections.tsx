@@ -19,7 +19,7 @@ interface AdminSettingsSectionsProps {
 export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPin, setConfirmPin, kioskConfig, kioskSaveMessage, setKioskConfig, handleResetPin, handleSaveKioskConfig }: AdminSettingsSectionsProps) {
   return <>
 {/* 11. PIN RESET */}
-          {activeMenu === "user_pin" && (
+          {activeMenu === "admin_settings" && (
             <div className="max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
               <div>
                 <h3 className="font-black text-xl text-white">Reset Parent PIN</h3>
@@ -64,10 +64,10 @@ export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPi
           )}
 
           {/* 12. KIOSK DISPLAY SETTINGS */}
-          {activeMenu === "admin_display" && (
+          {activeMenu === "admin_settings" && (
             <div className="max-w-xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl space-y-6 shadow-2xl">
               <div>
-                <h3 className="font-black text-xl text-white">Kiosk Hardware & Screen Settings</h3>
+                <h3 className="font-black text-xl text-white">Kiosk Display</h3>
                 <p className="text-xs text-slate-400 mt-1">Configure audio and idle timeout behaviors</p>
               </div>
 

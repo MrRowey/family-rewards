@@ -1,6 +1,6 @@
 "use client";
 
-import { Shield, ChevronDown, CheckSquare, Gift, Layers, Calendar, Users2, Eye, RotateCcw, Users, Sparkles, KeyRound, Sliders, BarChart3, Database, FileText, RefreshCw, LogOut } from "lucide-react";
+import { Shield, ChevronDown, CheckSquare, Gift, Layers, Calendar, Users2, Eye, RotateCcw, Users, Sliders, BarChart3, FileText, RefreshCw, LogOut } from "lucide-react";
 import type { NavigationMenu, SidebarCategory } from "./types";
 
 interface ParentSidebarProps {
@@ -181,16 +181,6 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                   >
                     <Users className="w-4 h-4" /> Child Profiles
                   </button>
-                  <button
-                    onClick={() => setActiveMenu("user_adjust")}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
-                      activeMenu === "user_adjust"
-                        ? "bg-slate-700 text-white"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <Sparkles className="w-4 h-4" /> Balance Adjust
-                  </button>
                 </div>
               )}
             </div>
@@ -209,24 +199,14 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
               {!collapsedCategories.admin && (
                 <div className="p-1.5 pt-0 space-y-1">
                   <button
-                    onClick={() => setActiveMenu("user_pin")}
+                    onClick={() => setActiveMenu("admin_settings")}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
-                      activeMenu === "user_pin"
+                      activeMenu === "admin_settings"
                         ? "bg-slate-700 text-white"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
-                    <KeyRound className="w-4 h-4" /> Reset PIN
-                  </button>
-                  <button
-                    onClick={() => setActiveMenu("admin_display")}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
-                      activeMenu === "admin_display"
-                        ? "bg-slate-700 text-white"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <Sliders className="w-4 h-4" /> Kiosk Display
+                    <Sliders className="w-4 h-4" /> Settings
                   </button>
                   <button
                     onClick={() => setActiveMenu("admin_analytics")}
@@ -237,16 +217,6 @@ export function ParentSidebar({ activeMenu, setActiveMenu, collapsedCategories, 
                     }`}
                   >
                     <BarChart3 className="w-4 h-4" /> Family Stats
-                  </button>
-                  <button
-                    onClick={() => setActiveMenu("admin_backup")}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition min-h-[38px] ${
-                      activeMenu === "admin_backup"
-                        ? "bg-slate-700 text-white"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <Database className="w-4 h-4" /> Backup & Data
                   </button>
                   <button
                     onClick={() => setActiveMenu("admin_audit")}

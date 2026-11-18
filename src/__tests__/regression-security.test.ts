@@ -152,3 +152,13 @@ it("uses a saved empty month plan instead of global rewards", async () => {
   const response = await getRewards(new Request("http://localhost/api/rewards?childId=child1"));
   expect(await response.json()).toEqual([]);
 });
+
+it("uses a month plan as the visibility rule for selected prizes", async () => {
+  findRewards.mockResolvedValue([{ id: "planned", assignments: [], isVisible: false }]);
+  findShopPlan.mockResolvedValue({ rewardIds: ["planned"] });
+  const response = await getRewards(new Request("http://localhost/api/rewards?childId=child1"));
+  expect(await response.json()).toMatchObject([{ id: "planned" }]);
+  const where = findRewards.mock.calls[0][0].where;
+  expect(where).toMatchObject({ id: { in: ["planned"] }, isGroup: false });
+  expect(where).not.toHaveProperty("isVisible");
+});

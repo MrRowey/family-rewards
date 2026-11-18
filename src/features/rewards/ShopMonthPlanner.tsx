@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { ChildProfile, RewardItem } from "@/features/admin/types";
 
 export function ShopMonthPlanner({ profiles, rewards }: { profiles: ChildProfile[]; rewards: RewardItem[] }) {
@@ -38,6 +38,7 @@ function MonthPlan({ childId, year, month, rewards }: { childId: string; year: n
   const [saving, setSaving] = useState(false);
   const candidates = rewards.filter((reward) => !reward.isGroup && (reward.targetMonth === null || reward.targetMonth === month));
   const included = draft ?? [];
+  const costs = [...new Set(candidates.map((reward) => reward.starCost))].toSorted((a, b) => a - b);
   const monthName = new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: "long" });
 
   useEffect(() => {
@@ -87,27 +88,45 @@ function MonthPlan({ childId, year, month, rewards }: { childId: string; year: n
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="space-y-2 rounded-xl border border-slate-800 p-4">
           <h3 className="font-semibold">All Shop Items</h3>
-          {candidates.filter((reward) => !included.includes(reward.id)).map((reward) => (
+          {costs.map((cost) => {
+            const entries = candidates.filter((reward) => reward.starCost === cost && !included.includes(reward.id));
+            if (!entries.length) return null;
+            return (
+              <Fragment key={cost}>
+                <h4 className="pt-2 text-sm font-semibold text-amber-200">{cost} {cost === 1 ? "star" : "stars"}</h4>
+                {entries.map((reward) => (
             <button key={reward.id} type="button" disabled={saving} draggable={!saving}
               onDragStart={(event) => event.dataTransfer.setData("application/x-family-prize", reward.id)}
               onClick={() => add(reward.id)}
               className="flex min-h-11 w-full justify-between rounded-lg bg-slate-900 p-3 text-left text-sm">
-              <span>{reward.title} · {reward.starCost} stars</span><span>Add to month</span>
+              <span>{reward.title}</span><span>Add to month</span>
             </button>
-          ))}
+                ))}
+              </Fragment>
+            );
+          })}
         </section>
         <section className="space-y-2 rounded-xl border border-slate-700 p-4"
           onDragOver={(event) => { if (event.dataTransfer.types.includes("application/x-family-prize")) event.preventDefault(); }}
           onDrop={(event) => { event.preventDefault(); add(event.dataTransfer.getData("application/x-family-prize")); }}>
           <h3 className="font-semibold">Available in {monthName}</h3>
-          {candidates.filter((reward) => included.includes(reward.id)).map((reward) => (
+          {costs.map((cost) => {
+            const entries = candidates.filter((reward) => reward.starCost === cost && included.includes(reward.id));
+            if (!entries.length) return null;
+            return (
+              <Fragment key={cost}>
+                <h4 className="pt-2 text-sm font-semibold text-amber-200">{cost} {cost === 1 ? "star" : "stars"}</h4>
+                {entries.map((reward) => (
             <div key={reward.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-900 p-3 text-sm">
-              <span>{reward.title}{!reward.isVisible ? " · Hidden" : ""}</span>
+              <span>{reward.title}</span>
               <button type="button" disabled={saving} className="min-h-11 rounded-md border border-slate-700 px-2"
                 aria-label={`Remove ${reward.title} from month`}
                 onClick={() => setDraft(included.filter((id) => id !== reward.id))}>Remove</button>
             </div>
-          ))}
+                ))}
+              </Fragment>
+            );
+          })}
           {included.length === 0 && <p className="text-sm text-slate-400">Drop prizes here to add them.</p>}
         </section>
       </div>

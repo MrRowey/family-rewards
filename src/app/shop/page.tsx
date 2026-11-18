@@ -68,7 +68,7 @@ export default function RewardShop() {
   const activeChildAge = activeChild?.ageYears ?? 0;
 
   const visibleRewards = rewards.filter((reward) => {
-    if (!reward.isVisible || reward.isGroup || reward.currentStock <= 0) return false;
+    if (reward.isGroup || reward.currentStock <= 0) return false;
     if (reward.targetMonth != null && reward.targetMonth !== new Date().getMonth() + 1) return false;
     if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
     if (reward.assignments && reward.assignments.length > 0) {

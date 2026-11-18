@@ -8,11 +8,8 @@ export type NavigationMenu =
   | "shop_visibility"
   | "shop_refunds"
   | "user_children"
-  | "user_adjust"
-  | "user_pin"
-  | "admin_display"
+  | "admin_settings"
   | "admin_analytics"
-  | "admin_backup"
   | "admin_audit";
 
 export type SidebarCategory = "approvals" | "vault" | "shop" | "users" | "admin";

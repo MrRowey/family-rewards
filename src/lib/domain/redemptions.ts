@@ -23,7 +23,7 @@ export async function claimReward(childId: string, rewardId: string) {
     }
 
     // Eligibility must be validated before returning an existing pending claim.
-    if (!reward.isVisible || reward.isGroup) {
+    if (reward.isGroup) {
       throw new Error("NOT_ELIGIBLE: Reward is not available for individual claims");
     }
     const age = calculateAgeProfile(child.dob).ageYears;
@@ -38,7 +38,7 @@ export async function claimReward(childId: string, rewardId: string) {
       where: { childId_year_month: { childId, year: today.getFullYear(), month: today.getMonth() + 1 } },
     });
     const assignments = plan ? [] : await tx.rewardAssignment.findMany({ where: { rewardId } });
-    if (plan ? !plan.rewardIds.includes(rewardId) : assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId)) {
+    if (plan ? !plan.rewardIds.includes(rewardId) : !reward.isVisible || (assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId))) {
       throw new Error("NOT_ELIGIBLE: Reward is not assigned to this child");
     }
 
