@@ -28,13 +28,13 @@ export async function POST(req: Request) {
     if (existingConfig) {
       const result = await prisma.familyConfig.updateMany({
         where: { id: existingConfig.id, isConfigured: false, parentPin: null },
-        data: { parentPin: hashedPin, isConfigured: true },
+        data: { parentPin: hashedPin, parentPinLength: pin.length, isConfigured: true },
       });
       if (result.count !== 1) return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
     } else {
       await prisma.familyConfig.create({
         data: {
-          parentPin: hashedPin,
+          parentPin: hashedPin, parentPinLength: pin.length,
           isConfigured: true,
         },
       });
