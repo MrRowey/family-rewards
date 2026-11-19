@@ -311,6 +311,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </div>
         )}
       </div>
+      {isTeen && (
       <div className="mx-auto mt-6 grid max-w-6xl gap-4 sm:grid-cols-2">
         {[{ label: "Waiting for approval", items: waitingTasks }, { label: "Done", items: doneTasks }].map(({ label, items }) => (
           <section key={label} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -326,6 +327,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </section>
         ))}
       </div>
+      )}
       <nav aria-label="Kiosk navigation" className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${isJunior ? "min-h-20" : ""} landscape:lg:hidden`}>
         <span aria-current="page" className="flex min-h-12 items-center gap-2 font-bold text-indigo-300"><ListCheck size={20} /> Chores</span>
         <span className="whitespace-nowrap text-amber-300" aria-label={child.stars + " stars"}>★ {child.stars}</span>
