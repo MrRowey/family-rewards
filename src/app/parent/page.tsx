@@ -109,11 +109,14 @@ export default function ParentDashboard() {
   }, []);
 
   useEffect(() => {
-    void loadPortalData();
+    const initial = window.setTimeout(loadPortalData, 0);
     const timer = window.setInterval(() => {
       if (!document.hidden && !approvalInFlight.current) void loadPortalData({ keepSettings: true });
     }, 5 * 60 * 1000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(timer);
+    };
   }, [loadPortalData]);
 
   useEffect(() => {
