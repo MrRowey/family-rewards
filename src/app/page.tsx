@@ -166,7 +166,7 @@ export default function HomePage() {
               {children.map((child) => (
                 <button
                   key={child.id}
-                  onClick={() => router.push(child.avatarConfig ? `/kid/${child.id}` : `/child/${child.id}/avatar`)}
+                  onClick={() => router.push(`/kid/${child.id}`)}
                   className="group relative bg-slate-900/70 hover:bg-slate-850/80 active:bg-slate-800/90 backdrop-blur-xl border border-white/10 hover:border-indigo-500/50 p-7 rounded-3xl transition-all duration-300 transform hover:-translate-y-1.5 active:scale-[0.98] shadow-2xl flex flex-col items-center text-center overflow-hidden min-h-[220px]"
                 >
                   {/* Subtle top edge highlight */}
