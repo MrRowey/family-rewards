@@ -1,7 +1,7 @@
 "use client";
 
 import { useKioskSettings } from "@/hooks/useKioskSettings";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Sparkles, Star, ChevronRight, User } from "lucide-react";
@@ -12,6 +12,16 @@ export default function HomePage() {
   const { config: kioskConfig } = useKioskSettings(false);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const lastHubTap = useRef(0);
+  const handleHubIconTap = () => {
+    const now = Date.now();
+    if (now - lastHubTap.current <= 1000) {
+      lastHubTap.current = 0;
+      window.location.reload();
+      return;
+    }
+    lastHubTap.current = now;
+  };
   const [children, setChildren] = useState<Child[]>([]);
   const [showPinModal, setShowPinModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>("");
@@ -97,9 +107,9 @@ export default function HomePage() {
       {/* Top Bar */}
       <header className="relative z-10 flex justify-between items-center bg-slate-900/60 backdrop-blur-xl border border-white/10 p-5 sm:p-6 rounded-3xl shadow-2xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <button type="button" onClick={handleHubIconTap} aria-label="Family Hub refresh shortcut: double tap to reload" title="Double tap to refresh kiosk" className="w-12 h-12 rounded-2xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white touch-manipulation">
             <Sparkles className="w-6 h-6 text-white" />
-          </div>
+          </button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
               Family Hub
