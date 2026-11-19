@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X, Delete, Lock } from "lucide-react";
 
 interface PinPadModalProps {
@@ -9,15 +9,35 @@ interface PinPadModalProps {
 }
 
 export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
+  const [pinLength, setPinLength] = useState<number | null | undefined>(undefined);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadPinLength() {
+      try {
+        const response = await fetch("/api/config", { cache: "no-store", signal: controller.signal });
+        if (!response.ok) throw new Error();
+        const { parentPinLength } = await response.json();
+        if (!controller.signal.aborted) {
+          setPinLength(Number.isInteger(parentPinLength) && parentPinLength >= 4 && parentPinLength <= 8 ? parentPinLength : null);
+        }
+      } catch {
+        if (!controller.signal.aborted) setPinLength(null);
+      }
+    }
+    void loadPinLength();
+    return () => controller.abort();
+  }, []);
+
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const canSubmit = pinLength !== undefined && (pinLength === null ? pin.length >= 4 : pin.length === pinLength);
 
   const handleDigit = (digit: string) => {
-    if (pin.length < 8) {
-      setPin((prev) => prev + digit);
-      setError(null);
-    }
+    if (loading || pinLength === undefined) return;
+    setPin((prev) => prev.length < (pinLength ?? 8) ? prev + digit : prev);
+    setError(null);
   };
 
   const handleDelete = () => {
@@ -26,7 +46,7 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!pin) return;
+    if (loading || !canSubmit) return;
     setLoading(true);
     setError(null);
 
@@ -75,7 +95,7 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
         )}
 
         <div className="flex justify-center gap-2 mb-6 min-h-6">
-          {Array.from({ length: Math.max(pin.length, 4) }).map((_, i) => (
+          {Array.from({ length: pinLength === undefined ? 0 : pinLength ?? Math.max(pin.length, 4) }).map((_, i) => (
             <div
               key={i}
               className={`w-4 h-4 rounded-full border border-slate-700 ${
@@ -109,7 +129,7 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !pin}
+            disabled={loading || !canSubmit}
             className="h-16 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base rounded-2xl transition active:scale-95 disabled:opacity-50 flex items-center justify-center"
           >
             OK
