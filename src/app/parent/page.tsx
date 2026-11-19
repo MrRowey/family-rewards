@@ -82,9 +82,12 @@ export default function ParentDashboard() {
   const [approvalMessage, setApprovalMessage] = useState("");
   const [approvalBusy, setApprovalBusy] = useState(false);
 
-  const loadPortalData = useCallback(async () => {
+  const portalRevision = useRef(0);
+  const loadPortalData = useCallback(async ({ keepSettings = false } = {}) => {
+    const portalRequest = ++portalRevision.current;
     const revision = ++queueRevision.current;
     const data = await fetchParentPortalData();
+    if (portalRequest !== portalRevision.current) return;
     if (data.children) {
       setChildren(data.children);
       if (data.children.length > 0) {
@@ -102,18 +105,15 @@ export default function ParentDashboard() {
       if (data.redemptionsHistory) setRedemptionsHistory(data.redemptionsHistory);
     }
     if (data.auditLogs) setAuditLogs(data.auditLogs);
-    if (data.kioskConfig) setKioskConfig(data.kioskConfig);
+    if (!keepSettings && data.kioskConfig) setKioskConfig(data.kioskConfig);
   }, []);
 
   useEffect(() => {
-    let isCancelled = false;
-    async function init() {
-      if (!isCancelled) await loadPortalData();
-    }
-    init();
-    return () => {
-      isCancelled = true;
-    };
+    void loadPortalData();
+    const timer = window.setInterval(() => {
+      if (!document.hidden && !approvalInFlight.current) void loadPortalData({ keepSettings: true });
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
   }, [loadPortalData]);
 
   useEffect(() => {
