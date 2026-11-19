@@ -39,7 +39,7 @@ export default function HomePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const res = await fetch("/api/children");
+      const res = await fetch("/api/children", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setChildren(data);
@@ -66,6 +66,13 @@ export default function HomePage() {
         setLoading(false);
       });
   }, [router, loadData]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void loadData();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [loadData]);
 
   if (loading) {
     return (
