@@ -4,8 +4,6 @@ import { verifyParentToken } from "@/lib/auth";
 
 const PUBLIC_API_MUTATIONS = new Set([
   "/api/auth/verify-pin",
-  "/api/completions",
-  "/api/task-completions",
   "/api/rewards/claim",
   "/api/kiosk/refund-requests",
   "/api/redemptions",
@@ -34,7 +32,8 @@ export async function proxy(req: NextRequest) {
 
   // Protect any non-whitelisted API mutations
   if (isApiRoute && !isParentApi && MUTATION_METHODS.has(method)) {
-    if (!PUBLIC_API_MUTATIONS.has(pathname)) {
+    const isChildCompletionSubmission = method === "POST" && (pathname === "/api/completions" || pathname === "/api/task-completions");
+    if (!PUBLIC_API_MUTATIONS.has(pathname) && !isChildCompletionSubmission) {
       requiresAuth = true;
     }
   }
