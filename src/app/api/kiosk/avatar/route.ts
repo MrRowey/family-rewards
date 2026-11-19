@@ -31,6 +31,8 @@ export async function POST(request: Request) {
     if (result.count !== 1) {
       return NextResponse.json({ error: "This profile already has an avatar or is unavailable." }, { status: 409 });
     }
+    const child = await prisma.child.findUnique({ where: { id: childId }, select: { name: true } });
+    await prisma.auditLog.create({ data: { actor: child?.name ?? "Parent", actorType: "PARENT", action: "CREATED_AVATAR", details: `Created first avatar for ${child?.name ?? childId} (${theme})` } });
     return NextResponse.json({ success: true });
   } catch (error) {
     return apiError(error, "Could not save the avatar.");
