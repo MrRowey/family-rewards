@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyParentToken } from "@/lib/auth";
-
-const PUBLIC_API_MUTATIONS = new Set([
-  "/api/auth/verify-pin",
-  "/api/rewards/claim",
-  "/api/kiosk/refund-requests",
-  "/api/redemptions",
-  "/api/setup",
-]);
+import { isPublicApiMutation } from "@/lib/api-permissions";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
@@ -32,8 +25,7 @@ export async function proxy(req: NextRequest) {
 
   // Protect any non-whitelisted API mutations
   if (isApiRoute && !isParentApi && MUTATION_METHODS.has(method)) {
-    const isChildCompletionSubmission = method === "POST" && (pathname === "/api/completions" || pathname === "/api/task-completions");
-    if (!PUBLIC_API_MUTATIONS.has(pathname) && !isChildCompletionSubmission) {
+    if (!isPublicApiMutation(pathname, method)) {
       requiresAuth = true;
     }
   }
