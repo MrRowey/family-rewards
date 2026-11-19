@@ -34,7 +34,7 @@ export async function proxy(req: NextRequest) {
 
   // Protect any non-whitelisted API mutations
   if (isApiRoute && !isParentApi && MUTATION_METHODS.has(method)) {
-    if (!PUBLIC_API_MUTATIONS.has(pathname) && !(method === "POST" && pathname === "/api/kiosk/avatar")) {
+    if (!PUBLIC_API_MUTATIONS.has(pathname)) {
       requiresAuth = true;
     }
   }
