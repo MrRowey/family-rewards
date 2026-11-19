@@ -95,7 +95,7 @@ export default function RewardShop() {
 
   const childStars = activeChild?.stars || 0;
   const affordableRewards = visibleRewards.filter((r) => childStars >= r.starCost);
-  const lockedRewards = visibleRewards.filter((r) => childStars < r.starCost);
+  const lockedRewards = visibleRewards.filter((r) => childStars < r.starCost).toSorted((a, b) => a.starCost - b.starCost);
 
   const handleClaimReward = async (e: React.MouseEvent, rewardId: string) => {
     e.preventDefault();
@@ -137,7 +137,7 @@ export default function RewardShop() {
 
 
   return (
-    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col landscape:lg:flex-row gap-4 sm:gap-6">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 pb-28 sm:p-8 sm:pb-28 landscape:lg:pb-8 select-none touch-manipulation flex flex-col landscape:lg:flex-row gap-4 sm:gap-6">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 right-1/4 w-[600px] h-[350px] bg-amber-500/10 blur-[150px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 left-10 w-[500px] h-[300px] bg-indigo-600/15 blur-[140px] rounded-full" />
@@ -437,6 +437,13 @@ export default function RewardShop() {
           </>
         )}
       </section>
+      {activeChild && (
+        <nav aria-label="Kiosk navigation" className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] landscape:lg:hidden">
+          <Link href={"/kid/" + encodeURIComponent(activeChild.id)} className="flex min-h-12 items-center rounded-xl px-3 font-bold">Chores</Link>
+          <span className="whitespace-nowrap text-amber-300" aria-label={childStars + " stars"}>★ {childStars}</span>
+          <span aria-current="page" className="flex min-h-12 items-center gap-2 font-bold text-indigo-300"><ShoppingBag size={20} /> Shop</span>
+        </nav>
+      )}
     </main>
   );
 }
