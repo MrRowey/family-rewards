@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
 import confetti from "canvas-confetti";
 import { sounds } from "@/lib/sound";
+import { resolveKioskMode } from "@/lib/kiosk-age-mode";
 
 interface SubStep {
   id: string;
@@ -27,6 +28,8 @@ interface Child {
   name: string;
   avatar: string;
   stars: number;
+  ageYears?: number;
+  kioskMode?: "AUTO" | "JUNIOR" | "EXPLORER" | "TEEN";
 }
 
 export default function KidKioskPage({ params }: { params: Promise<{ childId: string }> }) {
@@ -149,8 +152,12 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
     );
   }
 
+  const displayMode = resolveKioskMode(child.ageYears, child.kioskMode);
+  const isJunior = displayMode === "JUNIOR";
+  const isTeen = displayMode === "TEEN";
+
   return (
-    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 px-4 pt-5 pb-28 sm:px-8 sm:pt-8 landscape:lg:pb-8 select-none touch-manipulation">
+    <main data-kiosk-mode={displayMode.toLowerCase()} data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 px-4 pt-5 pb-28 sm:px-8 sm:pt-8 landscape:lg:pb-8 select-none touch-manipulation">
       <header className="mx-auto mb-6 grid max-w-6xl gap-4 rounded-3xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6 landscape:lg:flex landscape:lg:items-center landscape:lg:justify-between">
         <div className="flex min-w-0 items-center gap-3 sm:gap-5">
           <button
@@ -178,7 +185,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
 
           <div>
             <h1 className="wrap-break-word text-2xl font-black tracking-tight sm:text-4xl">{child.name}&apos;s Dashboard</h1>
-            <p className="text-sm text-slate-400 font-medium">Complete daily chores to earn shiny stars!</p>
+            <p className="text-sm text-slate-400 font-medium">{isTeen ? "Manage your tasks and rewards." : isJunior ? "Do your chores and collect stars!" : "Complete your challenges and earn rewards!"}</p>
           </div>
         </div>
 
@@ -189,7 +196,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </div>
           <button
             onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
-            className="hidden min-h-14 flex-1 justify-center whitespace-nowrap landscape:lg:flex bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
+            className={`${isJunior ? "hidden" : "hidden min-h-14 landscape:lg:flex"} flex-1 justify-center whitespace-nowrap bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95`}
           >
             <ShoppingBag className="w-6 h-6" /> Reward Shop
           </button>
@@ -206,6 +213,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </span>
         </div>
 
+        {isJunior && <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))} className="flex w-full min-h-24 items-center justify-center gap-4 rounded-3xl bg-linear-to-r from-fuchsia-600 to-indigo-600 px-6 py-5 text-2xl font-black shadow-xl active:scale-95"><ShoppingBag size={36} /> 🛍️ Reward Shop</button>}
         <output className="block text-sm text-slate-300">{completionMessage}</output>
 
         {syncError && <p role="alert" className="text-sm text-amber-200">Could not refresh chores. Trying again automatically.</p>}
@@ -216,7 +224,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             <p className="text-slate-500">No pending chores left on your queue right now.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+          <div className={`grid grid-cols-1 gap-4 ${isJunior ? "lg:grid-cols-2" : "sm:grid-cols-2"} sm:gap-6`}>
             {tasks.map((task) => {
               const substeps = task.subSteps || [];
               const allSubstepsDone =
@@ -225,7 +233,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
               return (
                 <div
                   key={task.id}
-                  className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-3xl p-6 flex flex-col justify-between shadow-2xl backdrop-blur-sm transition-all duration-300"
+                  className={`bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-3xl ${isJunior ? "p-7" : "p-6"} flex flex-col justify-between shadow-2xl backdrop-blur-sm transition-all duration-300`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -294,7 +302,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                           : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
                       }`}
                     >
-                      {allSubstepsDone ? "Mark Completed!" : "Complete all steps above"}
+                      {allSubstepsDone ? (isJunior ? "⭐ I did it!" : isTeen ? "Submit task" : "Mark Completed!") : (isJunior ? "Finish the steps first" : "Complete all steps above")}
                     </button>
                   </div>
                 </div>
@@ -303,6 +311,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </div>
         )}
       </div>
+      {isTeen && (
       <div className="mx-auto mt-6 grid max-w-6xl gap-4 sm:grid-cols-2">
         {[{ label: "Waiting for approval", items: waitingTasks }, { label: "Done", items: doneTasks }].map(({ label, items }) => (
           <section key={label} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -318,11 +327,12 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </section>
         ))}
       </div>
-      <nav aria-label="Kiosk navigation" className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] landscape:lg:hidden">
+      )}
+      <nav aria-label="Kiosk navigation" className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${isJunior ? "min-h-20" : ""} landscape:lg:hidden`}>
         <span aria-current="page" className="flex min-h-12 items-center gap-2 font-bold text-indigo-300"><ListCheck size={20} /> Chores</span>
         <span className="whitespace-nowrap text-amber-300" aria-label={child.stars + " stars"}>★ {child.stars}</span>
         <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
-          className="flex min-h-12 items-center gap-2 rounded-xl px-3 font-bold"><ShoppingBag size={20} /> Shop</button>
+          className={`flex items-center gap-2 rounded-xl px-3 font-bold ${isJunior ? "min-h-16 text-lg bg-indigo-600 text-white" : "min-h-12"}`}><ShoppingBag size={isJunior ? 28 : 20} /> {isJunior ? "🛍️ Shop!" : "Shop"}</button>
       </nav>
     </main>
   );

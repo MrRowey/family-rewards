@@ -21,6 +21,7 @@ export interface ChildProfile {
   avatarTheme?: string | null;
   avatarConfig?: string | null;
   stars: number;
+  kioskMode?: "AUTO" | "JUNIOR" | "EXPLORER" | "TEEN";
   dob: string;
 }
 

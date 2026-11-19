@@ -27,6 +27,7 @@ model Child {
   avatarTheme       String?            @default("bottts")
   avatarConfig      String?            // Json String for DiceBear Options
   stars             Int                @default(0)
+  kioskMode         String             @default("AUTO") // AUTO, JUNIOR, EXPLORER, TEEN
   dob               DateTime
   createdAt         DateTime           @default(now())
   assignments       TaskAssignment[]
