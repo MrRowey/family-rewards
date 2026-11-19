@@ -6,6 +6,7 @@ export async function GET() {
     const config = await prisma.familyConfig.findFirst();
 
     return NextResponse.json({
+      parentPinLength: config?.isConfigured ? config.parentPinLength : null,
       isConfigured: config?.isConfigured ?? false,
       maxDailyTasks: config?.maxDailyTasks ?? 5,
     });
