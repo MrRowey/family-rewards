@@ -11,14 +11,18 @@ const schema = z.object({
 export async function PATCH(req: Request) {
   try {
     const { childId, kioskMode } = await parseJson(req, schema);
-    const updated = await prisma.child.updateMany({
-      where: { id: childId },
-      data: { kioskMode },
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.child.updateMany({
+        where: { id: childId },
+        data: { kioskMode },
+      });
+      if (!result.count) return false;
+      await tx.auditLog.create({
+        data: { actor: "Parent", actorType: "PARENT", action: "UPDATED_KIOSK_MODE", details: `Set kiosk mode for child ${childId} to ${kioskMode}` },
+      });
+      return true;
     });
-    if (!updated.count) return NextResponse.json({ error: "Child not found" }, { status: 404 });
-    await prisma.auditLog.create({
-      data: { actor: "Parent", actorType: "PARENT", action: "UPDATED_KIOSK_MODE", details: `Set kiosk mode for child ${childId} to ${kioskMode}` },
-    });
+    if (!updated) return NextResponse.json({ error: "Child not found" }, { status: 404 });
     return NextResponse.json({ success: true, kioskMode });
   } catch (error) {
     return apiError(error, "Could not update kiosk mode.");
