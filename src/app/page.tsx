@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Sparkles, Star, ChevronRight, User } from "lucide-react";
+import AvatarDisplay from "@/components/AvatarDisplay";
 import PinPadModal from "@/components/ui/PinPadModal";
 import { Child } from "@/types";
 
@@ -173,7 +174,9 @@ export default function HomePage() {
 
                   {/* Avatar rendering */}
                   <div className="relative mb-4 mt-2">
-                    {child.avatar && child.avatar.startsWith("/") ? (
+                    {child.avatarConfig ? (
+                      <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={80} />
+                    ) : child.avatar && child.avatar.startsWith("/") ? (
                       <div className="w-24 h-24 rounded-3xl overflow-hidden ring-4 ring-indigo-500/20 group-hover:ring-indigo-500/50 shadow-xl transition-all">
                         <Image
                           src={child.avatar}

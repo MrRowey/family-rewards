@@ -2,6 +2,7 @@
 
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 import { useState, useEffect, useRef, use } from "react";
+import AvatarDisplay from "@/components/AvatarDisplay";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
@@ -26,6 +27,8 @@ interface Child {
   id: string;
   name: string;
   avatar: string;
+  avatarTheme?: string | null;
+  avatarConfig?: string | null;
   stars: number;
 }
 
@@ -151,8 +154,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             <ArrowLeft className="w-7 h-7 text-slate-200" />
           </button>
 
-          <div className="relative shrink-0">
-            {child.avatar.startsWith("/") ? (
+          <button type="button" onClick={() => router.push(`/child/${encodeURIComponent(childId)}/avatar`)} aria-label="Customise avatar" className="relative shrink-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-indigo-400">
+            {child.avatarConfig ? (
+              <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={64} />
+            ) : child.avatar.startsWith("/") ? (
               <Image
                 src={child.avatar}
                 alt={child.name}
@@ -164,7 +169,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             ) : (
               <span className="text-4xl sm:text-6xl filter drop-shadow-md">{child.avatar}</span>
             )}
-          </div>
+          </button>
 
           <div>
             <h1 className="wrap-break-word text-2xl font-black tracking-tight sm:text-4xl">{child.name}&apos;s Dashboard</h1>

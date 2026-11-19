@@ -7,8 +7,8 @@ export async function GET() {
     const children = await prisma.child.findMany({
       orderBy: { name: "asc" },
     });
-    return NextResponse.json(children.map(({ id, name, avatar, stars, dob }) => ({
-      id, name, avatar, stars, ageYears: calculateAgeProfile(dob).ageYears,
+    return NextResponse.json(children.map(({ id, name, avatar, stars, dob, avatarTheme, avatarConfig }) => ({
+      id, name, avatar, stars, avatarTheme, avatarConfig, ageYears: calculateAgeProfile(dob).ageYears,
     })));
   } catch {
     return NextResponse.json({ error: "Failed to fetch children" }, { status: 500 });
