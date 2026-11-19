@@ -73,10 +73,11 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         const records = new Map(completions.flatMap((item) => item.task ? [[item.taskId, item.task] as const] : []));
         const taskDetails = (ids: Set<string>) => [...ids].flatMap((id) => {
           const task = scheduled.get(id) ?? records.get(id);
-          return task ? [task] : [];
+          return [task ?? { id, title: "Chore details unavailable", icon: "📋", starValue: 0 }];
         });
         setWaitingTasks(taskDetails(pending));
         setDoneTasks(taskDetails(approved));
+        // A declined completion should return to the actionable list when still assigned today.
         setTasks([...scheduled.values()].filter((task) => !pending.has(task.id) && !approved.has(task.id)));
         setSyncError(false);
       } catch (err) {
@@ -310,7 +311,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
               <ul className="mt-2 divide-y divide-slate-800">
                 {items.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 py-2">
                   <span className="min-w-0 wrap-break-word">{task.icon} {task.title}</span>
-                  <span className="shrink-0 text-sm text-amber-300">{task.starValue} ★</span>
+                  <span className="shrink-0 text-sm text-amber-300">{task.starValue > 0 ? `${task.starValue} ★` : "—"}</span>
                 </li>)}
               </ul>
             )}
