@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const [children, tasks, subSteps, rewards, assignments, completions, redemptions, logs, config] =
-      await Promise.all([
+    const [children, tasks, subSteps, rewards, assignments, completions, redemptions, logs, config, rewardAssignments, shopPlans, groupPledges, badges, childBadges] =
+      await prisma.$transaction([
         prisma.child.findMany(),
         prisma.task.findMany(),
         prisma.subStep.findMany(),
@@ -14,13 +14,19 @@ export async function GET() {
         prisma.rewardRedemption.findMany(),
         prisma.auditLog.findMany(),
         prisma.familyConfig.findFirst(),
-      ]);
+        prisma.rewardAssignment.findMany(),
+        prisma.shopPlan.findMany(),
+        prisma.groupRewardPledge.findMany(),
+        prisma.badge.findMany(),
+        prisma.childBadge.findMany(),
+      ], { isolationLevel: "RepeatableRead" });
 
     const backup = {
       timestamp: new Date().toISOString(),
-      version: "1.0",
+      version: "2.0",
       data: {
-        config,
+        // Never export the parent authentication credential hash.
+        config: config ? { ...config, parentPin: null } : null,
         children,
         tasks,
         subSteps,
@@ -29,6 +35,11 @@ export async function GET() {
         completions,
         redemptions,
         logs,
+        rewardAssignments,
+        shopPlans,
+        groupPledges,
+        badges,
+        childBadges,
       },
     };
 

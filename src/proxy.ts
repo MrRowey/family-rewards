@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyParentToken } from "@/lib/auth";
-
-const PUBLIC_API_MUTATIONS = new Set([
-  "/api/auth/verify-pin",
-  "/api/completions",
-  "/api/rewards/claim",
-  "/api/setup",
-]);
+import { isPublicApiMutation } from "@/lib/api-permissions";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
@@ -24,14 +18,14 @@ export async function proxy(req: NextRequest) {
 
   const isParentPage = pathname.startsWith("/parent");
   const isParentApi = pathname.startsWith("/api/parent");
-  const isSensitiveRead = method === "GET" && (pathname.startsWith("/api/admin/") || pathname === "/api/approvals" || pathname === "/api/audit-logs" || (pathname === "/api/redemptions" && !req.nextUrl.searchParams.has("childId")) || (pathname === "/api/completions" && !req.nextUrl.searchParams.has("childId")));
+  const isSensitiveRead = method === "GET" && (pathname.startsWith("/api/admin/") || pathname === "/api/approvals" || pathname === "/api/audit-logs" || pathname === "/api/redemptions" || ((pathname === "/api/completions" || pathname === "/api/task-completions") && !req.nextUrl.searchParams.has("childId")));
   const isApiRoute = pathname.startsWith("/api");
 
   let requiresAuth = isParentPage || isParentApi || isSensitiveRead;
 
   // Protect any non-whitelisted API mutations
   if (isApiRoute && !isParentApi && MUTATION_METHODS.has(method)) {
-    if (!PUBLIC_API_MUTATIONS.has(pathname)) {
+    if (!isPublicApiMutation(pathname, method)) {
       requiresAuth = true;
     }
   }

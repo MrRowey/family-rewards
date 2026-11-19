@@ -1,7 +1,20 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { calculateAgeProfile } from "@/lib/ageRules";
+
+const MAX_TRANSACTION_ATTEMPTS = 3;
+
+async function withTransactionRetry<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try { return await operation(); }
+    catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2034" || attempt >= MAX_TRANSACTION_ATTEMPTS) throw error;
+    }
+  }
+}
 
 export async function claimReward(childId: string, rewardId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const child = await tx.child.findUnique({ where: { id: childId } });
     const reward = await tx.reward.findUnique({ where: { id: rewardId } });
 
@@ -9,22 +22,34 @@ export async function claimReward(childId: string, rewardId: string) {
       throw new Error("NOT_FOUND: Child or Reward record not found");
     }
 
-    if (reward.currentStock <= 0) {
-      throw new Error("OUT_OF_STOCK: Reward is out of stock");
+    // Eligibility must be validated before returning an existing pending claim.
+    if (reward.isGroup || reward.isArchived) {
+      throw new Error("NOT_ELIGIBLE: Reward is not available for individual claims");
+    }
+    const age = calculateAgeProfile(child.dob).ageYears;
+    if (age < reward.minAge || age > reward.maxAge) {
+      throw new Error("NOT_ELIGIBLE: Reward is outside the child's age range");
+    }
+    const today = new Date();
+    if (reward.targetMonth !== null && reward.targetMonth !== today.getMonth() + 1) {
+      throw new Error("NOT_ELIGIBLE: Reward is not available this month");
+    }
+    const plan = await tx.shopPlan.findUnique({
+      where: { childId_year_month: { childId, year: today.getFullYear(), month: today.getMonth() + 1 } },
+    });
+    const assignments = plan ? [] : await tx.rewardAssignment.findMany({ where: { rewardId } });
+    if (plan ? !plan.rewardIds.includes(rewardId) : !reward.isVisible || (assignments.length > 0 && !assignments.some((assignment) => assignment.childId === childId))) {
+      throw new Error("NOT_ELIGIBLE: Reward is not assigned to this child");
     }
 
-    if (child.stars < reward.starCost) {
-      throw new Error("INSUFFICIENT_STARS: Child does not have enough stars");
-    }
-
-    // Check for existing pending redemption
+    // Return the existing claim without charging twice or consuming another stock unit.
     const existingPending = await tx.rewardRedemption.findFirst({
       where: { childId, rewardId, status: "PENDING" },
     });
+    if (existingPending) return existingPending;
 
-    if (existingPending) {
-      return existingPending;
-    }
+    if (reward.currentStock <= 0) throw new Error("OUT_OF_STOCK: Reward is out of stock");
+    if (child.stars < reward.starCost) throw new Error("INSUFFICIENT_STARS: Child does not have enough stars");
 
     // Atomically deduct stars from child
     const updatedChild = await tx.child.updateMany({
@@ -36,12 +61,21 @@ export async function claimReward(childId: string, rewardId: string) {
       throw new Error("INSUFFICIENT_STARS: Concurrent star balance update failed");
     }
 
+    // Reserve one unit at claim time, preventing pending claims from overselling.
+    const reserved = await tx.reward.updateMany({
+      where: { id: rewardId, currentStock: { gt: 0 } },
+      data: { currentStock: { decrement: 1 } },
+    });
+    if (reserved.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
+
     // Create pending redemption
     const redemption = await tx.rewardRedemption.create({
       data: {
         childId,
         rewardId,
         status: "PENDING",
+        stockReserved: true,
+        starCostAtClaim: reward.starCost,
       },
     });
 
@@ -55,11 +89,11 @@ export async function claimReward(childId: string, rewardId: string) {
     });
 
     return redemption;
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
 export async function approveReward(redemptionId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
       include: { reward: true, child: true },
@@ -83,13 +117,14 @@ export async function approveReward(redemptionId: string) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
     }
 
-    // Decrement stock
-    const stockUpdate = await tx.reward.updateMany({
-      where: { id: redemption.rewardId, currentStock: { gt: 0 } },
-      data: { currentStock: { decrement: 1 } },
-    });
-    if (stockUpdate.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
-
+    // Older pending claims did not reserve stock at claim time.
+    if (!redemption.stockReserved) {
+      const stockUpdate = await tx.reward.updateMany({
+        where: { id: redemption.rewardId, currentStock: { gt: 0 } },
+        data: { currentStock: { decrement: 1 } },
+      });
+      if (stockUpdate.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
+    }
     await tx.auditLog.create({
       data: {
         actor: "Parent",
@@ -100,11 +135,11 @@ export async function approveReward(redemptionId: string) {
     });
 
     return { success: true };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
 export async function declineReward(redemptionId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
       include: { reward: true, child: true },
@@ -128,10 +163,18 @@ export async function declineReward(redemptionId: string) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
     }
 
+    // Release the reserved stock on decline.
+    if (redemption.stockReserved) {
+      await tx.reward.update({
+        where: { id: redemption.rewardId },
+        data: { currentStock: { increment: 1 } },
+      });
+    }
+
     // Refund reserved stars back to child
     await tx.child.update({
       where: { id: redemption.childId },
-      data: { stars: { increment: redemption.reward.starCost } },
+      data: { stars: { increment: (redemption.starCostAtClaim ?? redemption.reward.starCost) } },
     });
 
     await tx.auditLog.create({
@@ -139,16 +182,16 @@ export async function declineReward(redemptionId: string) {
         actor: "Parent",
         actorType: "PARENT",
         action: "DECLINED_REWARD",
-        details: `Declined reward "${redemption.reward.title}" for ${redemption.child.name}. Refunded ${redemption.reward.starCost} stars.`,
+        details: `Declined reward "${redemption.reward.title}" for ${redemption.child.name}. Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars.`,
       },
     });
 
     return { success: true };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
-export async function refundReward(redemptionId: string) {
-  return await prisma.$transaction(async (tx) => {
+export async function refundReward(redemptionId: string, decision?: "APPROVE" | "DECLINE", returnToStock = true) {
+  return await withTransactionRetry(() => prisma.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findUnique({
       where: { id: redemptionId },
       include: { reward: true, child: true },
@@ -162,36 +205,53 @@ export async function refundReward(redemptionId: string) {
       throw new Error("INVALID_STATE: Only APPROVED redemptions can be refunded");
     }
 
-    // Atomically transition APPROVED -> REFUNDED
+    if (decision && redemption.refundState !== "PENDING") {
+      throw new Error("INVALID_STATE: No pending refund request");
+    }
+
+    // Update the request and redemption together before touching balances.
     const updatedRedemption = await tx.rewardRedemption.updateMany({
-      where: { id: redemptionId, status: "APPROVED" },
-      data: { status: "REFUNDED" },
+      where: { id: redemptionId, status: "APPROVED", ...(decision && { refundState: "PENDING" }) },
+      data: decision === "DECLINE"
+        ? { refundState: "DECLINED" }
+        : { status: "REFUNDED", ...(decision && { refundState: "APPROVED" }) },
     });
 
     if (updatedRedemption.count === 0) {
       throw new Error("CONCURRENCY_ERROR: Redemption status already changed");
     }
 
+    if (decision === "DECLINE") {
+      await tx.auditLog.create({
+        data: {
+          actor: "Parent", actorType: "PARENT", action: "DECLINED_REFUND",
+          details: `Declined the refund for "${redemption.reward.title}" for ${redemption.child.name}.`,
+        },
+      });
+      return { success: true };
+    }
+
     // Refund stars & increment stock
     await tx.child.update({
       where: { id: redemption.childId },
-      data: { stars: { increment: redemption.reward.starCost } },
+      data: { stars: { increment: (redemption.starCostAtClaim ?? redemption.reward.starCost) } },
     });
 
-    await tx.reward.update({
-      where: { id: redemption.rewardId },
-      data: { currentStock: { increment: 1 } },
-    });
+    if (returnToStock) {
+      await tx.reward.update({
+        where: { id: redemption.rewardId }, data: { currentStock: { increment: 1 } },
+      });
+    }
 
     await tx.auditLog.create({
       data: {
         actor: "Parent",
         actorType: "PARENT",
         action: "REFUNDED_REWARD",
-        details: `Refunded ${redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". Stock restored.`,
+        details: `Refunded ${redemption.starCostAtClaim ?? redemption.reward.starCost} stars to ${redemption.child.name} for "${redemption.reward.title}". ${returnToStock ? "Stock restored." : "Stock unchanged."}`,
       },
     });
 
     return { success: true };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }

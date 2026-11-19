@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { calculateAgeProfile } from "@/lib/ageRules";
 
 export async function GET() {
   try {
     const children = await prisma.child.findMany({
       orderBy: { name: "asc" },
     });
-    return NextResponse.json(children);
+    return NextResponse.json(children.map(({ id, name, avatar, stars, dob, kioskMode }) => ({
+      id, name, avatar, stars, kioskMode, ageYears: calculateAgeProfile(dob).ageYears,
+    })));
   } catch {
     return NextResponse.json({ error: "Failed to fetch children" }, { status: 500 });
   }

@@ -3,11 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-interface KioskConfig {
-  idleTimeoutSec: number;
-  soundEffects: boolean;
-  maxDailyTasks: number;
-}
+import type { KioskConfig } from "@/features/admin/types";
 
 export function useKioskSettings(enableIdleReset: boolean = true) {
   const router = useRouter();
@@ -15,6 +11,9 @@ export function useKioskSettings(enableIdleReset: boolean = true) {
   const [config, setConfig] = useState<KioskConfig>({
     idleTimeoutSec: 45,
     soundEffects: true,
+    reducedMotion: false,
+    largeKioskText: false,
+    showPickerStars: true,
     maxDailyTasks: 5,
   });
 
@@ -26,11 +25,11 @@ export function useKioskSettings(enableIdleReset: boolean = true) {
 
     async function fetchConfig() {
       try {
-        const res = await fetch("/api/config/kiosk");
+        const res = await fetch("/api/kiosk/settings");
         if (res.ok) {
           const data = await res.json();
           if (!isCancelled && data && typeof data === "object") {
-            setConfig(data);
+            setConfig((defaults) => ({ ...defaults, ...data }));
           }
         }
       } catch (err) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
@@ -23,18 +23,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const hashedPin = await bcrypt.hash(pin, 10);
+    const hashedPin = await hash(pin, 10);
 
     if (existingConfig) {
       const result = await prisma.familyConfig.updateMany({
         where: { id: existingConfig.id, isConfigured: false, parentPin: null },
-        data: { parentPin: hashedPin, isConfigured: true },
+        data: { parentPin: hashedPin, parentPinLength: pin.length, isConfigured: true },
       });
       if (result.count !== 1) return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
     } else {
       await prisma.familyConfig.create({
         data: {
-          parentPin: hashedPin,
+          parentPin: hashedPin, parentPinLength: pin.length,
           isConfigured: true,
         },
       });

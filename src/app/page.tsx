@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useKioskSettings } from "@/hooks/useKioskSettings";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Sparkles, Star, ChevronRight, User } from "lucide-react";
@@ -8,8 +9,19 @@ import PinPadModal from "@/components/ui/PinPadModal";
 import { Child } from "@/types";
 
 export default function HomePage() {
+  const { config: kioskConfig } = useKioskSettings(false);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const lastHubTap = useRef(0);
+  const handleHubIconTap = () => {
+    const now = Date.now();
+    if (now - lastHubTap.current <= 1000) {
+      lastHubTap.current = 0;
+      window.location.reload();
+      return;
+    }
+    lastHubTap.current = now;
+  };
   const [children, setChildren] = useState<Child[]>([]);
   const [showPinModal, setShowPinModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>("");
@@ -35,9 +47,9 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const res = await fetch("/api/children");
+      const res = await fetch("/api/children", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setChildren(data);
@@ -47,7 +59,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetch("/api/config")
@@ -63,7 +75,14 @@ export default function HomePage() {
         console.error("Failed to fetch config:", err);
         setLoading(false);
       });
-  }, [router]);
+  }, [router, loadData]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void loadData();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [loadData]);
 
   if (loading) {
     return (
@@ -80,7 +99,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-6 sm:p-10 select-none touch-manipulation flex flex-col justify-between">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-6 sm:p-10 select-none touch-manipulation flex flex-col justify-between">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-indigo-600/15 blur-[140px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 right-10 w-[500px] h-[300px] bg-amber-500/10 blur-[130px] rounded-full" />
@@ -88,9 +107,9 @@ export default function HomePage() {
       {/* Top Bar */}
       <header className="relative z-10 flex justify-between items-center bg-slate-900/60 backdrop-blur-xl border border-white/10 p-5 sm:p-6 rounded-3xl shadow-2xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <button type="button" onClick={handleHubIconTap} aria-label="Family Hub refresh shortcut: double tap to reload" title="Double tap to refresh kiosk" className="w-12 h-12 rounded-2xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white touch-manipulation">
             <Sparkles className="w-6 h-6 text-white" />
-          </div>
+          </button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
               Family Hub
@@ -192,12 +211,12 @@ export default function HomePage() {
                   </h3>
 
                   {/* Star Badge */}
-                  <div className="mt-3 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-1.5 rounded-full shadow-inner">
+                   {kioskConfig.showPickerStars && (<div className="mt-3 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-1.5 rounded-full shadow-inner">
                     <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                     <span className="text-base font-black text-amber-300">
                       {child.stars} {child.stars === 1 ? "Star" : "Stars"}
                     </span>
-                  </div>
+                  </div>)}
                 </button>
               ))}
             </div>

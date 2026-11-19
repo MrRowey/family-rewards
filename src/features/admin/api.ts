@@ -1,0 +1,77 @@
+import type {
+  ChildProfile, TaskItem, TaskAssignmentItem, RewardItem,
+  TaskCompletionRecord, RewardRedemptionRecord, AuditLogRecord, KioskConfig,
+} from "./types";
+
+export interface ParentPortalData {
+  children?: ChildProfile[];
+  tasks?: TaskItem[];
+  rewards?: RewardItem[];
+  assignments?: TaskAssignmentItem[];
+  pendingTasks?: TaskCompletionRecord[];
+  pendingRedemptions?: RewardRedemptionRecord[];
+  redemptionsHistory?: RewardRedemptionRecord[];
+  auditLogs?: AuditLogRecord[];
+  kioskConfig?: KioskConfig;
+}
+
+async function fetchJson(url: string): Promise<unknown | undefined> {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return undefined;
+    return await response.json() as unknown;
+  } catch (error) {
+    console.error(`Failed to load ${url}`, error);
+    return undefined;
+  }
+}
+
+function asList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value as T[] : [];
+}
+
+function isKioskConfig(value: unknown): value is KioskConfig {
+  if (!value || typeof value !== "object") return false;
+  const config = value as Record<string, unknown>;
+  return typeof config.idleTimeoutSec === "number"
+    && typeof config.soundEffects === "boolean"
+    && typeof config.reducedMotion === "boolean"
+    && typeof config.largeKioskText === "boolean"
+    && typeof config.showPickerStars === "boolean"
+    && typeof config.maxDailyTasks === "number";
+}
+
+export async function fetchParentQueues() {
+  const [tasks, history] = await Promise.all([
+    fetchJson("/api/task-completions?status=PENDING"),
+    fetchJson("/api/redemptions"),
+  ]);
+  const redemptionsHistory = history === undefined ? undefined : asList<RewardRedemptionRecord>(history);
+  return {
+    pendingTasks: tasks === undefined ? undefined : asList<TaskCompletionRecord>(tasks),
+    pendingRedemptions: redemptionsHistory?.filter((item) => item.status === "PENDING"),
+    redemptionsHistory,
+  };
+}
+
+export async function fetchParentPortalData(): Promise<ParentPortalData> {
+  const [children, tasks, rewards, assignments, queues, auditLogs, kioskConfig] = await Promise.all([
+    fetchJson("/api/parent/children"),
+    fetchJson("/api/tasks"),
+    fetchJson("/api/parent/rewards"),
+    fetchJson("/api/task-assignments"),
+    fetchParentQueues(),
+    fetchJson("/api/audit-logs"),
+    fetchJson("/api/kiosk/settings"),
+  ]);
+
+  return {
+    ...(children !== undefined && { children: asList<ChildProfile>(children) }),
+    ...(tasks !== undefined && { tasks: asList<TaskItem>(tasks) }),
+    ...(rewards !== undefined && { rewards: asList<RewardItem>(rewards) }),
+    ...(assignments !== undefined && { assignments: asList<TaskAssignmentItem>(assignments) }),
+    ...queues,
+    ...(auditLogs !== undefined && { auditLogs: asList<AuditLogRecord>(auditLogs) }),
+    ...(isKioskConfig(kioskConfig) && { kioskConfig }),
+  };
+}

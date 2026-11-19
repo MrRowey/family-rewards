@@ -6,6 +6,8 @@ export interface Child {
   avatar: string;
   stars: number;
   dob?: string;
+  ageYears?: number;
+  kioskMode?: "AUTO" | "JUNIOR" | "EXPLORER" | "TEEN";
   ageTier?: AgeTier;
   stageName?: string;
 }

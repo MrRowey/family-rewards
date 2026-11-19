@@ -1,64 +1,93 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { ChildRefundRequests } from "@/features/rewards/ChildRefundRequests";
+import { useKioskSettings } from "@/hooks/useKioskSettings";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Lock, ShoppingBag, Sparkles, Clock, Star, Package } from "lucide-react";
 import confetti from "canvas-confetti";
-import { calculateAgeProfile } from "@/lib/ageRules";
 import { Child, Reward, RewardAssignment, PendingApproval } from "@/types";
 import { sounds } from "@/lib/sound";
+import { resolveKioskMode } from "@/lib/kiosk-age-mode";
+
+const getRewardImage = (reward: Reward) => {
+  const raw = reward as unknown as Record<string, unknown>;
+  return (raw.imageUrl as string | undefined) || (raw.imageURL as string | undefined) || null;
+};
+
+const getRewardDesc = (reward: Reward) => {
+  const raw = reward as unknown as Record<string, unknown>;
+  return (raw.description as string | undefined) || null;
+};
 
 export default function RewardShop() {
+  const { config: kioskConfig } = useKioskSettings(true);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>("");
   const [pendingRedemptions, setPendingRedemptions] = useState<PendingApproval[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
+  const [shopError, setShopError] = useState(false);
+  const requestVersion = useRef(0);
+  const [rewardChildId, setRewardChildId] = useState<string | null>(null);
+
   const loadShopData = useCallback(async () => {
+    const version = ++requestVersion.current;
     try {
       const [rwRes, chRes, appRes] = await Promise.all([
-        fetch("/api/rewards"),
+        fetch(selectedChildId ? `/api/rewards?childId=${encodeURIComponent(selectedChildId)}` : "/api/rewards", { cache: "no-store" }),
         fetch("/api/children"),
-        fetch("/api/approvals"),
+        fetch("/api/kiosk/pending-rewards"),
       ]);
 
-      if (rwRes.ok) setRewards(await rwRes.json());
-
-      if (chRes.ok) {
-        const chData: Child[] = await chRes.json();
-        setChildren(chData);
-        setSelectedChildId((prev) => (prev ? prev : chData[0]?.id || ""));
+      const [nextRewards, chData, appData] = await Promise.all([
+        rwRes.ok ? rwRes.json() : null, chRes.ok ? chRes.json() as Promise<Child[]> : null, appRes.ok ? appRes.json() : null,
+      ]);
+      if (version !== requestVersion.current) return;
+      setShopError(!rwRes.ok || !chRes.ok || !appRes.ok);
+      if (nextRewards) {
+        setRewards(nextRewards);
+        setRewardChildId(selectedChildId);
       }
 
-      if (appRes.ok) {
-        const appData = await appRes.json();
-        setPendingRedemptions(appData.pendingRewards || []);
+      if (chData) {
+        setChildren(chData);
+        const requestedChild = new URLSearchParams(window.location.search).get("childId");
+        setSelectedChildId((prev) => chData.some((child) => child.id === prev) ? prev
+          : chData.find((child) => child.id === requestedChild)?.id ?? chData[0]?.id ?? "");
+      }
+
+      if (appData) {
+        setPendingRedemptions(appData || []);
       }
     } catch (err) {
+      if (version === requestVersion.current) setShopError(true);
       console.error("Failed to load shop data:", err);
     }
-  }, []);
+  }, [selectedChildId]);
 
   useEffect(() => {
-    let isSubscribed = true;
-    async function fetchData() {
-      if (isSubscribed) await loadShopData();
-    }
-    fetchData();
+    const refresh = () => { if (!document.hidden) void loadShopData(); };
+    refresh();
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
-      isSubscribed = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, [loadShopData]);
 
   const activeChild = children.find((c) => c.id === selectedChildId);
-  const activeChildAge = activeChild?.dob
-    ? calculateAgeProfile(new Date(activeChild.dob)).ageYears
-    : 0;
+  const activeChildAge = activeChild?.ageYears ?? 0;
+  const juniorMode = activeChild ? resolveKioskMode(activeChild.ageYears, activeChild.kioskMode) === "JUNIOR" : false;
 
-  const visibleRewards = rewards.filter((reward) => {
-    if (reward.currentStock <= 0) return false;
+  const visibleRewards = (rewardChildId === selectedChildId && activeChild ? rewards : []).filter((reward) => {
+    if (reward.isGroup || reward.currentStock <= 0) return false;
+    if (reward.targetMonth != null && reward.targetMonth !== new Date().getMonth() + 1) return false;
     if (activeChildAge < reward.minAge || activeChildAge > reward.maxAge) return false;
     if (reward.assignments && reward.assignments.length > 0) {
       return reward.assignments.some((a: RewardAssignment) => a.childId === selectedChildId);
@@ -68,17 +97,17 @@ export default function RewardShop() {
 
   const childStars = activeChild?.stars || 0;
   const affordableRewards = visibleRewards.filter((r) => childStars >= r.starCost);
-  const lockedRewards = visibleRewards.filter((r) => childStars < r.starCost);
+  const lockedRewards = visibleRewards.filter((r) => childStars < r.starCost).toSorted((a, b) => a.starCost - b.starCost);
 
   const handleClaimReward = async (e: React.MouseEvent, rewardId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!selectedChildId) return;
+    if (!selectedChildId || submittingId || shopError || rewardChildId !== selectedChildId) return;
 
     setSubmittingId(rewardId);
 
     try {
-      const res = await fetch("/api/rewards/claim", {
+      const res = await fetch("/api/redemptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ childId: selectedChildId, rewardId }),
@@ -87,47 +116,39 @@ export default function RewardShop() {
       const data = await res.json();
 
       if (res.ok) {
-        sounds.playFanfare();
-        confetti({
+        if (kioskConfig.soundEffects) sounds.playFanfare();
+        if (!kioskConfig.reducedMotion) confetti({
+          disableForReducedMotion: true,
           particleCount: 90,
           spread: 80,
           origin: { y: 0.6 },
         });
         await loadShopData();
       } else {
-        sounds.playLockedBuzz();
+        if (kioskConfig.soundEffects) sounds.playLockedBuzz();
         alert(data.error || "Could not claim reward.");
       }
     } catch (err) {
       console.error("Claim error:", err);
-      sounds.playLockedBuzz();
+      if (kioskConfig.soundEffects) sounds.playLockedBuzz();
       alert("Network error processing claim.");
     } finally {
       setSubmittingId(null);
     }
   };
 
-  const getRewardImage = (reward: Reward) => {
-    const raw = reward as unknown as Record<string, unknown>;
-    return (raw.imageUrl as string | undefined) || (raw.imageURL as string | undefined) || null;
-  };
-
-  const getRewardDesc = (reward: Reward) => {
-    const raw = reward as unknown as Record<string, unknown>;
-    return (raw.description as string | undefined) || null;
-  };
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 pb-28 sm:p-8 sm:pb-28 landscape:lg:pb-8 select-none touch-manipulation flex flex-col landscape:lg:flex-row gap-4 sm:gap-6">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 right-1/4 w-[600px] h-[350px] bg-amber-500/10 blur-[150px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 left-10 w-[500px] h-[300px] bg-indigo-600/15 blur-[140px] rounded-full" />
 
       {/* Left-Hand Sidebar: Child Card & Profile Switcher */}
-      <aside className="relative z-10 w-full lg:w-80 shrink-0 flex flex-col justify-between bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl">
-        <div className="flex flex-col items-center text-center">
+      <aside className="relative z-10 w-full landscape:lg:w-80 shrink-0 flex flex-col justify-between bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-4 landscape:lg:p-6 shadow-2xl">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 text-left landscape:lg:flex landscape:lg:flex-col landscape:lg:text-center">
           {/* Top back button & shop title */}
-          <div className="w-full flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+          <div className="col-span-full w-full flex items-center justify-between mb-3 pb-3 landscape:lg:mb-8 border-b border-white/5">
             <Link
               href="/"
               className="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 rounded-2xl transition active:scale-95 min-h-[48px] min-w-[48px] flex items-center justify-center shadow-md"
@@ -141,9 +162,9 @@ export default function RewardShop() {
           </div>
 
           {/* Child Big Avatar */}
-          <div className="relative mb-5">
+          <div className="relative row-span-2 landscape:lg:mb-5">
             {activeChild?.avatar && activeChild.avatar.startsWith("/") ? (
-              <div className="w-32 h-32 rounded-3xl overflow-hidden ring-4 ring-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+              <div className="w-14 h-14 landscape:lg:w-32 landscape:lg:h-32 rounded-2xl landscape:lg:rounded-3xl overflow-hidden ring-4 ring-indigo-500/30 shadow-2xl shadow-indigo-500/20">
                 <Image
                   src={activeChild.avatar}
                   alt={activeChild.name}
@@ -154,31 +175,31 @@ export default function RewardShop() {
                 />
               </div>
             ) : (
-              <div className="w-32 h-32 rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-7xl shadow-2xl shadow-indigo-500/10">
+              <div className="w-14 h-14 landscape:lg:w-32 landscape:lg:h-32 rounded-2xl landscape:lg:rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-3xl landscape:lg:text-7xl shadow-2xl shadow-indigo-500/10">
                 {activeChild?.avatar || "👤"}
               </div>
             )}
           </div>
 
           {/* Child Name */}
-          <h2 className="text-3xl font-black text-white tracking-tight mb-3">
+          <h2 className="wrap-break-word text-xl landscape:lg:text-3xl font-black text-white tracking-tight landscape:lg:mb-3">
             {activeChild?.name || "Shopper"}
           </h2>
 
           {/* Big Star Balance Badge */}
-          <div className="w-full bg-linear-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/30 p-4 rounded-2xl shadow-inner flex flex-col items-center mb-6">
+          <div className="w-full bg-linear-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/30 p-2 rounded-2xl shadow-inner flex flex-wrap items-center gap-2 landscape:lg:flex-col landscape:lg:p-4 landscape:lg:mb-6">
             <span className="text-xs uppercase tracking-wider font-extrabold text-amber-300/80 mb-1">
               Your Star Balance
             </span>
             <div className="flex items-center gap-2.5">
               <Star className="w-7 h-7 text-amber-400 fill-amber-400 animate-pulse" />
-              <span className="text-4xl font-black text-amber-300">{childStars}</span>
+              <span className="text-2xl landscape:lg:text-4xl font-black text-amber-300">{childStars}</span>
             </div>
           </div>
         </div>
 
         {/* Quick Sibling Switcher */}
-        <div className="pt-4 border-t border-white/5">
+        <div className="mt-3 pt-3 border-t border-white/5">
           <p className="text-[11px] uppercase tracking-wider font-extrabold text-slate-400 mb-2.5 text-center">
             Switch Shopper
           </p>
@@ -190,7 +211,7 @@ export default function RewardShop() {
                   key={c.id}
                   type="button"
                   onClick={() => {
-                    sounds.playPop();
+                    if (kioskConfig.soundEffects) sounds.playPop();
                    setSelectedChildId(c.id)
                   }}
                   className={`p-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 min-h-[48px] active:scale-95 ${
@@ -210,8 +231,12 @@ export default function RewardShop() {
 
       {/* Right Area: Storefront Shelves */}
       <section className="relative z-10 flex-1 overflow-y-auto space-y-8 pr-1">
-        {visibleRewards.length === 0 ? (
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-16 text-center max-w-xl mx-auto shadow-2xl mt-12">
+        {shopError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-sm text-amber-200">Could not refresh the shop. Trying again automatically.</p>}
+        {activeChild && <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />}
+        {rewardChildId !== selectedChildId || (shopError && visibleRewards.length === 0) ? (
+          !shopError && <output className="block text-sm text-slate-300">Loading shop…</output>
+        ) : visibleRewards.length === 0 ? (
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-10 text-center max-w-xl mx-auto shadow-2xl mt-12">
             <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/30 rounded-3xl flex items-center justify-center mx-auto mb-5 text-4xl">
               🎁
             </div>
@@ -224,7 +249,7 @@ export default function RewardShop() {
           <>
             {/* Shelf 1: Available Now (Can Afford) */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <h3 className="text-2xl font-black tracking-tight flex items-center gap-2.5 text-white">
                   <Sparkles className="w-6 h-6 text-amber-400" /> Ready to Redeem
                 </h3>
@@ -307,7 +332,7 @@ export default function RewardShop() {
                           ) : (
                             <button
                               type="button"
-                              disabled={isSubmitting}
+                              disabled={submittingId !== null || shopError}
                               onClick={(e) => handleClaimReward(e, reward.id)}
                               className="w-full min-h-[48px] bg-linear-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-[0.98] transition cursor-pointer text-sm"
                             >
@@ -326,7 +351,7 @@ export default function RewardShop() {
             {/* Shelf 2: Goal Vault (Locked / Need More Stars) */}
             {lockedRewards.length > 0 && (
               <div className="pt-4">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <h3 className="text-xl font-black tracking-tight flex items-center gap-2 text-slate-300">
                     <Lock className="w-5 h-5 text-slate-400" /> Goal Vault (Need More Stars)
                   </h3>
@@ -345,9 +370,14 @@ export default function RewardShop() {
                     return (
                       <div
                         key={reward.id}
-                        onClick={() => sounds.playLockedBuzz()}
-                        className="rounded-3xl p-5 bg-slate-900/40 border border-slate-800/80 shadow-lg backdrop-blur-md flex flex-col justify-between opacity-70 hover:opacity-90 transition-opacity"
+                        className="relative rounded-3xl p-5 bg-slate-900/40 border border-slate-800/80 shadow-lg backdrop-blur-md flex flex-col justify-between opacity-70 hover:opacity-90 transition-opacity"
                       >
+                        <button
+                          type="button"
+                          aria-label={`Locked reward: ${reward.title}`}
+                          onClick={() => { if (kioskConfig.soundEffects) sounds.playLockedBuzz(); }}
+                          className="absolute inset-0 z-10 rounded-3xl cursor-not-allowed focus-visible:outline-2 focus-visible:outline-indigo-400"
+                        />
                         <div>
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="relative grayscale opacity-80">
@@ -409,6 +439,13 @@ export default function RewardShop() {
           </>
         )}
       </section>
+      {activeChild && (
+        <nav aria-label="Kiosk navigation" className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] landscape:lg:hidden">
+          <Link href={"/kid/" + encodeURIComponent(activeChild.id)} className={`flex items-center rounded-xl px-3 font-bold ${juniorMode ? "min-h-16 bg-indigo-600 text-lg text-white" : "min-h-12"}`}>{juniorMode ? "🏠 My Chores" : "Chores"}</Link>
+          <span className="whitespace-nowrap text-amber-300" aria-label={childStars + " stars"}>★ {childStars}</span>
+          <span aria-current="page" className="flex min-h-12 items-center gap-2 font-bold text-indigo-300"><ShoppingBag size={20} /> Shop</span>
+        </nav>
+      )}
     </main>
   );
 }

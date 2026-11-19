@@ -47,8 +47,8 @@ export function ShopTab({ rewards, childrenList, onCreateReward, onAssignReward 
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Reward Name</label>
-            <input
+            <label htmlFor="a11y-parent-ShopTab-tsx-1" className="block text-xs font-semibold text-slate-400 mb-1">Reward Name</label>
+            <input id="a11y-parent-ShopTab-tsx-1"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -60,8 +60,8 @@ export function ShopTab({ rewards, childrenList, onCreateReward, onAssignReward 
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Icon</label>
-              <input
+              <label htmlFor="a11y-parent-ShopTab-tsx-2" className="block text-xs font-semibold text-slate-400 mb-1">Icon</label>
+              <input id="a11y-parent-ShopTab-tsx-2"
                 type="text"
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
@@ -69,8 +69,8 @@ export function ShopTab({ rewards, childrenList, onCreateReward, onAssignReward 
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Star Cost</label>
-              <input
+              <label htmlFor="a11y-parent-ShopTab-tsx-3" className="block text-xs font-semibold text-slate-400 mb-1">Star Cost</label>
+              <input id="a11y-parent-ShopTab-tsx-3"
                 type="number"
                 value={cost}
                 onChange={(e) => setCost(Number(e.target.value))}
@@ -78,8 +78,8 @@ export function ShopTab({ rewards, childrenList, onCreateReward, onAssignReward 
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Stock</label>
-              <input
+              <label htmlFor="a11y-parent-ShopTab-tsx-4" className="block text-xs font-semibold text-slate-400 mb-1">Stock</label>
+              <input id="a11y-parent-ShopTab-tsx-4"
                 type="number"
                 value={stock}
                 onChange={(e) => setStock(Number(e.target.value))}
@@ -89,8 +89,8 @@ export function ShopTab({ rewards, childrenList, onCreateReward, onAssignReward 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Target Age Bracket</label>
-            <select
+            <label htmlFor="a11y-parent-ShopTab-tsx-5" className="block text-xs font-semibold text-slate-400 mb-1">Target Age Bracket</label>
+            <select id="a11y-parent-ShopTab-tsx-5"
               onChange={(e) => {
                 const [min, max] = e.target.value.split("-").map(Number);
                 setMinAge(min);

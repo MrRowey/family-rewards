@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, use, useCallback } from "react";
+import { useKioskSettings } from "@/hooks/useKioskSettings";
+import { useState, useEffect, useRef, use } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
 import confetti from "canvas-confetti";
 import { sounds } from "@/lib/sound";
+import { resolveKioskMode } from "@/lib/kiosk-age-mode";
 
 interface SubStep {
   id: string;
@@ -26,9 +28,12 @@ interface Child {
   name: string;
   avatar: string;
   stars: number;
+  ageYears?: number;
+  kioskMode?: "AUTO" | "JUNIOR" | "EXPLORER" | "TEEN";
 }
 
 export default function KidKioskPage({ params }: { params: Promise<{ childId: string }> }) {
+  const { config: kioskConfig } = useKioskSettings(true);
   const resolvedParams = use(params);
   const { childId } = resolvedParams;
   const router = useRouter();
@@ -36,90 +41,105 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   const [child, setChild] = useState<Child | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [checkedSubsteps, setCheckedSubsteps] = useState<Record<string, boolean>>({});
+  const submission = useRef(false);
+  const completionVersion = useRef(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState("");
+  const [waitingTasks, setWaitingTasks] = useState<Task[]>([]);
+  const [doneTasks, setDoneTasks] = useState<Task[]>([]);
+  const [syncError, setSyncError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const resetTimer = useCallback(() => {
-    return setTimeout(() => router.push("/"), 45000);
-  }, [router]);
-
   useEffect(() => {
-    let timer = resetTimer();
-    const handleActivity = () => {
-      clearTimeout(timer);
-      timer = resetTimer();
-    };
-    window.addEventListener("pointerdown", handleActivity);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("pointerdown", handleActivity);
-    };
-  }, [resetTimer]);
-
-  useEffect(() => {
+    let version = 0;
     async function loadData() {
+      if (document.hidden) return;
+      const latestRequest = ++version;
+      const completionAtStart = completionVersion.current;
       try {
         const [childRes, taskRes, compRes] = await Promise.all([
           fetch("/api/children"),
-          fetch(`/api/assignments?childId=${childId}&day=today`),
-          fetch(`/api/completions?childId=${childId}&date=today`),
+          fetch(`/api/task-assignments?childId=${childId}&day=today`, { cache: "no-store" }),
+          fetch(`/api/task-completions?childId=${childId}&date=today`, { cache: "no-store" }),
         ]);
 
-        let completedOrPendingTaskIds: string[] = [];
-        if (compRes.ok) {
-          const completions = await compRes.json();
-          completedOrPendingTaskIds = completions
-            .filter((c: { status: string }) => c.status === "PENDING" || c.status === "APPROVED")
-            .map((c: { taskId: string }) => c.taskId);
-        }
+        if (!childRes.ok || !taskRes.ok || !compRes.ok) throw new Error("Could not refresh chores.");
+        const [children, assignments, completions]: [
+          Child[], { task: Task }[], { status: string; taskId: string; task?: Task }[],
+        ] = await Promise.all([childRes.json(), taskRes.json(), compRes.json()]);
+        if (latestRequest !== version || completionAtStart !== completionVersion.current) return;
 
-        if (childRes.ok) {
-          const children: Child[] = await childRes.json();
-          const current = children.find((c) => c.id === childId);
-          if (current) setChild(current);
-        }
-
-        if (taskRes.ok) {
-          const assignments = await taskRes.json();
-          const availableTasks = assignments
-            .map((a: { task: Task }) => a.task)
-            .filter((t: Task) => t && !completedOrPendingTaskIds.includes(t.id));
-
-          setTasks(availableTasks);
-        }
+        const pending = new Set(completions.filter((item) => item.status === "PENDING").map((item) => item.taskId));
+        const approved = new Set(completions.filter((item) => item.status === "APPROVED").map((item) => item.taskId));
+        const scheduled = new Map(assignments.map(({ task }) => [task.id, task]));
+        setChild(children.find((item) => item.id === childId) ?? null);
+        const records = new Map(completions.flatMap((item) => item.task ? [[item.taskId, item.task] as const] : []));
+        const taskDetails = (ids: Set<string>) => [...ids].flatMap((id) => {
+          const task = scheduled.get(id) ?? records.get(id);
+          return [task ?? { id, title: "Chore details unavailable", icon: "📋", starValue: 0 }];
+        });
+        setWaitingTasks(taskDetails(pending));
+        setDoneTasks(taskDetails(approved));
+        // A declined completion should return to the actionable list when still assigned today.
+        setTasks([...scheduled.values()].filter((task) => !pending.has(task.id) && !approved.has(task.id)));
+        setSyncError(false);
       } catch (err) {
+        if (latestRequest === version) setSyncError(true);
         console.error("Failed to load kiosk data", err);
       } finally {
-        setLoading(false);
+        if (latestRequest === version) setLoading(false);
       }
     }
 
-    loadData();
+    void loadData();
+    const timer = window.setInterval(loadData, 10000);
+    window.addEventListener("focus", loadData);
+    document.addEventListener("visibilitychange", loadData);
+    return () => {
+      version++;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", loadData);
+      document.removeEventListener("visibilitychange", loadData);
+    };
   }, [childId]);
 
   const toggleSubstep = (substepId: string) => {
-    sounds.playPop();
+    if (kioskConfig.soundEffects) sounds.playPop();
     setCheckedSubsteps((prev) => ({ ...prev, [substepId]: !prev[substepId] }));
   };
 
   const handleCompleteChore = async (taskId: string) => {
+    if (submission.current) return;
+    submission.current = true;
+    setSubmitting(true);
+    setCompletionMessage("");
     try {
-      const res = await fetch("/api/completions", {
+      const res = await fetch("/api/task-completions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ childId, taskId }),
       });
 
+      if (!res.ok) throw new Error("Could not submit chore.");
       if (res.ok) {
-        sounds.playSuccessChime();
-        confetti({
+        completionVersion.current++;
+        setCompletionMessage("Chore sent for approval.");
+        if (kioskConfig.soundEffects) sounds.playSuccessChime();
+        if (!kioskConfig.reducedMotion) confetti({
+          disableForReducedMotion: true,
           particleCount: 60,
           spread: 70,
           origin: { y: 0.7 },
         });
+        const submittedTask = tasks.find((task) => task.id === taskId);
+        if (submittedTask) setWaitingTasks((previous) => [...previous.filter((task) => task.id !== taskId), submittedTask]);
         setTasks((prev) => prev.filter((t) => t.id !== taskId));
       }
     } catch {
-      console.error("Failed to submit chore completion");
+      setCompletionMessage("Could not submit this chore. Try again.");
+    } finally {
+      submission.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -127,24 +147,28 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100">
         <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="font-bold text-slate-400">Opening Dashboard...</p>
+        <p className="font-bold text-slate-400">{syncError ? "Could not load chores. Trying again…" : !loading ? "Child profile unavailable" : "Opening Dashboard…"}</p>
       </div>
     );
   }
 
+  const displayMode = resolveKioskMode(child.ageYears, child.kioskMode);
+  const isJunior = displayMode === "JUNIOR";
+  const isTeen = displayMode === "TEEN";
+
   return (
-    <main className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
-      <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800/80 bg-slate-900/40 p-6 rounded-3xl backdrop-blur-md">
-        <div className="flex items-center gap-5">
+    <main data-kiosk-mode={displayMode.toLowerCase()} data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 px-4 pt-5 pb-28 sm:px-8 sm:pt-8 landscape:lg:pb-8 select-none touch-manipulation">
+      <header className="mx-auto mb-6 grid max-w-6xl gap-4 rounded-3xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6 landscape:lg:flex landscape:lg:items-center landscape:lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
           <button
             onClick={() => router.push("/")}
-            className="p-4 min-h-24 min-w-24 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-2xl transition flex items-center justify-center border border-slate-700/50 shadow-lg"
+            className="shrink-0 p-3 min-h-14 min-w-14 sm:min-h-16 sm:min-w-16 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-2xl transition flex items-center justify-center border border-slate-700/50 shadow-lg"
             aria-label="Back to home"
           >
             <ArrowLeft className="w-7 h-7 text-slate-200" />
           </button>
 
-          <div className="relative">
+          <div className="relative shrink-0">
             {child.avatar.startsWith("/") ? (
               <Image
                 src={child.avatar}
@@ -155,33 +179,33 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                 className="w-16 h-16 rounded-2xl object-cover ring-4 ring-indigo-500/30 shadow-xl"
               />
             ) : (
-              <span className="text-6xl filter drop-shadow-md">{child.avatar}</span>
+              <span className="text-4xl sm:text-6xl filter drop-shadow-md">{child.avatar}</span>
             )}
           </div>
 
           <div>
-            <h1 className="text-4xl font-black tracking-tight">{child.name}&apos;s Dashboard</h1>
-            <p className="text-sm text-slate-400 font-medium">Complete daily chores to earn shiny stars!</p>
+            <h1 className="wrap-break-word text-2xl font-black tracking-tight sm:text-4xl">{child.name}&apos;s Dashboard</h1>
+            <p className="text-sm text-slate-400 font-medium">{isTeen ? "Manage your tasks and rewards." : isJunior ? "Do your chores and collect stars!" : "Complete your challenges and earn rewards!"}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="bg-amber-500/10 border border-amber-500/30 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-inner">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div className="bg-amber-500/10 border border-amber-500/30 px-4 py-3 rounded-2xl flex items-center gap-3 shadow-inner">
             <Star className="w-8 h-8 text-amber-400 fill-amber-400 animate-pulse" />
             <span className="text-3xl font-black text-amber-400">{child.stars}</span>
           </div>
           <button
-            onClick={() => router.push("/shop")}
-            className="min-h-24 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
+            onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
+            className={`${isJunior ? "hidden" : "hidden min-h-14 landscape:lg:flex"} flex-1 justify-center whitespace-nowrap bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95`}
           >
             <ShoppingBag className="w-6 h-6" /> Reward Shop
           </button>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3">
             <ListCheck className="w-8 h-8 text-indigo-400" /> Today&apos;s Chores
           </h2>
           <span className="text-sm font-semibold bg-indigo-950 text-indigo-300 px-4 py-1.5 rounded-full border border-indigo-800/50">
@@ -189,23 +213,27 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </span>
         </div>
 
+        {isJunior && <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))} className="flex w-full min-h-24 items-center justify-center gap-4 rounded-3xl bg-linear-to-r from-fuchsia-600 to-indigo-600 px-6 py-5 text-2xl font-black shadow-xl active:scale-95"><ShoppingBag size={36} /> 🛍️ Reward Shop</button>}
+        <output className="block text-sm text-slate-300">{completionMessage}</output>
+
+        {syncError && <p role="alert" className="text-sm text-amber-200">Could not refresh chores. Trying again automatically.</p>}
         {tasks.length === 0 ? (
-          <div className="bg-slate-900/60 border border-slate-800/80 p-16 rounded-3xl text-center space-y-3">
+          <div className="bg-slate-900/60 border border-slate-800/80 p-8 sm:p-12 rounded-3xl text-center space-y-3">
             <div className="text-6xl">🎉</div>
             <h3 className="text-2xl font-bold text-slate-300">All done for today!</h3>
             <p className="text-slate-500">No pending chores left on your queue right now.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={`grid grid-cols-1 gap-4 ${isJunior ? "lg:grid-cols-2" : "sm:grid-cols-2"} sm:gap-6`}>
             {tasks.map((task) => {
               const substeps = task.subSteps || [];
               const allSubstepsDone =
-                substeps.length === 0 || substeps.every((s) => checkedSubsteps[s.id]);
+                substeps.every((s) => checkedSubsteps[s.id]);
 
               return (
                 <div
                   key={task.id}
-                  className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-3xl p-6 flex flex-col justify-between shadow-2xl backdrop-blur-sm transition-all duration-300"
+                  className={`bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-3xl ${isJunior ? "p-7" : "p-6"} flex flex-col justify-between shadow-2xl backdrop-blur-sm transition-all duration-300`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -222,7 +250,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                         <span className="text-5xl">{task.icon}</span>
                       )}
                       <div>
-                        <h3 className="text-2xl font-bold">{task.title}</h3>
+                        <h3 className="wrap-break-word text-xl font-bold sm:text-2xl">{task.title}</h3>
                         <div className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 font-extrabold text-sm px-3 py-1 rounded-full border border-amber-500/20 mt-1">
                           <Star className="w-4 h-4 fill-amber-400" /> +{task.starValue} Stars
                         </div>
@@ -242,7 +270,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                             key={sub.id}
                             type="button"
                             onClick={() => toggleSubstep(sub.id)}
-                            className={`w-full min-h-24 flex items-center justify-between p-3 rounded-xl border text-left text-sm font-semibold transition ${
+                            className={`w-full min-h-14 flex items-center justify-between p-3 rounded-xl border text-left text-sm font-semibold transition ${
                               isChecked
                                 ? "bg-indigo-950/50 border-indigo-500/50 text-indigo-200"
                                 : "bg-slate-950/50 border-slate-800/80 text-slate-300 hover:bg-slate-800/50"
@@ -267,14 +295,14 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                   <div className="mt-6 pt-4 border-t border-slate-800/60 flex justify-end">
                     <button
                       onClick={() => handleCompleteChore(task.id)}
-                      disabled={!allSubstepsDone}
-                      className={`w-full min-h-24 font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
+                      disabled={!allSubstepsDone || submitting || syncError}
+                      className={`w-full min-h-14 font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
                         allSubstepsDone
                           ? "bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer"
                           : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
                       }`}
                     >
-                      {allSubstepsDone ? "Mark Completed!" : "Complete all steps above"}
+                      {allSubstepsDone ? (isJunior ? "⭐ I did it!" : isTeen ? "Submit task" : "Mark Completed!") : (isJunior ? "Finish the steps first" : "Complete all steps above")}
                     </button>
                   </div>
                 </div>
@@ -283,6 +311,29 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </div>
         )}
       </div>
+      {isTeen && (
+      <div className="mx-auto mt-6 grid max-w-6xl gap-4 sm:grid-cols-2">
+        {[{ label: "Waiting for approval", items: waitingTasks }, { label: "Done", items: doneTasks }].map(({ label, items }) => (
+          <section key={label} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <h2 className="text-lg font-bold">{label} ({items.length})</h2>
+            {items.length === 0 ? <p className="mt-2 text-sm text-slate-400">No chores here yet.</p> : (
+              <ul className="mt-2 divide-y divide-slate-800">
+                {items.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 py-2">
+                  <span className="min-w-0 wrap-break-word">{task.icon} {task.title}</span>
+                  <span className="shrink-0 text-sm text-amber-300">{task.starValue > 0 ? `${task.starValue} ★` : "—"}</span>
+                </li>)}
+              </ul>
+            )}
+          </section>
+        ))}
+      </div>
+      )}
+      <nav aria-label="Kiosk navigation" className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${isJunior ? "min-h-20" : ""} landscape:lg:hidden`}>
+        <span aria-current="page" className="flex min-h-12 items-center gap-2 font-bold text-indigo-300"><ListCheck size={20} /> Chores</span>
+        <span className="whitespace-nowrap text-amber-300" aria-label={child.stars + " stars"}>★ {child.stars}</span>
+        <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
+          className={`flex items-center gap-2 rounded-xl px-3 font-bold ${isJunior ? "min-h-16 text-lg bg-indigo-600 text-white" : "min-h-12"}`}><ShoppingBag size={isJunior ? 28 : 20} /> {isJunior ? "🛍️ Shop!" : "Shop"}</button>
+      </nav>
     </main>
   );
 }

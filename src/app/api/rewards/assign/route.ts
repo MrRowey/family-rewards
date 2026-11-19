@@ -1,29 +1,16 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { toggleRewardAssignment } from "@/features/rewards/assignments";
 
+// Compatibility endpoint: existing clients use POST to toggle assignment.
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { rewardId, childId } = body;
-
-    if (!rewardId || !childId) {
+    const { rewardId, childId } = body ?? {};
+    if (typeof rewardId !== "string" || !rewardId || typeof childId !== "string" || !childId) {
       return NextResponse.json({ error: "rewardId and childId are required" }, { status: 400 });
     }
-
-    const existing = await prisma.rewardAssignment.findFirst({
-      where: { rewardId, childId },
-    });
-
-    if (existing) {
-      await prisma.rewardAssignment.delete({ where: { id: existing.id } });
-      return NextResponse.json({ action: "removed" });
-    }
-
-    const assignment = await prisma.rewardAssignment.create({
-      data: { rewardId, childId },
-    });
-
-    return NextResponse.json({ action: "added", assignment }, { status: 201 });
+    const result = await toggleRewardAssignment(rewardId, childId);
+    return NextResponse.json(result, { status: result.action === "added" ? 201 : 200 });
   } catch {
     return NextResponse.json({ error: "Failed to toggle assignment" }, { status: 500 });
   }

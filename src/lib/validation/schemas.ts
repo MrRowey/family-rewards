@@ -9,6 +9,7 @@ export const CreateChildSchema = z.object({
 });
 
 export const CreateTaskSchema = z.object({
+  category: z.string().trim().max(60).optional(),
   title: z.string().min(1, "Task title is required").max(100),
   icon: z.string().default("⭐"),
   imageUrl: z.string().url().optional().nullable(),

@@ -1,44 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { apiError, parseJson } from "@/lib/api";
+import { CreateTaskSchema } from "@/lib/validation/schemas";
+import { createTask, listTasks } from "@/features/tasks/service";
 
-// GET /api/tasks -> Fetch all tasks
 export async function GET() {
-    try {
-        const tasks = await prisma.task.findMany({
-            include: { subSteps: { orderBy: { order: "asc"}}},
-            orderBy: { minAge: "asc"},
-        });
-        return NextResponse.json(tasks);
-    }    catch {
-        return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
-    }
+  try { return NextResponse.json(await listTasks()); }
+  catch (error) { return apiError(error, "Failed to fetch tasks"); }
 }
 
-// POST /api/tasks -> Add task to vault with sub-steps and age bracket
 export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const { title, icon, starValue, minAge, maxAge, subSteps } = body;
-
-        const newTask = await prisma.task.create({
-            data: {
-                title,
-                icon: icon || "⭐",
-                starValue: parseInt(starValue) || 1,
-                minAge: parseInt(minAge) || 2,
-                maxAge: parseInt(maxAge) || 18,
-                subSteps: {
-                    create: subSteps?.map((s: string, idx: number) => ({
-                        title: s,
-                        order: idx + 1,
-                    })),
-                },
-            },
-            include: { subSteps: true },
-        });
-
-        return NextResponse.json(newTask);
-    } catch {
-        return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
-    }
+  try {
+    const task = await createTask(await parseJson(request, CreateTaskSchema));
+    return NextResponse.json(task, { status: 201 });
+  } catch (error) {
+    return apiError(error, "Failed to create task");
+  }
 }
