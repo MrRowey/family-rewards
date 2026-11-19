@@ -137,16 +137,16 @@ export default function RewardShop() {
 
 
   return (
-    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col lg:flex-row gap-6">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100 p-4 sm:p-8 select-none touch-manipulation flex flex-col landscape:lg:flex-row gap-4 sm:gap-6">
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute -top-40 right-1/4 w-[600px] h-[350px] bg-amber-500/10 blur-[150px] rounded-full" />
       <div className="pointer-events-none absolute -bottom-40 left-10 w-[500px] h-[300px] bg-indigo-600/15 blur-[140px] rounded-full" />
 
       {/* Left-Hand Sidebar: Child Card & Profile Switcher */}
-      <aside className="relative z-10 w-full lg:w-80 shrink-0 flex flex-col justify-between bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl">
-        <div className="flex flex-col items-center text-center">
+      <aside className="relative z-10 w-full landscape:lg:w-80 shrink-0 flex flex-col justify-between bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-4 landscape:lg:p-6 shadow-2xl">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 text-left landscape:lg:flex landscape:lg:flex-col landscape:lg:text-center">
           {/* Top back button & shop title */}
-          <div className="w-full flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+          <div className="col-span-full w-full flex items-center justify-between mb-3 pb-3 landscape:lg:mb-8 border-b border-white/5">
             <Link
               href="/"
               className="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 rounded-2xl transition active:scale-95 min-h-[48px] min-w-[48px] flex items-center justify-center shadow-md"
@@ -160,9 +160,9 @@ export default function RewardShop() {
           </div>
 
           {/* Child Big Avatar */}
-          <div className="relative mb-5">
+          <div className="relative row-span-2 landscape:lg:mb-5">
             {activeChild?.avatar && activeChild.avatar.startsWith("/") ? (
-              <div className="w-32 h-32 rounded-3xl overflow-hidden ring-4 ring-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+              <div className="w-14 h-14 landscape:lg:w-32 landscape:lg:h-32 rounded-2xl landscape:lg:rounded-3xl overflow-hidden ring-4 ring-indigo-500/30 shadow-2xl shadow-indigo-500/20">
                 <Image
                   src={activeChild.avatar}
                   alt={activeChild.name}
@@ -173,31 +173,31 @@ export default function RewardShop() {
                 />
               </div>
             ) : (
-              <div className="w-32 h-32 rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-7xl shadow-2xl shadow-indigo-500/10">
+              <div className="w-14 h-14 landscape:lg:w-32 landscape:lg:h-32 rounded-2xl landscape:lg:rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-3xl landscape:lg:text-7xl shadow-2xl shadow-indigo-500/10">
                 {activeChild?.avatar || "👤"}
               </div>
             )}
           </div>
 
           {/* Child Name */}
-          <h2 className="text-3xl font-black text-white tracking-tight mb-3">
+          <h2 className="wrap-break-word text-xl landscape:lg:text-3xl font-black text-white tracking-tight landscape:lg:mb-3">
             {activeChild?.name || "Shopper"}
           </h2>
 
           {/* Big Star Balance Badge */}
-          <div className="w-full bg-linear-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/30 p-4 rounded-2xl shadow-inner flex flex-col items-center mb-6">
+          <div className="w-full bg-linear-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/30 p-2 rounded-2xl shadow-inner flex flex-wrap items-center gap-2 landscape:lg:flex-col landscape:lg:p-4 landscape:lg:mb-6">
             <span className="text-xs uppercase tracking-wider font-extrabold text-amber-300/80 mb-1">
               Your Star Balance
             </span>
             <div className="flex items-center gap-2.5">
               <Star className="w-7 h-7 text-amber-400 fill-amber-400 animate-pulse" />
-              <span className="text-4xl font-black text-amber-300">{childStars}</span>
+              <span className="text-2xl landscape:lg:text-4xl font-black text-amber-300">{childStars}</span>
             </div>
           </div>
         </div>
 
         {/* Quick Sibling Switcher */}
-        <div className="pt-4 border-t border-white/5">
+        <div className="mt-3 pt-3 border-t border-white/5">
           <p className="text-[11px] uppercase tracking-wider font-extrabold text-slate-400 mb-2.5 text-center">
             Switch Shopper
           </p>
@@ -234,7 +234,7 @@ export default function RewardShop() {
         {rewardChildId !== selectedChildId || (shopError && visibleRewards.length === 0) ? (
           !shopError && <output className="block text-sm text-slate-300">Loading shop…</output>
         ) : visibleRewards.length === 0 ? (
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-16 text-center max-w-xl mx-auto shadow-2xl mt-12">
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-10 text-center max-w-xl mx-auto shadow-2xl mt-12">
             <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/30 rounded-3xl flex items-center justify-center mx-auto mb-5 text-4xl">
               🎁
             </div>
@@ -247,7 +247,7 @@ export default function RewardShop() {
           <>
             {/* Shelf 1: Available Now (Can Afford) */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <h3 className="text-2xl font-black tracking-tight flex items-center gap-2.5 text-white">
                   <Sparkles className="w-6 h-6 text-amber-400" /> Ready to Redeem
                 </h3>
@@ -349,7 +349,7 @@ export default function RewardShop() {
             {/* Shelf 2: Goal Vault (Locked / Need More Stars) */}
             {lockedRewards.length > 0 && (
               <div className="pt-4">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <h3 className="text-xl font-black tracking-tight flex items-center gap-2 text-slate-300">
                     <Lock className="w-5 h-5 text-slate-400" /> Goal Vault (Need More Stars)
                   </h3>

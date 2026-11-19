@@ -140,18 +140,18 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   }
 
   return (
-    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-8 select-none touch-manipulation">
-      <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800/80 bg-slate-900/40 p-6 rounded-3xl backdrop-blur-md">
-        <div className="flex items-center gap-5">
+    <main data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 px-4 py-5 sm:px-8 sm:py-8 select-none touch-manipulation">
+      <header className="mx-auto mb-6 grid max-w-6xl gap-4 rounded-3xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6 landscape:lg:flex landscape:lg:items-center landscape:lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
           <button
             onClick={() => router.push("/")}
-            className="p-4 min-h-24 min-w-24 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-2xl transition flex items-center justify-center border border-slate-700/50 shadow-lg"
+            className="shrink-0 p-3 min-h-14 min-w-14 sm:min-h-16 sm:min-w-16 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-2xl transition flex items-center justify-center border border-slate-700/50 shadow-lg"
             aria-label="Back to home"
           >
             <ArrowLeft className="w-7 h-7 text-slate-200" />
           </button>
 
-          <div className="relative">
+          <div className="relative shrink-0">
             {child.avatar.startsWith("/") ? (
               <Image
                 src={child.avatar}
@@ -162,33 +162,33 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                 className="w-16 h-16 rounded-2xl object-cover ring-4 ring-indigo-500/30 shadow-xl"
               />
             ) : (
-              <span className="text-6xl filter drop-shadow-md">{child.avatar}</span>
+              <span className="text-4xl sm:text-6xl filter drop-shadow-md">{child.avatar}</span>
             )}
           </div>
 
           <div>
-            <h1 className="text-4xl font-black tracking-tight">{child.name}&apos;s Dashboard</h1>
+            <h1 className="wrap-break-word text-2xl font-black tracking-tight sm:text-4xl">{child.name}&apos;s Dashboard</h1>
             <p className="text-sm text-slate-400 font-medium">Complete daily chores to earn shiny stars!</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="bg-amber-500/10 border border-amber-500/30 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-inner">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div className="bg-amber-500/10 border border-amber-500/30 px-4 py-3 rounded-2xl flex items-center gap-3 shadow-inner">
             <Star className="w-8 h-8 text-amber-400 fill-amber-400 animate-pulse" />
             <span className="text-3xl font-black text-amber-400">{child.stars}</span>
           </div>
           <button
             onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
-            className="min-h-24 bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
+            className="min-h-14 flex-1 justify-center whitespace-nowrap bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
           >
             <ShoppingBag className="w-6 h-6" /> Reward Shop
           </button>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3">
             <ListCheck className="w-8 h-8 text-indigo-400" /> Today&apos;s Chores
           </h2>
           <span className="text-sm font-semibold bg-indigo-950 text-indigo-300 px-4 py-1.5 rounded-full border border-indigo-800/50">
@@ -200,13 +200,13 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         {pendingCount > 0 && <p className="text-sm text-slate-300">{pendingCount} waiting for parent approval</p>}
         {syncError && <p role="alert" className="text-sm text-amber-200">Could not refresh chores. Trying again automatically.</p>}
         {tasks.length === 0 ? (
-          <div className="bg-slate-900/60 border border-slate-800/80 p-16 rounded-3xl text-center space-y-3">
+          <div className="bg-slate-900/60 border border-slate-800/80 p-8 sm:p-12 rounded-3xl text-center space-y-3">
             <div className="text-6xl">🎉</div>
             <h3 className="text-2xl font-bold text-slate-300">All done for today!</h3>
             <p className="text-slate-500">No pending chores left on your queue right now.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
             {tasks.map((task) => {
               const substeps = task.subSteps || [];
               const allSubstepsDone =
@@ -232,7 +232,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                         <span className="text-5xl">{task.icon}</span>
                       )}
                       <div>
-                        <h3 className="text-2xl font-bold">{task.title}</h3>
+                        <h3 className="wrap-break-word text-xl font-bold sm:text-2xl">{task.title}</h3>
                         <div className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 font-extrabold text-sm px-3 py-1 rounded-full border border-amber-500/20 mt-1">
                           <Star className="w-4 h-4 fill-amber-400" /> +{task.starValue} Stars
                         </div>
@@ -252,7 +252,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                             key={sub.id}
                             type="button"
                             onClick={() => toggleSubstep(sub.id)}
-                            className={`w-full min-h-24 flex items-center justify-between p-3 rounded-xl border text-left text-sm font-semibold transition ${
+                            className={`w-full min-h-14 flex items-center justify-between p-3 rounded-xl border text-left text-sm font-semibold transition ${
                               isChecked
                                 ? "bg-indigo-950/50 border-indigo-500/50 text-indigo-200"
                                 : "bg-slate-950/50 border-slate-800/80 text-slate-300 hover:bg-slate-800/50"
@@ -278,7 +278,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                     <button
                       onClick={() => handleCompleteChore(task.id)}
                       disabled={!allSubstepsDone || submitting || syncError}
-                      className={`w-full min-h-24 font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
+                      className={`w-full min-h-14 font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
                         allSubstepsDone
                           ? "bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer"
                           : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
