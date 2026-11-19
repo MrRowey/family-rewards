@@ -91,7 +91,7 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
 
               <div className="lg:col-span-2 space-y-4">
                 <h3 className="font-black text-lg text-white">Registered Profiles ({householdChildren.length})</h3>
-                <p role="status" className="text-sm text-slate-300">{modeMessage}</p>
+                <output className="block text-sm text-slate-300">{modeMessage}</output>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {householdChildren.map((child) => (
                     <div key={child.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex flex-col gap-4 shadow-xl">
