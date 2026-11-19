@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { avatarAppearance, validateAvatarUnlocks } from "@/lib/domain/avatar-appearance";
+import { apiError, parseJson } from "@/lib/api";
 
 export async function GET(
   _req: Request,
@@ -43,14 +45,16 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const body = await req.json();
-    const { theme, config } = body;
+    const { theme, config } = await parseJson(req, avatarAppearance);
+    if (!await validateAvatarUnlocks(id, { theme, config })) {
+      return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
+    }
 
     const updated = await prisma.child.update({
       where: { id },
       data: {
         avatarTheme: theme,
-        avatarConfig: JSON.stringify(config),
+        avatarConfig: JSON.stringify(theme === "bottts" ? config : {}),
       },
     });
 
@@ -66,6 +70,6 @@ export async function PATCH(
     return NextResponse.json({ success: true, updated });
   } catch (error) {
     console.error("Failed to save avatar config:", error);
-    return NextResponse.json({ error: "Failed to save avatar" }, { status: 500 });
+    return apiError(error, "Failed to save avatar");
   }
 }
