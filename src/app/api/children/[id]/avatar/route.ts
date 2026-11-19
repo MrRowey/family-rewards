@@ -25,6 +25,7 @@ export async function GET(
     });
 
     return NextResponse.json({
+      hasAvatar: child.avatarConfig !== null,
       theme: child.avatarTheme || "bottts",
       config: child.avatarConfig ? JSON.parse(child.avatarConfig) : {},
       completedTasksCount,
