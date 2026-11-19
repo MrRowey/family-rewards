@@ -43,14 +43,18 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
   const [selectedTop, setSelectedTop] = useState("antenna");
   const [selectedEyes, setSelectedEyes] = useState("round");
   const [completedChores, setCompletedChores] = useState(0);
+  const [firstAvatar, setFirstAvatar] = useState<boolean>();
+  const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function fetchChildAvatar() {
       try {
         const res = await fetch(`/api/children/${id}/avatar`);
+        if (!res.ok) throw new Error("Could not load this profile.");
         if (res.ok) {
           const data = await res.json();
+          setFirstAvatar(!data.hasAvatar);
           if (data.theme) setTheme(data.theme);
           if (data.config?.baseColor) setSelectedColor(data.config.baseColor[0]);
           if (data.config?.top) setSelectedTop(data.config.top[0]);
@@ -58,28 +62,39 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
           setCompletedChores(data.completedTasksCount || 0);
         }
       } catch (err) {
-        console.error("Failed to load avatar state:", err);
+        setSaveError(err instanceof Error ? err.message : "Could not load this profile.");
       }
     }
     fetchChildAvatar();
   }, [id]);
 
-  const currentConfig = {
+  const currentConfig = theme === "bottts" ? {
     baseColor: [selectedColor],
     top: [selectedTop],
     eyes: [selectedEyes],
-  };
+  } : {};
 
   const handleSave = async () => {
+    if (saving || firstAvatar === undefined) return;
     setSaving(true);
-    playSfx("success");
-    await fetch(`/api/children/${id}/avatar`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme, config: currentConfig }),
-    });
-    setSaving(false);
-    router.back();
+    setSaveError("");
+    try {
+      const res = await fetch(firstAvatar ? "/api/kiosk/avatar" : `/api/children/${id}/avatar`, {
+        method: firstAvatar ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId: id, theme, config: currentConfig }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Could not save the avatar.");
+      }
+      playSfx("success");
+      router.replace("/kid/" + encodeURIComponent(id));
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save the avatar.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -107,27 +122,29 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
 
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || firstAvatar === undefined}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 text-white font-black text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition min-h-[48px]"
         >
           <Check className="w-4 h-4" /> {saving ? "Saving..." : "Equip Look"}
         </button>
       </header>
 
+      <output className="mt-3 block text-sm text-amber-200">{saveError}</output>
       {/* Main Dressing Room View */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-8 items-center max-w-6xl mx-auto w-full pt-6">
+      <div className="flex-1 grid grid-cols-1 landscape:lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto w-full pt-6">
         {/* Left: Avatar Showcase */}
-        <div className="md:col-span-5 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl relative">
+        <div className="landscape:lg:col-span-5 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl relative">
           <div className="w-64 h-64 rounded-full bg-slate-950 border-4 border-indigo-500/40 p-4 shadow-inner flex items-center justify-center relative overflow-hidden">
             <div className="absolute inset-0 bg-radial from-indigo-500/20 to-transparent blur-xl pointer-events-none" />
             <AvatarDisplay
               theme={theme}
+              seed={id}
               config={JSON.stringify(currentConfig)}
               size={200}
             />
           </div>
 
-          <div className="mt-6 flex gap-2">
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
             {THEMES.map((t) => {
               const Icon = t.icon;
               return (
@@ -151,7 +168,7 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
         </div>
 
         {/* Right: Customization Controls */}
-        <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-3xl space-y-6 shadow-2xl">
+        <div hidden={theme !== "bottts"} className="landscape:lg:col-span-7 bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-3xl space-y-6 shadow-2xl">
           {/* Colors */}
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
