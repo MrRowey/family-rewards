@@ -27,4 +27,16 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/mrrowey/family-rewards:latest
+          tags: |
+            ghcr.io/mrrowey/family-rewards:latest
+            ghcr.io/mrrowey/family-rewards:sha-${{ github.sha }}
+
+      - name: Build and push fresh-install schema image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: deps
+          push: true
+          tags: |
+            ghcr.io/mrrowey/family-rewards:init
+            ghcr.io/mrrowey/family-rewards:init-sha-${{ github.sha }}
