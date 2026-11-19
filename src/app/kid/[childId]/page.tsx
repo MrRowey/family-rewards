@@ -2,6 +2,7 @@
 
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 import { useState, useEffect, useRef, use } from "react";
+import AvatarDisplay from "@/components/AvatarDisplay";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
@@ -26,6 +27,8 @@ interface Child {
   id: string;
   name: string;
   avatar: string;
+  avatarTheme?: string | null;
+  avatarConfig?: string | null;
   stars: number;
 }
 
@@ -152,7 +155,9 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </button>
 
           <div className="relative shrink-0">
-            {child.avatar.startsWith("/") ? (
+            {child.avatarConfig ? (
+              <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={64} />
+            ) : child.avatar.startsWith("/") ? (
               <Image
                 src={child.avatar}
                 alt={child.name}
