@@ -196,7 +196,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </div>
           <button
             onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
-            className={`${isJunior ? "flex min-h-20 text-xl" : "hidden min-h-14 landscape:lg:flex"} flex-1 justify-center whitespace-nowrap bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95"
+            className={`${isJunior ? "flex min-h-20 text-xl" : "hidden min-h-14 landscape:lg:flex"} flex-1 justify-center whitespace-nowrap bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95`}
           >
             <ShoppingBag className="w-6 h-6" /> Reward Shop
           </button>
