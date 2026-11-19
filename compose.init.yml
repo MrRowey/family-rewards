@@ -1,0 +1,13 @@
+# One-time FRESH DATABASE schema setup only. Never use against existing family data.
+# Usage: docker compose -f compose.deploy.yml -f compose.init.yml --profile setup run --rm init
+services:
+  init:
+    profiles: ["setup"]
+    image: ${FAMILY_REWARDS_INIT_IMAGE:-ghcr.io/mrrowey/family-rewards:init}
+    working_dir: /app
+    entrypoint: ["npx", "prisma", "db", "push"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-family_admin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-family_rewards}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
