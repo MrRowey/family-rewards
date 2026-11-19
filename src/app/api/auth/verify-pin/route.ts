@@ -44,6 +44,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid PIN" }, { status: 401 });
     }
 
+    if (config.parentPinLength === null) {
+      await prisma.familyConfig.updateMany({
+        where: { id: config.id, parentPin: config.parentPin, parentPinLength: null },
+        data: { parentPinLength: pin.length },
+      });
+    }
+
     recordPinAttempt(clientIp, true);
 
     const token = await signParentToken();

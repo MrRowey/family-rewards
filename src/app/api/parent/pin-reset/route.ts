@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     const { newPin } = await req.json();
     if (typeof newPin !== "string" || !/^\d{4,8}$/.test(newPin)) {
-      return NextResponse.json({ error: "PIN must be at least 4 digits" }, { status: 400 });
+      return NextResponse.json({ error: "PIN must be between 4 and 8 digits" }, { status: 400 });
     }
 
     const config = await prisma.familyConfig.findFirst();
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     await prisma.familyConfig.update({
       where: { id: config.id },
-      data: { parentPin: await hash(newPin, 12) },
+      data: { parentPin: await hash(newPin, 12), parentPinLength: newPin.length },
     });
 
     await prisma.auditLog.create({
