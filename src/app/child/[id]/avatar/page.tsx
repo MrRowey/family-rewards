@@ -4,6 +4,7 @@ import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, ArrowLeft, Check, Lock, Palette, Smile, Cpu, Wand2 } from "lucide-react";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import PinPadModal from "@/components/ui/PinPadModal";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 
 interface DressingRoomProps {
@@ -46,6 +47,7 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
   const [firstAvatar, setFirstAvatar] = useState<boolean>();
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showParentPin, setShowParentPin] = useState(false);
 
   useEffect(() => {
     async function fetchChildAvatar() {
@@ -74,7 +76,11 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
     eyes: [selectedEyes],
   } : {};
 
-  const handleSave = async () => {
+  const handleSave = async (parentVerified = false) => {
+    if (firstAvatar && !parentVerified) {
+      setShowParentPin(true);
+      return;
+    }
     if (saving || firstAvatar === undefined) return;
     setSaving(true);
     setSaveError("");
@@ -121,7 +127,7 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
         </div>
 
         <button
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           disabled={saving || firstAvatar === undefined}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 text-white font-black text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition min-h-[48px]"
         >
@@ -130,6 +136,8 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
       </header>
 
       <output className="mt-3 block text-sm text-amber-200">{saveError}</output>
+      {firstAvatar && <p className="mt-2 text-sm text-slate-300">Ask a parent to enter their PIN to save your first avatar. You can still use chores without an avatar.</p>}
+      {showParentPin && <PinPadModal onClose={() => setShowParentPin(false)} onSuccess={() => { setShowParentPin(false); void handleSave(true); }} />}
       {/* Main Dressing Room View */}
       <div className="flex-1 grid grid-cols-1 landscape:lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto w-full pt-6">
         {/* Left: Avatar Showcase */}
