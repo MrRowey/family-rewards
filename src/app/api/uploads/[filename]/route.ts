@@ -10,7 +10,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   const extension = filename.split(".").at(-1) || "";
   try {
     const directory = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
-    const bytes = await readFile(path.join(directory, filename));
+    // Uploads live in a runtime-mounted volume; do not trace its dynamic path into the standalone bundle.
+    const bytes = await readFile(/*turbopackIgnore: true*/ path.join(/*turbopackIgnore: true*/ directory, filename));
     return new NextResponse(new Uint8Array(bytes), {
       headers: { "Content-Type": CONTENT_TYPES[extension], "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=31536000, immutable" },
     });
