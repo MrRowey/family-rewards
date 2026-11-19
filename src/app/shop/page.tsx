@@ -9,6 +9,7 @@ import { ArrowLeft, Lock, ShoppingBag, Sparkles, Clock, Star, Package } from "lu
 import confetti from "canvas-confetti";
 import { Child, Reward, RewardAssignment, PendingApproval } from "@/types";
 import { sounds } from "@/lib/sound";
+import { resolveKioskMode } from "@/lib/kiosk-age-mode";
 
 const getRewardImage = (reward: Reward) => {
   const raw = reward as unknown as Record<string, unknown>;
@@ -82,6 +83,7 @@ export default function RewardShop() {
 
   const activeChild = children.find((c) => c.id === selectedChildId);
   const activeChildAge = activeChild?.ageYears ?? 0;
+  const juniorMode = activeChild ? resolveKioskMode(activeChild.ageYears, activeChild.kioskMode) === "JUNIOR" : false;
 
   const visibleRewards = (rewardChildId === selectedChildId && activeChild ? rewards : []).filter((reward) => {
     if (reward.isGroup || reward.currentStock <= 0) return false;
@@ -439,7 +441,7 @@ export default function RewardShop() {
       </section>
       {activeChild && (
         <nav aria-label="Kiosk navigation" className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] landscape:lg:hidden">
-          <Link href={"/kid/" + encodeURIComponent(activeChild.id)} className="flex min-h-12 items-center rounded-xl px-3 font-bold">Chores</Link>
+          <Link href={"/kid/" + encodeURIComponent(activeChild.id)} className={`flex items-center rounded-xl px-3 font-bold ${juniorMode ? "min-h-16 bg-indigo-600 text-lg text-white" : "min-h-12"}`}>{juniorMode ? "🏠 My Chores" : "Chores"}</Link>
           <span className="whitespace-nowrap text-amber-300" aria-label={childStars + " stars"}>★ {childStars}</span>
           <span aria-current="page" className="flex min-h-12 items-center gap-2 font-bold text-indigo-300"><ShoppingBag size={20} /> Shop</span>
         </nav>
