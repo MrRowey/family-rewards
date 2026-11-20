@@ -153,7 +153,7 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
       <div className="flex-1 grid grid-cols-1 landscape:lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto w-full pt-6">
         {/* Left: Avatar Showcase */}
         <div className="landscape:lg:col-span-5 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl relative">
-          <div className="w-64 h-64 rounded-full bg-slate-950 border-4 border-indigo-500/40 p-4 shadow-inner flex items-center justify-center relative overflow-hidden">
+          <div className="w-64 h-64 rounded-3xl bg-slate-950 border-4 border-indigo-500/40 p-4 shadow-inner flex items-center justify-center relative overflow-hidden">
             <div className="absolute inset-0 bg-radial from-indigo-500/20 to-transparent blur-xl pointer-events-none" />
             <AvatarDisplay
               theme={theme}
