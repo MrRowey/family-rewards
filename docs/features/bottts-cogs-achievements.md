@@ -1,63 +1,79 @@
-# Bottts Robot Workshop, Cogs and Achievements — V1 follow-up feature
+# Family Rewards — Avatar & Progression System
 
-Status: **Proposed / not implemented**. Separate from the release-blocking V1 stabilisation work and V2 remote-access architecture.
+Status: **Approved product specification; implementation in stages.** This document supersedes the Bottts-only/Cogs-only proposal. Related implementation PR: #25. This planning PR: #30. No runtime behaviour is changed by this document.
 
-## Goal
-Add a second, cosmetic-only progression system to Family Rewards. **Stars** remain exclusively for parent-configured real-world rewards. **Cogs** are earned from achievements and spent on cosmetic options for a child's **DiceBear Bottts** avatar. An achievement may instead unlock a cosmetic directly.
+## Core loop
+A parent approves a chore -> the existing Stars award remains for real-world rewards -> the child receives one random XP grant based on the Stars actually awarded -> XP increases their shared avatar level -> every level crossed awards avatar currency -> the child spends currency on appearance options. Stars and avatar currency are never exchangeable.
 
-## User experience
-- Child kiosk: display Stars and Cogs separately; open a touch-friendly **Robot Workshop**; preview, buy, equip and unequip owned cosmetics; show achievement progress and earned rewards.
-- Starter avatar: Bottts, with the full character visible and a curated set of free starter options. Do not assume every Bottts option or an arbitrary “full cast” preset exists; inspect the installed DiceBear version and its actual schema before building the catalogue.
-- Parent dashboard: manage achievement eligibility and rewards; optionally configure Cog amounts and cosmetic unlocks. No direct access to child purchase endpoints without a valid scoped child/kiosk session.
-- Achievements: first approved chore, N approved chores, scheduled-task milestones and parent-defined challenges are examples, not yet final product rules. Make eligibility and time-zone boundaries explicit.
-- Child-friendly UX: locked items show requirements, clear balance/price, confirmation before purchase, accessible feedback, no purchases using Stars.
+## Seven themes and display-only currency labels
+| Theme | Currency label |
+| --- | --- |
+| Sprouts — Animated | Seeds |
+| Bottts — Full Cast | Cogs |
+| Critters — Animated | Paws |
+| Bottts Neutral — Full Cast | Bolts |
+| Voxel Bot — Animated | Pixels |
+| Planets — Warm System | Orbits |
+| Constellations — Animated | Stardust |
 
-## Security and accounting invariants
-1. Stars and Cogs are independent; existing Star approval, claim and refund logic must remain unchanged.
-2. All Cog grants and spends happen server-side inside database transactions; no client-supplied balance, price or achievement-complete flag is trusted.
-3. Maintain immutable Cog ledger entries (award, purchase, adjustment/refund) with idempotency keys and references to the achievement or cosmetic purchase.
-4. Prevent duplicate achievement awards, duplicate purchases, overspending and negative Cog balances under concurrent requests.
-5. Award only on **approved** qualifying completions; resubmission or repeated approval must not re-award an achievement. Define repeatable achievements explicitly if supported.
-6. Parent changes to achievement definitions must not silently revoke already-owned cosmetics or retroactively mint Cogs without an explicit policy.
-7. Validate cosmetic category and option against an allowlisted catalogue generated for the installed Bottts version; don't trust arbitrary avatar options or remote URLs.
-8. Save avatar configuration and cosmetic entitlements in PostgreSQL. Render DiceBear locally where practical; do not make an external DiceBear API mandatory.
-9. Avoid exposing cross-child history or enabling a child to purchase/equip for another child; enforce kiosk/parent auth per API endpoint.
-10. Plan reversible schema migrations and backups for existing self-hosted installations.
+One **shared wallet per child** and one **shared XP total and level**. The currency label changes with the active theme; switching does not exchange, grant or reset funds. Verify the exact DiceBear styles, animation support, available schemas and licensing before committing to cosmetic parts; curated local presets or application-owned frames are acceptable where styles lack supported parts. Do not assume all names correspond to packages in the installed @dicebear/styles version.
 
-## Suggested data model (design, not committed schema)
-- `Child.cogsBalance` integer default 0 (or derive from ledger with a cached balance maintained transactionally).
-- `CogTransaction`: id, childId, delta, reason, sourceType, sourceId, idempotencyKey (unique), createdAt.
-- `CosmeticDefinition`: stable id, Bottts category, validated option key, priceCogs, unlockRule, enabled, catalogueVersion.
-- `ChildCosmetic`: childId, cosmeticId, acquiredAt, acquisitionSource; unique (childId, cosmeticId).
-- `ChildAvatarConfiguration`: childId unique, Bottts seed and equipped option IDs / validated config JSON.
-- `AchievementDefinition`: id, trigger type, target, rewardCogs or cosmeticId, repeatability, enabled.
-- `ChildAchievement`: childId, achievementId, progress, earnedAt, grant key; unique per one-time achievement.
-- Keep existing Star records and rewards unchanged; add migrations, never reset child data.
+## Age and access
+- Child under 8: choose an initial theme; cannot independently switch themes thereafter. Parent can switch with verified PIN and an authenticated parent session.
+- Child 8 or older: may switch themes independently, without charge.
+- Use the saved DOB to determine age at request time; validate server-side on **every** theme-changing route, including kiosk and child APIs. Existing profile defaults and legacy avatar modes require a compatibility/migration strategy.
+- Parent-only changes must verify server-side PIN/session. Child identity must be scoped to an authenticated kiosk session, never just a client-supplied childId. Do not expose arbitrary cross-child updates.
 
-## Suggested API boundaries (exact routes subject to audit)
-- GET child-scoped cosmetic catalogue, inventory, Cog balance, achievements and progress.
-- POST purchase cosmetic; POST equip cosmetic. Both require valid child/kiosk or parent authorisation and server-side ownership checks.
-- Parent-only CRUD for achievement definitions and optional Cog adjustments.
-- Achievement evaluation invoked from existing approved-completion domain transaction or a reliable outbox/job with idempotent grant processing.
-- Never expose an unauthenticated public PATCH/DELETE route for balances, grants, approvals or configuration.
+## XP calculation and level curve
+- Default XP for an approved chore with S awarded Stars: a single cryptographically secure uniformly random **integer** in inclusive [5*S, 8*S]. Both positive multipliers are configurable in Parent Settings, minimum <= maximum, with bounded server-side validation.
+- Use the **Stars award snapshot at approval**, not a mutable task price; XP is awarded exactly once per approval transition. Pending/declined chores award no XP.
+- Suggested baseline XP to go from level L to L+1: for 1 <= L <= 9, 50 + 15*(L-1); at L=10, 200; for L >= 10, 200 + 30*(L-10) + 5*(L-10)*(L-11)/2. This yields L=15: 350, L=20: 550, L=30: 1100, L=40: 2150, L=50: 3700. **The earlier illustrative 40/50 figures differed; use one verified implementation formula and tune via tests before release.** No maximum level; avoid integer overflow and ensure bounded calculations.
+- Store cumulative earned/adjusted XP as the source of truth and derive the current level and progress from the versioned curve. Existing earned entitlements must not be silently re-awarded after curve changes.
+- Every level-up awards **25 shared currency** by default (parent-configurable for future awards). Every tenth level also grants **bonus currency and an exclusive cosmetic**. Exact bonus amount and catalogue identity to be selected during balancing; use a versioned milestone policy.
+- No minimum level requirement for purchasing ordinary Workshop items. Achievements can separately grant exclusive badges/cosmetics.
 
-## Implementation PR breakdown (after V1 baseline)
-1. **Bottts catalogue and starter avatar** — confirm installed DiceBear options; catalogue tests; local rendering; default free cosmetics.
-2. **Cogs and purchase ledger** — schema migrations, transactional earn/spend and inventory; concurrency/idempotency tests.
-3. **Achievement engine** — approved-chore triggers, progress and one-time grants; test resubmissions and duplicate approvals.
-4. **Robot Workshop UI** — responsive touch-first previews, locked/owned/equipped states, feedback.
-5. **Parent configuration and E2E** — parent controls and full integration regression tests.
+## Reversals and accounting
+- Reversing an approved chore reverses its Stars according to the existing domain policy, records a compensating XP ledger entry, recalculates the level and reconciles previously granted level currency.
+- Do not re-roll XP on retries or reversal/reapproval. Define reapproval as a new explicit approval event with its own unique key only if the existing completion lifecycle supports it.
+- Preserve already purchased cosmetics. If revoked rewards exceed available currency, track **non-spendable debt** separately; future earnings settle debt before increasing spendable funds. No negative spendable wallet and no silent removal of ownership.
+- Do not repeatedly grant level/milestone rewards when XP crosses the same level again following a reversal. Track milestone entitlements and reversals with durable source keys; exclusive awarded cosmetics remain owned unless parents explicitly choose a separate revocation policy.
+- XP, currency and Star mutations must be atomic with the existing approval/reversal transaction, or use a durable transactional outbox with idempotent consumers. No partial success.
+- All grant/spend/compensation operations use an immutable ledger, unique idempotency keys, transactional balances, server-side prices and serialisable/row-locked purchase safety. Child A cannot inspect or mutate child B's records.
 
-## Acceptance criteria
-- Existing Stars and real-world rewards work unchanged.
-- A newly created child gets a valid Bottts avatar and starter options without needing internet access.
-- Cogs are granted only by verified achievement logic and cannot be spent twice.
-- Cosmetics can be purchased once, remain owned after restart and only equip when owned.
-- No achievement can be repeatedly claimed unless configured as repeatable.
-- Child A cannot view or modify Child B's private transactions or avatar inventory.
-- Child kiosk works on portrait/landscape touchscreens.
-- Existing installations migrate without losing children, Stars, rewards or approvals.
-- Automated unit, integration and Docker build tests pass before merging.
+## Child UX
+- Touch-first avatar onboarding with free starter options and locally rendered avatar previews.
+- Avatar level, progress bar, XP gain feedback, currency name and balance, milestone celebration and achievement badges.
+- Workshop supports theme-specific catalogues, previews, purchases, owned/equipped states, and confirmation; no paid services or mandatory network avatar rendering.
+- Owned items persist through theme switches, restarts, upgrades and migrations. Reduced-motion and age-adaptive Junior/Explorer/Teen presentation must be respected.
 
-## Release boundary
-This PR is **planning-only** and does not change runtime behaviour. Do not merge this feature into the first stable V1 release until the core chore/reward flow and security work are verified.
+## Parent UX
+- Parent Settings: configurable minimum/maximum XP multipliers, currency per level, milestone bonus policy, cosmetic availability and achievement definitions.
+- Parent PIN-gated theme changes for children under 8; parent adjustments recorded in audit log.
+- Settings changes apply prospectively; previously recorded XP awards and purchase prices are not recomputed without explicit audited migration.
+
+## Suggested implementation data boundaries (final Prisma schema subject to code audit)
+- Per-child progress aggregate: cumulative XP and level projection (if cached), spendable currency and debt.
+- Immutable XP ledger: childId, signed delta, approval/completion reference, settings snapshot, event idempotency key.
+- Immutable currency ledger: childId, signed delta, reason, source milestone/level/purchase/reversal, unique idempotency key.
+- Avatar style/preset catalogue, cosmetic definitions and version, child inventory and equipped configuration.
+- Level/milestone award entitlement with unique (childId, level, reward type, policy version) to prevent replay.
+- Achievement definition and child achievement records with repeatability policy.
+- Do not reset or reinterpret existing Stars, completions, child DOB, or reward records.
+
+## Implementation stages
+1. **PR #25 avatar foundation**: inspect current child avatar routes and theme defaults; fix authorization, PIN/session handling and atomic audit; add verified style registry, age-gated switching, initial selection and migration compatibility.
+2. **PR #30 specification**: maintain this document as the source of truth; PR #30 is planning-only and does not implement the feature.
+3. **XP engine**: introduce schema/migration, approval-time XP snapshot, random roll and immutable ledger; test retry, duplicate approval and reversal.
+4. **Level engine**: deterministic versioned curve, progress display, 25-currency grants and one-time milestone rewards.
+5. **Wallet and Workshop**: ledger, debt handling, catalogue, purchase/equip APIs, scoped permissions, local rendering.
+6. **Achievements and Parent Settings**: configuration and audits, badge/cosmetic rewards, milestone controls.
+7. **Integration and release**: transactional E2E tests, concurrency tests, migration backup/restore, Docker build, touchscreen/reduced-motion checks.
+
+## Release gates and technical verification
+- Audit actual approval and reversal routes before wiring grants; determine how reapproval works and what happens if Stars were spent.
+- Verify the seven DiceBear style IDs and capabilities against installed packages and licences; verify whether animation works offline and with reduced motion.
+- Audit current child/kiosk auth, parent PIN verification, age calculation and whether DOB is populated for legacy profiles.
+- Decide milestone bonus amount and exact exclusive cosmetic assets; verify the XP curve against representative chore volumes and existing Star values.
+- Back up PostgreSQL before migrations; test upgrades on existing self-hosted data and preserve all Stars and purchases.
+- Unit/integration tests cover first-time creation, theme restrictions, XP snapshots, reversal, replay, level crossing, wallet debt, double purchase and cross-child access.
+- Do not merge the feature into a stable release until the core chores/rewards flow and security work are verified.
