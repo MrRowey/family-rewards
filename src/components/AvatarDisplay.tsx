@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import Image from "next/image";
-import { Avatar, Style } from "@dicebear/core";
+import { Avatar, Style, OptionsDescriptor } from "@dicebear/core";
 import bottts from "@dicebear/styles/bottts.json";
 import adventurer from "@dicebear/styles/adventurer.json";
 import funEmoji from "@dicebear/styles/fun-emoji.json";
@@ -25,10 +25,10 @@ interface AvatarProps {
 // Strictly typed collection map avoiding 'any'
 export const STYLES = { sprouts, bottts, botttsNeutral, critters, voxelBot, constellation, planets, adventurer, funEmoji };
 
-export function styleProperties(theme: string): Record<string, { enum?: string[]; items?: { enum?: string[] }; type?: string | string[] }> {
+export type AvatarOption = { type: string; values?: string[]; list?: boolean };
+export function styleProperties(theme: string): Record<string, AvatarOption> {
   const definition = STYLES[theme as keyof typeof STYLES] || STYLES.bottts;
-  const schema = (definition as unknown as { schema?: { properties?: Record<string, { enum?: string[]; items?: { enum?: string[] }; type?: string | string[] }> } }).schema;
-  return schema?.properties || {};
+  return new OptionsDescriptor(new Style(definition)).toJSON() as Record<string, AvatarOption>;
 }
 
 export default function AvatarDisplay({
@@ -53,10 +53,10 @@ export default function AvatarDisplay({
               for (const [key, value] of Object.entries(choices)) {
                 const spec = properties[key];
                 if (!spec) continue;
-                const allowed = spec.items?.enum || spec.enum;
-                if (Array.isArray(value) && value.length === 1 && typeof value[0] === "string" && (!allowed || allowed.includes(value[0]))) {
+                const allowed = spec.values;
+                if (Array.isArray(value) && value.length === 1 && typeof value[0] === "string" && ((spec.type === "enum" && allowed?.includes(value[0])) || (spec.type === "color" && /^[a-fA-F0-9]{6}$/.test(value[0])))) {
                   parsedOptions[key] = value;
-                } else if (typeof value === "boolean" && (spec.type === "boolean" || (Array.isArray(spec.type) && spec.type.includes("boolean")))) {
+                } else if (typeof value === "boolean" && (spec.type === "boolean")) {
                   parsedOptions[key] = value;
                 }
               }
@@ -64,7 +64,7 @@ export default function AvatarDisplay({
             if (!choices && Array.isArray(cfg.baseColor) && properties.baseColor) {
               parsedOptions.baseColor = cfg.baseColor;
             }
-            if (cfg.flip === "horizontal" || cfg.flip === "both") parsedOptions.flip = true;
+            if (cfg.flip === "horizontal" || cfg.flip === "both") parsedOptions.flip = "horizontal";
           }
         } catch { /* invalid saved configuration falls back to seed */ }
       }
