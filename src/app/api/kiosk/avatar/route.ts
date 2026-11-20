@@ -9,10 +9,8 @@ const appearance = avatarAppearance.extend({ childId: z.uuid() });
 export async function POST(request: Request) {
   try {
     const { childId, theme, config } = await parseJson(request, appearance);
-    if (!await validateAvatarUnlocks(childId, { theme, config })) {
+    if (!await validateAvatarUnlocks(childId, { theme, config })) return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
     if (!await validateAvatarOwnership(childId, theme, config)) return NextResponse.json({ error: "Unlock this avatar part with Avatar Coins first." }, { status: 403 });
-      return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
-    }
     const result = await prisma.$transaction(async (tx) => {
       const updated = await tx.child.updateMany({
         where: { id: childId, avatarConfig: null },
