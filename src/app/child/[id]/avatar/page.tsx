@@ -81,7 +81,7 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
   } : {};
 
   const handleSave = async (parentVerified = false) => {
-    if ((firstAvatar || (!canSwitchTheme && theme !== originalTheme)) && !parentVerified) {
+    if (!firstAvatar && !canSwitchTheme && theme !== originalTheme && !parentVerified) {
       setShowParentPin(true);
       return;
     }
@@ -141,7 +141,7 @@ export default function AvatarCreatorPage({ params }: DressingRoomProps) {
 
       <output className="mt-3 block text-sm text-amber-200">{saveError}</output>
       {!firstAvatar && !canSwitchTheme && <p className="mt-2 text-sm text-slate-300">A parent PIN is required to change your avatar theme until age 8. You can still customise your current theme.</p>}
-      {firstAvatar && <p className="mt-2 text-sm text-slate-300">Ask a parent to enter their PIN to save your first avatar. You can still use chores without an avatar.</p>}
+      {firstAvatar && <p className="mt-2 text-sm text-slate-300">Choose your first avatar freely! You can change its colours and accessories later.</p>}
       {showParentPin && <PinPadModal onClose={() => setShowParentPin(false)} onSuccess={() => { setShowParentPin(false); void handleSave(true); }} />}
       {/* Main Dressing Room View */}
       <div className="flex-1 grid grid-cols-1 landscape:lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto w-full pt-6">
