@@ -23,7 +23,7 @@ interface Task {
   subSteps?: SubStep[];
 }
 
-interface Achievement { key: string; title: string; icon: string; description: string; threshold: number; current: number; unlocked: boolean; }
+interface Achievement { key: string; title: string; icon: string; description: string; ruleType: "TOTAL_TASKS" | "STARS_EARNED" | "REWARDS_REDEEMED" | "STREAK_DAYS"; threshold: number; current: number; unlocked: boolean; }
 
 interface Child {
   id: string;
@@ -212,8 +212,8 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {achievements.map(item => <div key={item.key} className={`rounded-2xl border p-3 text-center ${item.unlocked ? "border-amber-500/40 bg-amber-500/10" : "border-white/10 bg-slate-900/60"}`}>
             <div className={`text-3xl ${item.unlocked ? "" : "grayscale opacity-50"}`}>{item.icon}</div>
-            <p className="mt-1 text-sm font-bold">{item.title}</p>
-            <p className="text-xs text-slate-400">{item.current}/{item.threshold} chores</p>
+            <p className="mt-1 text-sm font-bold">{item.title}</p><p className="text-[11px] text-slate-400">{item.description}</p>
+            <p className="text-xs text-slate-400">{item.current}/{item.threshold} {item.ruleType === "TOTAL_TASKS" ? "chores" : item.ruleType === "STARS_EARNED" ? "Stars" : item.ruleType === "REWARDS_REDEEMED" ? "rewards" : "days"}</p>
             <p className="mt-1 text-xs font-semibold text-amber-300">{item.unlocked ? "Unlocked!" : "+5 🪙 to unlock"}</p>
           </div>)}
         </div>
