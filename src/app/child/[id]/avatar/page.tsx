@@ -36,6 +36,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   const [coins, setCoins] = useState(0);
   const [owned, setOwned] = useState<string[]>([]);
   const [buying, setBuying] = useState(false);
+  const [activeTab, setActiveTab] = useState("eyes");
   const [previewPart, setPreviewPart] = useState<{ component: string; variant: string; first: string } | null>(null);
 
   useEffect(() => {
@@ -118,8 +119,8 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
       <button type="button" onClick={() => void save()} disabled={saving || firstAvatar === undefined} className="min-h-12 rounded-2xl bg-emerald-600 px-5 font-bold disabled:opacity-50 flex items-center gap-2"><Check size={18}/>{saving ? "Saving..." : "Equip Look"}</button>
     </header>
     {error && <p role="alert" className="my-4 text-amber-300">{error}</p>}
-    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6">
-      <section className="lg:col-span-5 rounded-3xl bg-slate-900 border border-white/10 p-5 flex flex-col items-center gap-5">
+    <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 pt-5">
+      <section className="lg:col-span-4 lg:sticky lg:top-5 lg:self-start rounded-3xl bg-slate-900 border border-white/10 p-5 flex flex-col items-center gap-5">
         <div className="w-64 h-64 max-w-full rounded-3xl border-4 border-indigo-500/40 bg-slate-950 p-4 flex items-center justify-center">
           <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(equippedConfig)} size={200}/>
         </div>
@@ -128,7 +129,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           <p className="text-sm text-slate-300 text-center">Choose your avatar theme. After saving, only a parent can change the theme.</p>
           <div className="flex flex-wrap justify-center gap-2">
             {THEMES.filter(t => !["adventurer", "funEmoji"].includes(t.id)).map(t =>
-              <button type="button" key={t.id} aria-pressed={theme === t.id} onClick={() => { setTheme(t.id); setConfig({ flip: "none", options: {} }); playSfx("click"); }}
+              <button type="button" key={t.id} aria-pressed={theme === t.id} onClick={() => { setTheme(t.id); setConfig({ flip: "none", options: {} }); setActiveTab(t.parts[0] || "colours"); playSfx("click"); }}
                 className={`min-h-12 rounded-xl px-4 text-sm font-bold border ${theme === t.id ? "bg-indigo-600 border-indigo-400" : "bg-slate-950 border-white/20"}`}>{t.name}</button>
             )}
           </div>
@@ -144,22 +145,27 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           <button type="button" onClick={() => setPreviewPart(null)} className="w-full min-h-12 rounded-xl border border-white/20">Back to Workshop</button>
         </div>
       </div>}
-      <section className="lg:col-span-7 rounded-3xl bg-slate-900 border border-white/10 p-5 space-y-6">
-        <div><h2 className="font-black mb-3">Flip</h2><div className="flex flex-wrap gap-2">
+      <section className="lg:col-span-8 rounded-3xl bg-slate-900 border border-white/10 p-5 space-y-5">
+        <nav aria-label="Avatar customisation categories" className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
+          {selected.parts.map(part => <button type="button" key={part} aria-pressed={activeTab === part} onClick={() => setActiveTab(part)}
+            className={`min-h-11 rounded-xl border px-4 text-sm font-bold ${activeTab === part ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>{label(part)}</button>)}
+          <button type="button" aria-pressed={activeTab === "colours"} onClick={() => setActiveTab("colours")} className={`min-h-11 rounded-xl border px-4 text-sm font-bold ${activeTab === "colours" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Colours</button>
+          <button type="button" aria-pressed={activeTab === "flip"} onClick={() => setActiveTab("flip")} className={`min-h-11 rounded-xl border px-4 text-sm font-bold ${activeTab === "flip" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Flip</button>
+        </nav>
+        {activeTab === "flip" && <div><h2 className="font-black mb-3">Flip your avatar</h2><div className="flex flex-wrap gap-2">
           {(["none", "horizontal", "vertical", "both"] as const).map(value =>
             <button type="button" key={value} aria-pressed={(config.flip || "none") === value} onClick={() => setConfig(prev => ({ ...prev, flip: value }))}
               className={`min-h-12 rounded-xl border px-4 capitalize ${(config.flip || "none") === value ? "bg-indigo-600 border-indigo-400" : "border-white/20"}`}>{value}</button>
           )}
-        </div></div>
-        <h2 className="font-black text-lg">Components</h2>
-        {selected.parts.map(part => {
+        </div></div>}
+        {selected.parts.filter(part => part === activeTab).map(part => {
           const key = Object.keys(properties).find(k => k.toLowerCase() === (part + "Variant").toLowerCase() || k.toLowerCase() === part.toLowerCase());
           if (!key) return null;
           const schema = properties[key];
           if (schema.type === "boolean") return <div key={part} className="flex items-center justify-between"><label className="font-bold">{label(part)}</label><input type="checkbox" checked={options[key] === true} onChange={e => setOption(key, e.target.checked)} className="w-6 h-6"/></div>;
           const choices = schema.values || [];
           if (!choices.length) return null;
-          return <div key={part}><h3 className="font-bold text-sm mb-2">{label(part)}</h3><div className="flex flex-wrap gap-2">
+          return <div key={part}><h3 className="font-bold text-sm mb-2">{label(part)}</h3><div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
             {choices.map(choice => {
               const locked = choice !== choices[0] && !owned.includes([theme, key, choice].join(":"));
               const active = (Array.isArray(options[key]) ? options[key][0] : choices[0]) === choice;
@@ -171,7 +177,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
                 aria-label={`${label(choice)}${locked ? `, locked, ${AVATAR_VARIANT_PRICE} Avatar Coins` : ", available"}`}
                 onClick={() => { if (!locked) setOption(key, [choice]); else setPreviewPart({ component: key, variant: choice, first: choices[0] }); }}
                 disabled={buying}
-                className={`relative flex w-28 flex-col items-center gap-2 rounded-2xl border p-2 text-center text-xs transition-colors ${active ? "border-indigo-400 bg-indigo-600/30" : "border-white/20 bg-slate-950 hover:border-indigo-400/70"}`}>
+                className={`relative flex w-full min-w-0 flex-col items-center gap-2 rounded-2xl border p-2 text-center text-xs transition-colors ${active ? "border-indigo-400 bg-indigo-600/30" : "border-white/20 bg-slate-950 hover:border-indigo-400/70"}`}>
                 <span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-slate-800">
                   <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(thumbnailConfig)} size={76}/>
                   {locked && <span className="absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 p-1 text-amber-300"><Lock size={13}/></span>}
@@ -182,8 +188,8 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
             })}
           </div></div>;
         })}
-        <h2 className="font-black text-lg">Colours</h2>
-        {selected.colors.map(color => {
+        {activeTab === "colours" && <h2 className="font-black text-lg">Colours</h2>}
+        {selected.colors.filter(color => activeTab === "colours").map(color => {
           const key = Object.keys(properties).find(k => k.toLowerCase() === color.toLowerCase());
           if (!key) return null;
           const value = Array.isArray(options[key]) ? options[key][0] : "";
