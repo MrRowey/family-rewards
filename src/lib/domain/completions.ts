@@ -99,7 +99,7 @@ export async function approveCompletion(completionId: string) {
         actor: "Parent",
         actorType: "PARENT",
         action: "APPROVED_TASK",
-        details: `Approved chore "${completion.task.title}" for ${completion.child.name} (+${completion.task.starValue} stars).`,
+        details: `Approved chore "${completion.task.title}" for ${completion.child.name} (+${completion.task.starValue} stars, +1 Avatar Coin).`,
       },
     });
 
