@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Sparkles, Lock } from "lucide-react";
 import AvatarDisplay, { styleProperties } from "@/components/AvatarDisplay";
+import { AVATAR_VARIANT_PRICE } from "@/lib/avatar-catalog";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 
 const THEMES = [
@@ -32,6 +33,9 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   const [completedChores, setCompletedChores] = useState(0);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [coins, setCoins] = useState(0);
+  const [owned, setOwned] = useState<string[]>([]);
+  const [buying, setBuying] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -45,6 +49,8 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
         setTheme(data.theme || "bottts");
         setConfig(data.config || { flip: "none", options: {} });
         setCompletedChores(data.completedTasksCount || 0);
+        setCoins(data.avatarCoins || 0);
+        setOwned((data.unlockedVariants || []).map((item: { theme: string; component: string; variant: string }) => [item.theme, item.component, item.variant].join(":")));
       } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load avatar."); }
     })();
     return () => { active = false; };
@@ -56,6 +62,25 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   const setOption = (key: string, value: string[] | boolean) => {
     setConfig(previous => ({ ...previous, options: { ...previous.options, [key]: value } }));
     playSfx("click");
+  };
+  const chooseVariant = async (component: string, variant: string, first: string) => {
+    const key = [theme, component, variant].join(":");
+    if (variant === first || owned.includes(key)) { setOption(component, [variant]); return; }
+    if (firstAvatar) { setError("Save your first avatar with the free parts before buying extras."); return; }
+    if (buying) return;
+    if (coins < AVATAR_VARIANT_PRICE) { setError("Not enough Avatar Coins yet."); return; }
+    if (!window.confirm(`Unlock ${label(variant)} for ${AVATAR_VARIANT_PRICE} Avatar Coins?`)) return;
+    setBuying(true);
+    setError("");
+    try {
+      const response = await fetch("/api/kiosk/avatar/purchase", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId: id, theme, component, variant }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Purchase failed.");
+      setCoins(result.avatarCoins);
+      setOwned(previous => [...previous, key]);
+      setOption(component, [variant]);
+    } catch (err) { setError(err instanceof Error ? err.message : "Purchase failed."); }
+    finally { setBuying(false); }
   };
   const save = async () => {
     if (firstAvatar === undefined || saving) return;
@@ -78,7 +103,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   return <main className="min-h-screen bg-slate-950 text-white p-4 sm:p-6">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-5">
       <button type="button" onClick={() => router.back()} className="min-h-12 rounded-2xl border border-white/20 px-4 flex items-center gap-2"><ArrowLeft size={18}/> Back</button>
-      <div className="text-center"><h1 className="font-black text-xl flex items-center gap-2"><Sparkles className="text-amber-400"/> Avatar Dressing Room</h1><p className="text-slate-400 text-xs">{completedChores} chores completed</p></div>
+      <div className="text-center"><h1 className="font-black text-xl flex items-center gap-2"><Sparkles className="text-amber-400"/> Avatar Dressing Room</h1><p className="text-slate-400 text-xs">{completedChores} chores completed · 🪙 {coins} Avatar Coins</p></div>
       <button type="button" onClick={() => void save()} disabled={saving || firstAvatar === undefined} className="min-h-12 rounded-2xl bg-emerald-600 px-5 font-bold disabled:opacity-50 flex items-center gap-2"><Check size={18}/>{saving ? "Saving..." : "Equip Look"}</button>
     </header>
     {error && <p role="alert" className="my-4 text-amber-300">{error}</p>}
@@ -114,8 +139,8 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           const choices = schema.values || [];
           if (!choices.length) return null;
           return <div key={part}><h3 className="font-bold text-sm mb-2">{label(part)}</h3><div className="flex flex-wrap gap-2">
-            {choices.map(choice => <button type="button" key={choice} aria-pressed={Array.isArray(options[key]) && options[key][0] === choice} onClick={() => setOption(key, [choice])}
-              className={`min-h-11 rounded-xl px-3 border text-sm ${Array.isArray(options[key]) && options[key][0] === choice ? "bg-indigo-600 border-indigo-400" : "border-white/20"}`}>{label(choice)}</button>)}
+            {choices.map(choice => <button type="button" key={choice} aria-pressed={Array.isArray(options[key]) && options[key][0] === choice} onClick={() => void chooseVariant(key, choice, choices[0])} disabled={buying}
+              className={`min-h-11 rounded-xl px-3 border text-sm ${Array.isArray(options[key]) && options[key][0] === choice ? "bg-indigo-600 border-indigo-400" : "border-white/20"}`}>{choice !== choices[0] && !owned.includes([theme, key, choice].join(":")) && <Lock className="inline w-3 h-3 mr-1 text-amber-400"/>}{label(choice)}{choice !== choices[0] && !owned.includes([theme, key, choice].join(":")) ? ` · ${AVATAR_VARIANT_PRICE} 🪙` : ""}</button>)}
           </div></div>;
         })}
         <h2 className="font-black text-lg">Colours</h2>
