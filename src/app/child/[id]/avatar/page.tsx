@@ -137,7 +137,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           </div>
         </> : <p className="text-sm text-slate-400 text-center">Your theme is locked in. Ask a parent if you want to switch themes.</p>}
       </section>
-      {parentApproval && <PinPadModal onClose={() => setParentApproval(false)} onSuccess={() => { setParentApproval(false); if (previewPart) void chooseVariant(previewPart.component, previewPart.variant, previewPart.first); }}/>} 
+      {parentApproval && <div className="relative z-[70]"><PinPadModal onClose={() => setParentApproval(false)} onSuccess={() => { setParentApproval(false); if (previewPart) void chooseVariant(previewPart.component, previewPart.variant, previewPart.first); }}/></div>} 
       {previewPart && <div role="dialog" aria-modal="true" aria-label="Preview locked avatar part" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
         <div className="w-full max-w-sm rounded-3xl border border-white/20 bg-slate-900 p-6 flex flex-col items-center gap-4">
           <h2 className="text-xl font-black">Preview: {label(previewPart.variant)}</h2>
