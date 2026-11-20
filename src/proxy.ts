@@ -10,6 +10,7 @@ const PUBLIC_API_MUTATIONS = new Set([
   "/api/kiosk/refund-requests",
   "/api/redemptions",
   "/api/setup",
+  "/api/kiosk/avatar",
 ]);
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
@@ -34,7 +35,7 @@ export async function proxy(req: NextRequest) {
 
   // Protect any non-whitelisted API mutations
   if (isApiRoute && !isParentApi && MUTATION_METHODS.has(method)) {
-    if (!PUBLIC_API_MUTATIONS.has(pathname)) {
+    if (!PUBLIC_API_MUTATIONS.has(pathname) && !(method === "PATCH" && /^\/api\/children\/[^/]+\/avatar$/.test(pathname))) {
       requiresAuth = true;
     }
   }
