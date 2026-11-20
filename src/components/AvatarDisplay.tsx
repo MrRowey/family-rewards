@@ -2,11 +2,16 @@
 
 import React, { useMemo } from "react";
 import Image from "next/image";
-import { Avatar } from "@dicebear/core";
+import { Avatar, Style } from "@dicebear/core";
 import bottts from "@dicebear/styles/bottts.json";
 import adventurer from "@dicebear/styles/adventurer.json";
 import funEmoji from "@dicebear/styles/fun-emoji.json";
-import lorelei from "@dicebear/styles/lorelei.json";
+import sprouts from "@dicebear/styles/sprouts.json";
+import botttsNeutral from "@dicebear/styles/bottts-neutral.json";
+import critters from "@dicebear/styles/critters.json";
+import voxelBot from "@dicebear/styles/voxel-bot.json";
+import constellation from "@dicebear/styles/constellation.json";
+import planets from "@dicebear/styles/planets.json";
 
 interface AvatarProps {
   theme?: string | null;
@@ -18,7 +23,7 @@ interface AvatarProps {
 }
 
 // Strictly typed collection map avoiding 'any'
-const STYLES = { bottts, adventurer, funEmoji, lorelei };
+const STYLES = { sprouts, bottts, botttsNeutral, critters, voxelBot, constellation, planets, adventurer, funEmoji };
 
 export default function AvatarDisplay({
   theme = "bottts",
@@ -54,7 +59,7 @@ export default function AvatarDisplay({
         }
       }
 
-      const avatar = new Avatar(activeStyle, {
+      const avatar = new Avatar(new Style(activeStyle), {
         ...parsedOptions,
         size,
       });
