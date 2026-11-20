@@ -23,6 +23,8 @@ interface Task {
   subSteps?: SubStep[];
 }
 
+interface Achievement { key: string; title: string; icon: string; description: string; threshold: number; current: number; unlocked: boolean; }
+
 interface Child {
   id: string;
   name: string;
@@ -42,6 +44,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
 
   const [child, setChild] = useState<Child | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [checkedSubsteps, setCheckedSubsteps] = useState<Record<string, boolean>>({});
   const submission = useRef(false);
   const completionVersion = useRef(0);
@@ -59,7 +62,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       const completionAtStart = completionVersion.current;
       try {
         const [childRes, taskRes, compRes] = await Promise.all([
-          fetch("/api/children"),
+          fetch("/api/children", { cache: "no-store" }),
           fetch(`/api/task-assignments?childId=${childId}&day=today`, { cache: "no-store" }),
           fetch(`/api/task-completions?childId=${childId}&date=today`, { cache: "no-store" }),
         ]);
@@ -74,6 +77,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         const approved = new Set(completions.filter((item) => item.status === "APPROVED").map((item) => item.taskId));
         const scheduled = new Map(assignments.map(({ task }) => [task.id, task]));
         setChild(children.find((item) => item.id === childId) ?? null);
+        void fetch(`/api/children/${encodeURIComponent(childId)}/progress`, { cache: "no-store" }).then(response => response.ok ? response.json() : null).then(data => { if (data?.achievements && latestRequest === version) setAchievements(data.achievements); }).catch(() => {});
         setPendingCount(pending.size);
         setTasks([...scheduled.values()].filter((task) => !pending.has(task.id) && !approved.has(task.id)));
         setSyncError(false);
@@ -202,6 +206,17 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           <div className="h-full rounded-full bg-linear-to-r from-indigo-500 to-violet-400 transition-[width] duration-500" style={{ width: `${child.progress?.percent ?? 0}%` }}/>
         </div>
         <p className="mt-2 text-xs text-slate-400">+20 XP and +1 Avatar Coin per approved chore · +5 coins per level · +5 coins per achievement</p>
+      </section>
+      <section aria-label="Achievements" className="max-w-6xl mx-auto mb-6">
+        <h2 className="mb-3 text-xl font-black">🏆 Achievements</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {achievements.map(item => <div key={item.key} className={`rounded-2xl border p-3 text-center ${item.unlocked ? "border-amber-500/40 bg-amber-500/10" : "border-white/10 bg-slate-900/60"}`}>
+            <div className={`text-3xl ${item.unlocked ? "" : "grayscale opacity-50"}`}>{item.icon}</div>
+            <p className="mt-1 text-sm font-bold">{item.title}</p>
+            <p className="text-xs text-slate-400">{item.current}/{item.threshold} chores</p>
+            <p className="mt-1 text-xs font-semibold text-amber-300">{item.unlocked ? "Unlocked!" : "+5 🪙 to unlock"}</p>
+          </div>)}
+        </div>
       </section>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
