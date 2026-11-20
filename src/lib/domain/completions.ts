@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { ACHIEVEMENTS, COINS_PER_APPROVED_CHORE, COINS_PER_ACHIEVEMENT, COINS_PER_LEVEL, getProgress, XP_PER_APPROVED_CHORE } from "@/lib/progression";
+import { COINS_PER_APPROVED_CHORE, COINS_PER_LEVEL, getProgress, XP_PER_APPROVED_CHORE } from "@/lib/progression";
+import { awardAchievements } from "./achievements";
 import { getTodayDate } from "./dates";
 import { isAssignmentDue } from "./schedule";
 
@@ -102,19 +103,12 @@ export async function approveCompletion(completionId: string) {
     const progress = getProgress(updatedChild.xp);
     const levelsEarned = Math.max(0, progress.level - updatedChild.rewardedLevel);
     let bonusCoins = levelsEarned * COINS_PER_LEVEL;
-    const approvedCount = await tx.completion.count({ where: { childId: completion.childId, status: "APPROVED" } });
-    for (const achievement of ACHIEVEMENTS) {
-      if (approvedCount < achievement.threshold) continue;
-      let badge = await tx.badge.findFirst({ where: { title: achievement.title, ruleType: "TOTAL_TASKS", threshold: achievement.threshold } });
-      if (!badge) badge = await tx.badge.create({ data: { title: achievement.title, description: achievement.description, icon: achievement.icon, ruleType: "TOTAL_TASKS", threshold: achievement.threshold } });
-      const awarded = await tx.childBadge.createMany({ data: [{ childId: completion.childId, badgeId: badge.id }], skipDuplicates: true });
-      if (awarded.count) bonusCoins += COINS_PER_ACHIEVEMENT;
-    }
+    bonusCoins += await awardAchievements(tx, completion.childId);
     if (bonusCoins || levelsEarned) {
       await tx.child.update({
         where: { id: completion.childId },
         data: {
-          avatarCoins: { increment: bonusCoins },
+          avatarCoins: { increment: levelsEarned * COINS_PER_LEVEL },
           ...(levelsEarned ? { rewardedLevel: progress.level } : {}),
         },
       });
