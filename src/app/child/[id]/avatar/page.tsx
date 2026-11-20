@@ -107,11 +107,11 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
         </div></div>
         <h2 className="font-black text-lg">Components</h2>
         {selected.parts.map(part => {
-          const key = Object.keys(properties).find(k => k.toLowerCase() === part.toLowerCase());
+          const key = Object.keys(properties).find(k => k.toLowerCase() === (part + "Variant").toLowerCase() || k.toLowerCase() === part.toLowerCase());
           if (!key) return null;
           const schema = properties[key];
           if (schema.type === "boolean") return <div key={part} className="flex items-center justify-between"><label className="font-bold">{label(part)}</label><input type="checkbox" checked={options[key] === true} onChange={e => setOption(key, e.target.checked)} className="w-6 h-6"/></div>;
-          const choices = schema.items?.enum || schema.enum || [];
+          const choices = schema.values || [];
           if (!choices.length) return null;
           return <div key={part}><h3 className="font-bold text-sm mb-2">{label(part)}</h3><div className="flex flex-wrap gap-2">
             {choices.map(choice => <button type="button" key={choice} aria-pressed={Array.isArray(options[key]) && options[key][0] === choice} onClick={() => setOption(key, [choice])}
