@@ -31,6 +31,7 @@ export async function GET(
 
     return NextResponse.json({
       hasAvatar: child.avatarConfig !== null,
+      canSwitchTheme: calculateAgeProfile(child.dob).ageYears >= 8,
       theme: child.avatarTheme || "bottts",
       config: child.avatarConfig ? JSON.parse(child.avatarConfig) : {},
       completedTasksCount,
