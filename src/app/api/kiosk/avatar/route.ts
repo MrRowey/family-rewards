@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { avatarAppearance, validateAvatarUnlocks } from "@/lib/domain/avatar-appearance";
+import { avatarAppearance, validateAvatarUnlocks, validateAvatarOwnership } from "@/lib/domain/avatar-appearance";
 import { prisma } from "@/lib/prisma";
 import { apiError, parseJson } from "@/lib/api";
 
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   try {
     const { childId, theme, config } = await parseJson(request, appearance);
     if (!await validateAvatarUnlocks(childId, { theme, config })) {
+    if (!await validateAvatarOwnership(childId, theme, config)) return NextResponse.json({ error: "Unlock this avatar part with Avatar Coins first." }, { status: 403 });
       return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
     }
     const result = await prisma.$transaction(async (tx) => {
