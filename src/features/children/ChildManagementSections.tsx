@@ -29,7 +29,7 @@ interface ChildManagementSectionsProps {
 export function ChildManagementSections({ activeMenu, householdChildren, childName, setChildName, childAvatar, setChildAvatar, childDob, setChildDob, adjustChildId, setAdjustChildId, adjustAmount, setAdjustAmount, adjustReason, setAdjustReason, handleCreateChild, handleAdjustStars }: ChildManagementSectionsProps) {
   const [adjusting, setAdjusting] = useState(false);
   const [themeError, setThemeError] = useState("");
-  const changeTheme = async (id: string, current: string | null) => {
+  const changeTheme = async (id: string, current: string | null | undefined) => {
     const theme = window.prompt("New theme (sprouts, bottts, botttsNeutral, critters, voxelBot, constellation, planets):", current || "sprouts");
     if (!theme || !["sprouts","bottts","botttsNeutral","critters","voxelBot","constellation","planets"].includes(theme)) return;
     if (!window.confirm("Change avatar theme and reset customisation?")) return;
