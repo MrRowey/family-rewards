@@ -146,11 +146,11 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
         </div>
       </div>}
       <section className="lg:col-span-8 rounded-3xl bg-slate-900 border border-white/10 p-5 space-y-5">
-        <nav aria-label="Avatar customisation categories" className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
+        <nav aria-label="Avatar customisation categories" className="flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain border-b border-white/10 pb-4 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
           {selected.parts.map(part => <button type="button" key={part} aria-pressed={activeTab === part} onClick={() => setActiveTab(part)}
-            className={`min-h-11 rounded-xl border px-4 text-sm font-bold ${activeTab === part ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>{label(part)}</button>)}
-          <button type="button" aria-pressed={activeTab === "colours"} onClick={() => setActiveTab("colours")} className={`min-h-11 rounded-xl border px-4 text-sm font-bold ${activeTab === "colours" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Colours</button>
-          <button type="button" aria-pressed={activeTab === "flip"} onClick={() => setActiveTab("flip")} className={`min-h-11 rounded-xl border px-4 text-sm font-bold ${activeTab === "flip" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Flip</button>
+            className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-4 text-sm font-bold ${activeTab === part ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>{label(part)}</button>)}
+          <button type="button" aria-pressed={activeTab === "colours"} onClick={() => setActiveTab("colours")} className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-4 text-sm font-bold ${activeTab === "colours" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Colours</button>
+          <button type="button" aria-pressed={activeTab === "flip"} onClick={() => setActiveTab("flip")} className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-4 text-sm font-bold ${activeTab === "flip" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Flip</button>
         </nav>
         {activeTab === "flip" && <div><h2 className="font-black mb-3">Flip your avatar</h2><div className="flex flex-wrap gap-2">
           {(["none", "horizontal", "vertical", "both"] as const).map(value =>
