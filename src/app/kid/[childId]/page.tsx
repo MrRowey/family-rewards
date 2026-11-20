@@ -30,6 +30,8 @@ interface Child {
   avatarTheme?: string | null;
   avatarConfig?: string | null;
   stars: number;
+  avatarCoins: number;
+  progress: { level: number; current: number; required: number; percent: number };
 }
 
 export default function KidKioskPage({ params }: { params: Promise<{ childId: string }> }) {
@@ -191,6 +193,16 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         </div>
       </header>
 
+      <section aria-label="Avatar level progress" className="max-w-6xl mx-auto mb-6 rounded-3xl border border-indigo-500/20 bg-slate-900/70 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div><p className="text-lg font-black text-indigo-200">⭐ Level {child.progress?.level ?? 1}</p><p className="text-xs text-slate-400">Keep completing chores to level up!</p></div>
+          <div className="text-right"><p className="font-bold text-amber-300">🪙 {child.avatarCoins ?? 0} Avatar Coins</p><p className="text-sm text-slate-400">{child.progress?.current ?? 0} / {child.progress?.required ?? 100} XP</p></div>
+        </div>
+        <div role="progressbar" aria-label="XP to next level" aria-valuenow={child.progress?.current ?? 0} aria-valuemin={0} aria-valuemax={child.progress?.required ?? 100} className="h-4 overflow-hidden rounded-full bg-slate-800">
+          <div className="h-full rounded-full bg-linear-to-r from-indigo-500 to-violet-400 transition-[width] duration-500" style={{ width: `${child.progress?.percent ?? 0}%` }}/>
+        </div>
+        <p className="mt-2 text-xs text-slate-400">+20 XP and +1 Avatar Coin per approved chore · +5 coins per level · +5 coins per achievement</p>
+      </section>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3">
