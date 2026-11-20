@@ -162,42 +162,43 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
               {children.map((child) => (
                 <button
                   key={child.id}
                   onClick={() => router.push(`/kid/${child.id}`)}
-                  className="group relative bg-slate-900/70 hover:bg-slate-850/80 active:bg-slate-800/90 backdrop-blur-xl border border-white/10 hover:border-indigo-500/50 p-7 rounded-3xl transition-all duration-300 transform hover:-translate-y-1.5 active:scale-[0.98] shadow-2xl flex flex-col items-center text-center overflow-hidden min-h-[220px]"
+                  className="group relative bg-slate-900/70 hover:bg-slate-850/80 active:bg-slate-800/90 backdrop-blur-xl border border-white/10 hover:border-indigo-500/50 p-5 sm:p-7 rounded-3xl transition-all duration-300 transform hover:-translate-y-1 active:scale-[0.98] shadow-2xl flex flex-row items-center gap-5 sm:gap-7 text-left overflow-hidden min-h-[180px]"
                 >
                   {/* Subtle top edge highlight */}
                   <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-indigo-500/40 to-transparent group-hover:via-indigo-400 transition-opacity" />
 
                   {/* Avatar rendering */}
-                  <div className="relative mb-4 mt-2">
+                  <div className="relative shrink-0">
                     {child.avatarConfig ? (
-                      <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={80} />
+                      <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={144} />
                     ) : child.avatar && child.avatar.startsWith("/") ? (
-                      <div className="w-24 h-24 rounded-3xl overflow-hidden ring-4 ring-indigo-500/20 group-hover:ring-indigo-500/50 shadow-xl transition-all">
+                      <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl overflow-hidden ring-4 ring-indigo-500/20 group-hover:ring-indigo-500/50 shadow-xl transition-all">
                         <Image
                           src={child.avatar}
                           alt={child.name}
-                          width={96}
-                          height={96}
+                          width={144}
+                          height={144}
                           unoptimized
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                     ) : child.avatar ? (
-                      <div className="w-24 h-24 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center text-6xl shadow-xl group-hover:scale-105 transition-transform duration-300">
+                      <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center text-6xl shadow-xl group-hover:scale-105 transition-transform duration-300">
                         {child.avatar}
                       </div>
                     ) : (
-                      <div className="w-24 h-24 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center shadow-xl">
+                      <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center shadow-xl">
                         <User className="w-12 h-12 text-slate-400" />
                       </div>
                     )}
                   </div>
 
+                  <div className="min-w-0 flex-1 flex flex-col items-start justify-center">
                   {/* Name */}
                   <h3 className="text-2xl font-black text-white tracking-tight group-hover:text-indigo-200 transition-colors">
                     {child.name}
@@ -210,6 +211,7 @@ export default function HomePage() {
                       {child.stars} {child.stars === 1 ? "Star" : "Stars"}
                     </span>
                   </div>)}
+                  </div>
                 </button>
               ))}
             </div>
