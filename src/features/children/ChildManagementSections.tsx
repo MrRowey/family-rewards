@@ -28,6 +28,15 @@ interface ChildManagementSectionsProps {
 
 export function ChildManagementSections({ activeMenu, householdChildren, childName, setChildName, childAvatar, setChildAvatar, childDob, setChildDob, adjustChildId, setAdjustChildId, adjustAmount, setAdjustAmount, adjustReason, setAdjustReason, handleCreateChild, handleAdjustStars }: ChildManagementSectionsProps) {
   const [adjusting, setAdjusting] = useState(false);
+  const [themeError, setThemeError] = useState("");
+  const changeTheme = async (id: string, current: string | null) => {
+    const theme = window.prompt("New theme (sprouts, bottts, botttsNeutral, critters, voxelBot, constellation, planets):", current || "sprouts");
+    if (!theme || !["sprouts","bottts","botttsNeutral","critters","voxelBot","constellation","planets"].includes(theme)) return;
+    if (!window.confirm("Change avatar theme and reset customisation?")) return;
+    const response = await fetch("/api/children/" + id + "/avatar", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme, config: { flip: "none", options: {} } }) });
+    if (response.ok) window.location.reload();
+    else setThemeError((await response.json().catch(() => ({}))).error || "Theme change failed.");
+  };
   const selectedChild = householdChildren.find((child) => child.id === adjustChildId);
   const adjustment = Number(adjustAmount);
   return <>
@@ -76,6 +85,7 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
               </CreateDialog>
 
               <div className="lg:col-span-2 space-y-4">
+                {themeError && <p role="alert" className="text-amber-300">{themeError}</p>}
                 <h3 className="font-black text-lg text-white">Registered Profiles ({householdChildren.length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {householdChildren.map((child) => (
@@ -89,10 +99,13 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                           <p className="text-xs text-amber-300 font-black mt-0.5">⭐ {child.stars} Stars</p>
                         </div>
                       </div>
+                      <div className="flex flex-col gap-2">
+                        {child.avatarConfig && <button type="button" onClick={() => void changeTheme(child.id, child.avatarTheme)} className="min-h-11 rounded-lg border border-indigo-500 px-3 text-sm">Change theme</button>}
                       <button type="button" onClick={() => { setAdjustChildId(child.id); setAdjustAmount("1"); setAdjustReason(""); setAdjusting(true); }}
                         className="min-h-11 rounded-lg border border-slate-700 px-3 text-sm">
                         Adjust stars
                       </button>
+                      </div>
                     </div>
                   ))}
                 </div>
