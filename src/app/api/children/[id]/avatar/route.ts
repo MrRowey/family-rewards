@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { avatarAppearance, validateAvatarUnlocks } from "@/lib/domain/avatar-appearance";
+import { avatarAppearance, validateAvatarUnlocks, validateAvatarOwnership } from "@/lib/domain/avatar-appearance";
 import { apiError, parseJson } from "@/lib/api";
 import { verifyParentToken } from "@/lib/auth";
 import { cookies } from "next/headers";
@@ -44,6 +44,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!authorised) return NextResponse.json({ error: "Only a parent can change an avatar theme." }, { status: 403 });
     }
     if (!await validateAvatarUnlocks(id, { theme, config })) return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
+    if (!await validateAvatarOwnership(id, theme, config)) return NextResponse.json({ error: "Unlock this avatar part with Avatar Coins first." }, { status: 403 });
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.child.update({ where: { id }, data: { avatarTheme: theme, avatarConfig: JSON.stringify(config) }, select: { id: true, avatarTheme: true, avatarConfig: true } });
       await tx.auditLog.create({ data: { actor: child.name, actorType: switching ? "PARENT" : "CHILD", action: "UPDATED_AVATAR", details: `${child.name} updated avatar (${child.avatarTheme ?? "none"} -> ${theme})` } });
