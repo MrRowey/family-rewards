@@ -11,6 +11,7 @@ const PUBLIC_API_MUTATIONS = new Set([
   "/api/redemptions",
   "/api/setup",
   "/api/kiosk/avatar",
+  "/api/kiosk/avatar/purchase",
 ]);
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
