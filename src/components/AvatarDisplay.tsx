@@ -37,7 +37,17 @@ export default function AvatarDisplay({
         try {
           const cfg = typeof config === "string" ? JSON.parse(config) : config;
           if (cfg && typeof cfg === "object") {
-            parsedOptions = { ...parsedOptions, ...cfg };
+            // App-level avatar choices are not DiceBear style option names.
+            const choices = cfg as Record<string, unknown>;
+            const color = Array.isArray(choices.baseColor) ? choices.baseColor[0] : undefined;
+            if (typeof color === "string" && /^[a-f0-9]{6}$/i.test(color)) {
+              parsedOptions.backgroundColor = [color];
+            }
+            const top = Array.isArray(choices.top) ? choices.top[0] : undefined;
+            const eyes = Array.isArray(choices.eyes) ? choices.eyes[0] : undefined;
+            if (typeof top === "string" || typeof eyes === "string") {
+              parsedOptions.seed = [seed, top, eyes].filter(Boolean).join(":");
+            }
           }
         } catch {
           // Fall back to base seed if parsing fails
