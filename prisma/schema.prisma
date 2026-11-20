@@ -28,6 +28,8 @@ model Child {
   avatarConfig      String?            // Json String for DiceBear Options
   stars             Int                @default(0)
   avatarCoins       Int                @default(0)
+  xp                Int                @default(0)
+  rewardedLevel     Int                @default(1)
   avatarUnlocks     AvatarUnlock[]
   dob               DateTime
   createdAt         DateTime           @default(now())
