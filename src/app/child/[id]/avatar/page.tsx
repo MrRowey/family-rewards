@@ -160,8 +160,26 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           const choices = schema.values || [];
           if (!choices.length) return null;
           return <div key={part}><h3 className="font-bold text-sm mb-2">{label(part)}</h3><div className="flex flex-wrap gap-2">
-            {choices.map(choice => <button type="button" key={choice} aria-pressed={(Array.isArray(options[key]) ? options[key][0] : choices[0]) === choice} onClick={() => { if (choice === choices[0] || owned.includes([theme, key, choice].join(":"))) setOption(key, [choice]); else setPreviewPart({ component: key, variant: choice, first: choices[0] }); }} disabled={buying}
-              className={`min-h-11 rounded-xl px-3 border text-sm ${(Array.isArray(options[key]) ? options[key][0] : choices[0]) === choice ? "bg-indigo-600 border-indigo-400" : "border-white/20"}`}>{choice !== choices[0] && !owned.includes([theme, key, choice].join(":")) && <Lock className="inline w-3 h-3 mr-1 text-amber-400"/>}{label(choice)}{choice !== choices[0] && !owned.includes([theme, key, choice].join(":")) ? ` · ${AVATAR_VARIANT_PRICE} 🪙` : ""}</button>)}
+            {choices.map(choice => {
+              const locked = choice !== choices[0] && !owned.includes([theme, key, choice].join(":"));
+              const active = (Array.isArray(options[key]) ? options[key][0] : choices[0]) === choice;
+              const thumbnailConfig: Config = {
+                ...equippedConfig,
+                options: { ...equippedConfig.options, [key]: [choice] },
+              };
+              return <button type="button" key={choice} aria-pressed={active}
+                aria-label={`${label(choice)}${locked ? `, locked, ${AVATAR_VARIANT_PRICE} Avatar Coins` : ", available"}`}
+                onClick={() => { if (!locked) setOption(key, [choice]); else setPreviewPart({ component: key, variant: choice, first: choices[0] }); }}
+                disabled={buying}
+                className={`relative flex w-28 flex-col items-center gap-2 rounded-2xl border p-2 text-center text-xs transition-colors ${active ? "border-indigo-400 bg-indigo-600/30" : "border-white/20 bg-slate-950 hover:border-indigo-400/70"}`}>
+                <span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-slate-800">
+                  <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(thumbnailConfig)} size={76}/>
+                  {locked && <span className="absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 p-1 text-amber-300"><Lock size={13}/></span>}
+                </span>
+                <span className="max-w-full break-words font-semibold">{label(choice)}</span>
+                <span className={locked ? "font-bold text-amber-300" : "text-emerald-300"}>{locked ? `${AVATAR_VARIANT_PRICE} 🪙` : active ? "Equipped" : "Owned / Free"}</span>
+              </button>;
+            })}
           </div></div>;
         })}
         <h2 className="font-black text-lg">Colours</h2>
