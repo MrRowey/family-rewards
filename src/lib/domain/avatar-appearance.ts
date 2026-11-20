@@ -25,3 +25,16 @@ export async function validateAvatarUnlocks(childId: string, appearance: z.outpu
   const completed = await prisma.completion.count({ where: { childId, status: "APPROVED" } });
   return completed >= required;
 }
+
+export async function validateAvatarOwnership(childId: string, theme: string, config: { options?: Record<string, string[] | boolean> }): Promise<boolean> {
+  const selected = Object.entries(config.options || {}).filter(([key]) => key.endsWith("Variant"));
+  for (const [component, value] of selected) {
+    if (!Array.isArray(value) || value.length !== 1 || !variantExists(theme, component, value[0])) return false;
+    if (variantIsFree(theme, component, value[0])) continue;
+    const owned = await prisma.avatarUnlock.findUnique({
+      where: { childId_theme_component_variant: { childId, theme, component, variant: value[0] } },
+    });
+    if (!owned) return false;
+  }
+  return true;
+}
