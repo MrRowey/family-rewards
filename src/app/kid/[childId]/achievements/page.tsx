@@ -36,10 +36,11 @@ export default function AchievementsPage({ params }: { params: Promise<{ childId
         setData(result);
         // Celebrate a newly unlocked badge only once per browser session.
         const key = `family-rewards-achievements-seen-${childId}`;
-        const seen = new Set<string>(JSON.parse(sessionStorage.getItem(key) || "[]") as string[]);
+        const previous = sessionStorage.getItem(key);
+        const seen = new Set<string>(previous ? JSON.parse(previous) as string[] : []);
         const newlyUnlocked = result.achievements.filter(item => item.unlocked && !seen.has(item.key));
         sessionStorage.setItem(key, JSON.stringify(result.achievements.filter(item => item.unlocked).map(item => item.key)));
-        if (newlyUnlocked.length) setCelebrate(newlyUnlocked[0]);
+        if (previous !== null && newlyUnlocked.length) setCelebrate(newlyUnlocked[0]);
       })
       .catch(() => { if (active) setError("Could not load achievements. Please try again."); });
     return () => { active = false; };
