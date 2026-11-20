@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { variantExists, variantIsFree } from "@/lib/avatar-catalog";
 
 export const AVATAR_THEMES = ["sprouts", "bottts", "botttsNeutral", "critters", "voxelBot", "constellation", "planets", "adventurer", "funEmoji"] as const;
 const hex = z.string().regex(/^[a-fA-F0-9]{6}$/);
