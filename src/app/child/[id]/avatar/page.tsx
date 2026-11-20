@@ -1,293 +1,134 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowLeft, Check, Lock, Palette, Smile, Cpu, Wand2, Leaf, PawPrint, Blocks, Orbit, Star } from "lucide-react";
-import AvatarDisplay from "@/components/AvatarDisplay";
-import PinPadModal from "@/components/ui/PinPadModal";
+import { ArrowLeft, Check, Sparkles } from "lucide-react";
+import AvatarDisplay, { styleProperties } from "@/components/AvatarDisplay";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 
-interface DressingRoomProps {
-  params: Promise<{ id: string }>;
-}
-
 const THEMES = [
-  { id: "sprouts", label: "Sprouts", icon: Leaf },
-  { id: "bottts", label: "Bottts", icon: Cpu },
-  { id: "botttsNeutral", label: "Bottts Neutral", icon: Cpu },
-  { id: "critters", label: "Critters", icon: PawPrint },
-  { id: "voxelBot", label: "Voxel Bot", icon: Blocks },
-  { id: "constellation", label: "Constellations", icon: Star },
-  { id: "planets", label: "Planets", icon: Orbit },
-  { id: "adventurer", label: "Heroes", icon: Wand2 },
-  { id: "funEmoji", label: "Emojis", icon: Smile },
-];
+  { id: "sprouts", name: "Sprouts", parts: ["animation", "cheeks", "eyes", "mouth", "pattern", "plant", "pot"], colors: ["backgroundColor", "bloomColor", "inkColor", "plantColor", "potColor"] },
+  { id: "bottts", name: "Bottts", parts: ["eyes", "head", "mouth", "sides", "texture", "top"], colors: ["backgroundColor", "baseColor"] },
+  { id: "botttsNeutral", name: "Bottts Neutral", parts: ["eyes", "mouth", "texture"], colors: ["backgroundColor"] },
+  { id: "critters", name: "Critters", parts: ["animation", "body", "cheeks", "eyes", "mouth", "pattern", "top"], colors: ["backgroundColor", "accentColor", "bodyColor", "inkColor"] },
+  { id: "voxelBot", name: "Voxel Bot", parts: ["animation", "chest", "eyes", "mouth", "top"], colors: ["backgroundColor", "accentColor", "bodyColor", "glowColor", "screenColor"] },
+  { id: "constellation", name: "Constellations", parts: ["animation", "comet", "constellation", "star"], colors: ["backgroundColor", "constellationColor"] },
+  { id: "planets", name: "Planets", parts: ["animation", "moons", "planet", "ring", "shade", "star", "surface"], colors: ["backgroundColor", "moonColor", "planetColor"] },
+  { id: "adventurer", name: "Heroes", parts: [], colors: ["backgroundColor"] },
+  { id: "funEmoji", name: "Emojis", parts: [], colors: ["backgroundColor"] },
+] as const;
 
-const BOT_PARTS = {
-  colors: ["4f46e5", "06b6d4", "10b981", "f59e0b", "ef4444", "ec4899", "8b5cf6"],
-  top: [
-    { id: "antenna", label: "Antenna", minChores: 0 },
-    { id: "horns", label: "Mech Horns", minChores: 0 },
-    { id: "bulb01", label: "Idea Bulb", minChores: 3 },
-    { id: "radar", label: "Deep Radar", minChores: 8 },
-    { id: "crown", label: "Golden Crown", minChores: 15 },
-  ],
-  eyes: [
-    { id: "round", label: "Curious", minChores: 0 },
-    { id: "square", label: "Focus", minChores: 0 },
-    { id: "eva", label: "Laser Visor", minChores: 5 },
-    { id: "sparkle", label: "Star Eyes", minChores: 10 },
-  ],
-};
+const PALETTE = ["f8fafc", "1e293b", "4f46e5", "06b6d4", "10b981", "f59e0b", "ef4444", "ec4899", "8b5cf6", "facc15"];
+type Config = { flip?: "none" | "horizontal" | "vertical" | "both"; options?: Record<string, string[] | boolean>; baseColor?: string[]; top?: string[]; eyes?: string[] };
+const label = (s: string) => s.replace(/Color$/, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, c => c.toUpperCase());
 
-export default function AvatarCreatorPage({ params }: DressingRoomProps) {
-  const router = useRouter();
+export default function AvatarCreatorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const { playSfx } = useKioskSettings();
-
   const [theme, setTheme] = useState("bottts");
-  const [selectedColor, setSelectedColor] = useState("4f46e5");
-  const [selectedTop, setSelectedTop] = useState("antenna");
-  const [selectedEyes, setSelectedEyes] = useState("round");
-  const [completedChores, setCompletedChores] = useState(0);
+  const [config, setConfig] = useState<Config>({ flip: "none", options: {} });
   const [firstAvatar, setFirstAvatar] = useState<boolean>();
-  const [canSwitchTheme, setCanSwitchTheme] = useState(false);
-  const [originalTheme, setOriginalTheme] = useState("bottts");
-  const [saveError, setSaveError] = useState("");
+  const [completedChores, setCompletedChores] = useState(0);
+  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [showParentPin, setShowParentPin] = useState(false);
 
   useEffect(() => {
-    async function fetchChildAvatar() {
+    let active = true;
+    void (async () => {
       try {
-        const res = await fetch(`/api/children/${id}/avatar`);
-        if (!res.ok) throw new Error("Could not load this profile.");
-        if (res.ok) {
-          const data = await res.json();
-          setFirstAvatar(!data.hasAvatar);
-          setCanSwitchTheme(Boolean(data.canSwitchTheme));
-          setOriginalTheme(data.theme || "bottts");
-          if (data.theme) setTheme(data.theme);
-          if (data.config?.baseColor) setSelectedColor(data.config.baseColor[0]);
-          if (data.config?.top) setSelectedTop(data.config.top[0]);
-          if (data.config?.eyes) setSelectedEyes(data.config.eyes[0]);
-          setCompletedChores(data.completedTasksCount || 0);
-        }
-      } catch (err) {
-        setSaveError(err instanceof Error ? err.message : "Could not load this profile.");
-      }
-    }
-    fetchChildAvatar();
+        const response = await fetch(`/api/children/${id}/avatar`);
+        if (!response.ok) throw new Error("Could not load this profile.");
+        const data = await response.json();
+        if (!active) return;
+        setFirstAvatar(!data.hasAvatar);
+        setTheme(data.theme || "bottts");
+        setConfig(data.config || { flip: "none", options: {} });
+        setCompletedChores(data.completedTasksCount || 0);
+      } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load avatar."); }
+    })();
+    return () => { active = false; };
   }, [id]);
 
-  const currentConfig = theme === "bottts" ? {
-    baseColor: [selectedColor],
-    top: [selectedTop],
-    eyes: [selectedEyes],
-  } : {};
-
-  const handleSave = async (parentVerified = false) => {
-    if (!firstAvatar && !canSwitchTheme && theme !== originalTheme && !parentVerified) {
-      setShowParentPin(true);
-      return;
-    }
-    if (saving || firstAvatar === undefined) return;
+  const selected = THEMES.find(t => t.id === theme) || THEMES[1];
+  const properties = styleProperties(theme);
+  const options = config.options || {};
+  const setOption = (key: string, value: string[] | boolean) => {
+    setConfig(previous => ({ ...previous, options: { ...previous.options, [key]: value } }));
+    playSfx("click");
+  };
+  const save = async () => {
+    if (firstAvatar === undefined || saving) return;
     setSaving(true);
-    setSaveError("");
+    setError("");
     try {
-      const res = await fetch(firstAvatar ? "/api/kiosk/avatar" : `/api/children/${id}/avatar`, {
+      const response = await fetch(firstAvatar ? "/api/kiosk/avatar" : `/api/children/${id}/avatar`, {
         method: firstAvatar ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childId: id, theme, config: currentConfig }),
+        body: JSON.stringify({ childId: id, theme, config }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Could not save the avatar.");
-      }
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Could not save your avatar.");
       playSfx("success");
-      router.replace("/kid/" + encodeURIComponent(id));
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Could not save the avatar.");
-    } finally {
-      setSaving(false);
-    }
+      router.replace(`/kid/${encodeURIComponent(id)}`);
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not save your avatar."); }
+    finally { setSaving(false); }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col p-6 touch-manipulation select-none">
-      {/* Top Header */}
-      <header className="flex items-center justify-between pb-6 border-b border-white/10">
-        <button
-          onClick={() => {
-            playSfx("click");
-            router.back();
-          }}
-          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 border border-white/10 font-black text-xs text-slate-300 active:scale-95 transition min-h-[48px]"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
-
-        <div className="text-center">
-          <h1 className="text-xl font-black tracking-tight text-white flex items-center justify-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" /> Avatar Dressing Room
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Chores Completed: <strong className="text-emerald-400 font-black">{completedChores}</strong>
-          </p>
+  return <main className="min-h-screen bg-slate-950 text-white p-4 sm:p-6">
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-5">
+      <button type="button" onClick={() => router.back()} className="min-h-12 rounded-2xl border border-white/20 px-4 flex items-center gap-2"><ArrowLeft size={18}/> Back</button>
+      <div className="text-center"><h1 className="font-black text-xl flex items-center gap-2"><Sparkles className="text-amber-400"/> Avatar Dressing Room</h1><p className="text-slate-400 text-xs">{completedChores} chores completed</p></div>
+      <button type="button" onClick={() => void save()} disabled={saving || firstAvatar === undefined} className="min-h-12 rounded-2xl bg-emerald-600 px-5 font-bold disabled:opacity-50 flex items-center gap-2"><Check size={18}/>{saving ? "Saving..." : "Equip Look"}</button>
+    </header>
+    {error && <p role="alert" className="my-4 text-amber-300">{error}</p>}
+    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6">
+      <section className="lg:col-span-5 rounded-3xl bg-slate-900 border border-white/10 p-5 flex flex-col items-center gap-5">
+        <div className="w-64 h-64 max-w-full rounded-3xl border-4 border-indigo-500/40 bg-slate-950 p-4 flex items-center justify-center">
+          <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(config)} size={200}/>
         </div>
-
-        <button
-          onClick={() => void handleSave()}
-          disabled={saving || firstAvatar === undefined}
-          className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 text-white font-black text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition min-h-[48px]"
-        >
-          <Check className="w-4 h-4" /> {saving ? "Saving..." : "Equip Look"}
-        </button>
-      </header>
-
-      <output className="mt-3 block text-sm text-amber-200">{saveError}</output>
-      {!firstAvatar && !canSwitchTheme && <p className="mt-2 text-sm text-slate-300">A parent PIN is required to change your avatar theme until age 8. You can still customise your current theme.</p>}
-      {firstAvatar && <p className="mt-2 text-sm text-slate-300">Choose your first avatar freely! You can change its colours and accessories later.</p>}
-      {showParentPin && <PinPadModal onClose={() => setShowParentPin(false)} onSuccess={() => { setShowParentPin(false); void handleSave(true); }} />}
-      {/* Main Dressing Room View */}
-      <div className="flex-1 grid grid-cols-1 landscape:lg:grid-cols-12 gap-8 items-center max-w-6xl mx-auto w-full pt-6">
-        {/* Left: Avatar Showcase */}
-        <div className="landscape:lg:col-span-5 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl relative">
-          <div className="w-64 h-64 rounded-3xl bg-slate-950 border-4 border-indigo-500/40 p-4 shadow-inner flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-radial from-indigo-500/20 to-transparent blur-xl pointer-events-none" />
-            <AvatarDisplay
-              theme={theme}
-              seed={id}
-              config={JSON.stringify(currentConfig)}
-              size={200}
-            />
+        <h2 className="text-lg font-black">{selected.name}</h2>
+        {firstAvatar ? <>
+          <p className="text-sm text-slate-300 text-center">Choose your avatar theme. After saving, only a parent can change the theme.</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {THEMES.filter(t => !["adventurer", "funEmoji"].includes(t.id)).map(t =>
+              <button type="button" key={t.id} aria-pressed={theme === t.id} onClick={() => { setTheme(t.id); setConfig({ flip: "none", options: {} }); playSfx("click"); }}
+                className={`min-h-12 rounded-xl px-4 text-sm font-bold border ${theme === t.id ? "bg-indigo-600 border-indigo-400" : "bg-slate-950 border-white/20"}`}>{t.name}</button>
+            )}
           </div>
-
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {THEMES.map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    playSfx("click");
-                    setTheme(t.id);
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs transition border ${
-                    theme === t.id
-                      ? "bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-600/30"
-                      : "bg-slate-950/60 border-white/10 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" /> {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right: Customization Controls */}
-        <div hidden={theme !== "bottts"} className="landscape:lg:col-span-7 bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-3xl space-y-6 shadow-2xl">
-          {/* Colors */}
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-              <Palette className="w-4 h-4 text-indigo-400" /> Chassis / Skin Tone
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {BOT_PARTS.colors.map((hex) => (
-                <button
-                  key={hex}
-                  type="button"
-                  aria-label={`Select colour #${hex}`}
-                  aria-pressed={selectedColor === hex}
-                  onClick={() => {
-                    playSfx("click");
-                    setSelectedColor(hex);
-                  }}
-                  style={{ backgroundColor: `#${hex}` }}
-                  className={`w-11 h-11 rounded-2xl border-2 transition active:scale-90 ${
-                    selectedColor === hex ? "border-white scale-110 shadow-lg" : "border-transparent opacity-80"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Head / Top Gear */}
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
-              Headgear & Gear
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {BOT_PARTS.top.map((item) => {
-                const isLocked = completedChores < item.minChores;
-                return (
-                  <button
-                    key={item.id}
-                    disabled={isLocked}
-                    onClick={() => {
-                      playSfx("click");
-                      setSelectedTop(item.id);
-                    }}
-                    className={`p-3 rounded-2xl border flex flex-col items-center justify-center text-xs font-bold transition min-h-[56px] relative ${
-                      isLocked
-                        ? "bg-slate-950/40 border-white/5 text-slate-600 cursor-not-allowed"
-                        : selectedTop === item.id
-                        ? "bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/30"
-                        : "bg-slate-950/60 border-white/10 text-slate-300 hover:bg-slate-800"
-                    }`}
-                  >
-                    {isLocked ? (
-                      <span className="flex items-center gap-1.5 text-[11px] text-amber-400 font-black">
-                        <Lock className="w-3.5 h-3.5" /> {item.minChores} Chores
-                      </span>
-                    ) : (
-                      <span>{item.label}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Eyes / Expressions */}
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
-              Visor & Expressions
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {BOT_PARTS.eyes.map((item) => {
-                const isLocked = completedChores < item.minChores;
-                return (
-                  <button
-                    key={item.id}
-                    disabled={isLocked}
-                    onClick={() => {
-                      playSfx("click");
-                      setSelectedEyes(item.id);
-                    }}
-                    className={`p-3 rounded-2xl border flex flex-col items-center justify-center text-xs font-bold transition min-h-[56px] relative ${
-                      isLocked
-                        ? "bg-slate-950/40 border-white/5 text-slate-600 cursor-not-allowed"
-                        : selectedEyes === item.id
-                        ? "bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/30"
-                        : "bg-slate-950/60 border-white/10 text-slate-300 hover:bg-slate-800"
-                    }`}
-                  >
-                    {isLocked ? (
-                      <span className="flex items-center gap-1.5 text-[11px] text-amber-400 font-black">
-                        <Lock className="w-3.5 h-3.5" /> {item.minChores} Chores
-                      </span>
-                    ) : (
-                      <span>{item.label}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
+        </> : <p className="text-sm text-slate-400 text-center">Your theme is locked in. Ask a parent if you want to switch themes.</p>}
+      </section>
+      <section className="lg:col-span-7 rounded-3xl bg-slate-900 border border-white/10 p-5 space-y-6">
+        <div><h2 className="font-black mb-3">Flip</h2><div className="flex flex-wrap gap-2">
+          {(["none", "horizontal", "vertical", "both"] as const).map(value =>
+            <button type="button" key={value} aria-pressed={(config.flip || "none") === value} onClick={() => setConfig(prev => ({ ...prev, flip: value }))}
+              className={`min-h-12 rounded-xl border px-4 capitalize ${(config.flip || "none") === value ? "bg-indigo-600 border-indigo-400" : "border-white/20"}`}>{value}</button>
+          )}
+        </div></div>
+        <h2 className="font-black text-lg">Components</h2>
+        {selected.parts.map(part => {
+          const key = Object.keys(properties).find(k => k.toLowerCase() === part.toLowerCase());
+          if (!key) return null;
+          const schema = properties[key];
+          if (schema.type === "boolean") return <div key={part} className="flex items-center justify-between"><label className="font-bold">{label(part)}</label><input type="checkbox" checked={options[key] === true} onChange={e => setOption(key, e.target.checked)} className="w-6 h-6"/></div>;
+          const choices = schema.items?.enum || schema.enum || [];
+          if (!choices.length) return null;
+          return <div key={part}><h3 className="font-bold text-sm mb-2">{label(part)}</h3><div className="flex flex-wrap gap-2">
+            {choices.map(choice => <button type="button" key={choice} aria-pressed={Array.isArray(options[key]) && options[key][0] === choice} onClick={() => setOption(key, [choice])}
+              className={`min-h-11 rounded-xl px-3 border text-sm ${Array.isArray(options[key]) && options[key][0] === choice ? "bg-indigo-600 border-indigo-400" : "border-white/20"}`}>{label(choice)}</button>)}
+          </div></div>;
+        })}
+        <h2 className="font-black text-lg">Colours</h2>
+        {selected.colors.map(color => {
+          const key = Object.keys(properties).find(k => k.toLowerCase() === color.toLowerCase());
+          if (!key) return null;
+          const value = Array.isArray(options[key]) ? options[key][0] : "";
+          return <div key={color}><h3 className="font-bold text-sm mb-2">{label(color)}</h3><div className="flex flex-wrap gap-2">
+            {PALETTE.map(hex => <button type="button" key={hex} aria-label={`${label(color)} #${hex}`} aria-pressed={value === hex} onClick={() => setOption(key, [hex])} style={{ backgroundColor: `#${hex}` }}
+              className={`w-11 h-11 rounded-xl border-2 ${value === hex ? "border-white scale-110" : "border-transparent"}`}/>)}
+          </div></div>;
+        })}
+      </section>
     </div>
-  );
+  </main>;
 }
