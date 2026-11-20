@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 export const avatarAppearance = z.object({
-  theme: z.enum(["bottts", "adventurer", "funEmoji"]),
+  theme: z.enum(["sprouts", "bottts", "botttsNeutral", "critters", "voxelBot", "constellation", "planets", "adventurer", "funEmoji"]),
   config: z.object({
     baseColor: z.tuple([z.string().regex(/^[a-f0-9]{6}$/)]).optional(),
     top: z.tuple([z.enum(["antenna", "horns", "bulb01", "radar", "crown"])]).optional(),
