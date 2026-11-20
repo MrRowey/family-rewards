@@ -23,7 +23,13 @@ interface AvatarProps {
 }
 
 // Strictly typed collection map avoiding 'any'
-const STYLES = { sprouts, bottts, botttsNeutral, critters, voxelBot, constellation, planets, adventurer, funEmoji };
+export const STYLES = { sprouts, bottts, botttsNeutral, critters, voxelBot, constellation, planets, adventurer, funEmoji };
+
+export function styleProperties(theme: string): Record<string, { enum?: string[]; items?: { enum?: string[] }; type?: string | string[] }> {
+  const definition = STYLES[theme as keyof typeof STYLES] || STYLES.bottts;
+  const schema = (definition as unknown as { schema?: { properties?: Record<string, { enum?: string[]; items?: { enum?: string[] }; type?: string | string[] }> } }).schema;
+  return schema?.properties || {};
+}
 
 export default function AvatarDisplay({
   theme = "bottts",
@@ -36,27 +42,31 @@ export default function AvatarDisplay({
   const avatarSvg = useMemo(() => {
     try {
       const activeStyle = STYLES[(theme || "bottts") as keyof typeof STYLES] || STYLES.bottts;
-      let parsedOptions: Record<string, unknown> = { seed };
-
+      const parsedOptions: Record<string, unknown> = { seed };
+      const properties = styleProperties(theme || "bottts");
       if (config) {
         try {
-          const cfg = typeof config === "string" ? JSON.parse(config) : config;
+          const cfg = typeof config === "string" ? JSON.parse(config) as Record<string, unknown> : config as unknown as Record<string, unknown>;
           if (cfg && typeof cfg === "object") {
-            // App-level avatar choices are not DiceBear style option names.
-            const choices = cfg as Record<string, unknown>;
-            const color = Array.isArray(choices.baseColor) ? choices.baseColor[0] : undefined;
-            if (typeof color === "string" && /^[a-f0-9]{6}$/i.test(color)) {
-              parsedOptions.backgroundColor = [color];
+            const choices = cfg.options;
+            if (choices && typeof choices === "object" && !Array.isArray(choices)) {
+              for (const [key, value] of Object.entries(choices)) {
+                const spec = properties[key];
+                if (!spec) continue;
+                const allowed = spec.items?.enum || spec.enum;
+                if (Array.isArray(value) && value.length === 1 && typeof value[0] === "string" && (!allowed || allowed.includes(value[0]))) {
+                  parsedOptions[key] = value;
+                } else if (typeof value === "boolean" && (spec.type === "boolean" || (Array.isArray(spec.type) && spec.type.includes("boolean")))) {
+                  parsedOptions[key] = value;
+                }
+              }
             }
-            const top = Array.isArray(choices.top) ? choices.top[0] : undefined;
-            const eyes = Array.isArray(choices.eyes) ? choices.eyes[0] : undefined;
-            if (typeof top === "string" || typeof eyes === "string") {
-              parsedOptions.seed = [seed, top, eyes].filter(Boolean).join(":");
+            if (!choices && Array.isArray(cfg.baseColor) && properties.baseColor) {
+              parsedOptions.baseColor = cfg.baseColor;
             }
+            if (cfg.flip === "horizontal" || cfg.flip === "both") parsedOptions.flip = true;
           }
-        } catch {
-          // Fall back to base seed if parsing fails
-        }
+        } catch { /* invalid saved configuration falls back to seed */ }
       }
 
       const avatar = new Avatar(new Style(activeStyle), {
@@ -70,6 +80,10 @@ export default function AvatarDisplay({
       return null;
     }
   }, [theme, config, seed, size]);
+
+  let flip = "none";
+  try { const parsed = typeof config === "string" ? JSON.parse(config) : config; flip = parsed?.flip || "none"; } catch { /* legacy configuration */ }
+  const vertical = flip === "vertical" || flip === "both";
 
   if (!avatarSvg) {
     return (
@@ -93,6 +107,7 @@ export default function AvatarDisplay({
         width={size}
         height={size}
         unoptimized // Necessary for base64 / data URIs
+        style={{ transform: vertical ? "scaleY(-1)" : undefined }}
         className="w-full h-full object-contain pointer-events-none"
       />
     </div>
