@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { verifyParentToken } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +10,14 @@ const requestSchema = z.object({ childId: z.uuid(), theme: z.string().min(1), co
 
 export async function POST(request: Request) {
   try {
+    const token = (await cookies()).get("parent_session")?.value;
+    if (!token) return NextResponse.json({ error: "Parent approval required." }, { status: 401 });
+    try {
+      const verified = await verifyParentToken(token);
+      if (verified.payload.role !== "parent") return NextResponse.json({ error: "Parent approval required." }, { status: 403 });
+    } catch { return NextResponse.json({ error: "Parent session expired." }, { status: 401 }); }
     const { childId, theme, component, variant } = await parseJson(request, requestSchema);
+    if (!["sprouts", "bottts", "botttsNeutral", "critters", "voxelBot", "constellation", "planets"].includes(theme)) return NextResponse.json({ error: "Invalid theme." }, { status: 400 });
     if (!variantExists(theme, component, variant)) return NextResponse.json({ error: "Invalid avatar part." }, { status: 400 });
     if (variantIsFree(theme, component, variant)) return NextResponse.json({ error: "This part is already free." }, { status: 400 });
     const result = await prisma.$transaction(async tx => {
@@ -22,7 +31,7 @@ export async function POST(request: Request) {
       await tx.avatarUnlock.create({ data: { childId, theme, component, variant, cost: AVATAR_VARIANT_PRICE } });
       await tx.auditLog.create({ data: { actor: child.name, actorType: "CHILD", action: "PURCHASED_AVATAR_PART", details: `${theme} / ${component} / ${variant} for ${AVATAR_VARIANT_PRICE} Avatar Coins` } });
       return { status: 200, coins: child.avatarCoins - AVATAR_VARIANT_PRICE };
-    });
+    }, { isolationLevel: "Serializable" });
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
     return NextResponse.json({ success: true, avatarCoins: result.coins });
   } catch (error) { return apiError(error, "Could not buy avatar part."); }
