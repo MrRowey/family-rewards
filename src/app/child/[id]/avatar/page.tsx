@@ -4,6 +4,7 @@ import React, { useEffect, useState, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Sparkles, Lock } from "lucide-react";
 import AvatarDisplay, { styleProperties } from "@/components/AvatarDisplay";
+import PinPadModal from "@/components/ui/PinPadModal";
 import { AVATAR_VARIANT_PRICE } from "@/lib/avatar-catalog";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 
@@ -36,6 +37,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   const [coins, setCoins] = useState(0);
   const [owned, setOwned] = useState<string[]>([]);
   const [buying, setBuying] = useState(false);
+  const [parentApproval, setParentApproval] = useState(false);
   const [activeTab, setActiveTab] = useState("eyes");
   const [previewPart, setPreviewPart] = useState<{ component: string; variant: string; first: string } | null>(null);
 
@@ -135,13 +137,14 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           </div>
         </> : <p className="text-sm text-slate-400 text-center">Your theme is locked in. Ask a parent if you want to switch themes.</p>}
       </section>
+      {parentApproval && <PinPadModal onClose={() => setParentApproval(false)} onSuccess={() => { setParentApproval(false); if (previewPart) void chooseVariant(previewPart.component, previewPart.variant, previewPart.first); }}/>} 
       {previewPart && <div role="dialog" aria-modal="true" aria-label="Preview locked avatar part" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
         <div className="w-full max-w-sm rounded-3xl border border-white/20 bg-slate-900 p-6 flex flex-col items-center gap-4">
           <h2 className="text-xl font-black">Preview: {label(previewPart.variant)}</h2>
           <p className="text-sm text-slate-300 text-center">See how this {label(previewPart.component.replace(/Variant$/, ""))} looks on your avatar before buying.</p>
           <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(previewConfig)} size={220}/>
           <p className="text-amber-300 font-bold">🔒 {AVATAR_VARIANT_PRICE} Avatar Coins · You have {coins}</p>
-          <button type="button" disabled={buying || firstAvatar || coins < AVATAR_VARIANT_PRICE} onClick={() => void chooseVariant(previewPart.component, previewPart.variant, previewPart.first)} className="w-full min-h-12 rounded-xl bg-indigo-600 font-bold disabled:opacity-50">{buying ? "Unlocking..." : firstAvatar ? "Save your starter avatar first" : coins < AVATAR_VARIANT_PRICE ? "Not enough coins" : "Unlock & Equip"}</button>
+          <button type="button" disabled={buying || firstAvatar || coins < AVATAR_VARIANT_PRICE} onClick={() => setParentApproval(true)} className="w-full min-h-12 rounded-xl bg-indigo-600 font-bold disabled:opacity-50">{buying ? "Unlocking..." : firstAvatar ? "Save your starter avatar first" : coins < AVATAR_VARIANT_PRICE ? "Not enough coins" : "Ask Parent to Unlock"}</button>
           <button type="button" onClick={() => setPreviewPart(null)} className="w-full min-h-12 rounded-xl border border-white/20">Back to Workshop</button>
         </div>
       </div>}
