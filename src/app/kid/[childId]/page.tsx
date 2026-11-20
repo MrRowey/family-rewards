@@ -207,16 +207,9 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         </div>
         <p className="mt-2 text-xs text-slate-400">+20 XP and +1 Avatar Coin per approved chore · +5 coins per level · +5 coins per achievement</p>
       </section>
-      <section aria-label="Achievements" className="max-w-6xl mx-auto mb-6">
-        <h2 className="mb-3 text-xl font-black">🏆 Achievements</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {achievements.map(item => <div key={item.key} className={`rounded-2xl border p-3 text-center ${item.unlocked ? "border-amber-500/40 bg-amber-500/10" : "border-white/10 bg-slate-900/60"}`}>
-            <div className={`text-3xl ${item.unlocked ? "" : "grayscale opacity-50"}`}>{item.icon}</div>
-            <p className="mt-1 text-sm font-bold">{item.title}</p><p className="text-[11px] text-slate-400">{item.description}</p>
-            <p className="text-xs text-slate-400">{item.current}/{item.threshold} {item.ruleType === "TOTAL_TASKS" ? "chores" : item.ruleType === "STARS_EARNED" ? "Stars" : item.ruleType === "REWARDS_REDEEMED" ? "rewards" : "days"}</p>
-            <p className="mt-1 text-xs font-semibold text-amber-300">{item.unlocked ? "Unlocked!" : "+5 🪙 to unlock"}</p>
-          </div>)}
-        </div>
+      <section aria-label="Achievements" className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-500/20 bg-slate-900/70 p-5">
+        <div><h2 className="text-xl font-black">🏆 Achievements</h2><p className="text-sm text-slate-300">{achievements.filter(item => item.unlocked).length} / {achievements.length} badges unlocked · Earn coins as you progress!</p></div>
+        <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/achievements`)} className="min-h-14 rounded-2xl bg-indigo-600 px-6 font-black hover:bg-indigo-500">View Achievements</button>
       </section>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
