@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowLeft, Check, Lock, Palette, Smile, Cpu, Wand2 } from "lucide-react";
+import { Sparkles, ArrowLeft, Check, Lock, Palette, Smile, Cpu, Wand2, Leaf, PawPrint, Blocks, Orbit, Star } from "lucide-react";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import PinPadModal from "@/components/ui/PinPadModal";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
@@ -12,7 +12,13 @@ interface DressingRoomProps {
 }
 
 const THEMES = [
-  { id: "bottts", label: "Robots", icon: Cpu },
+  { id: "sprouts", label: "Sprouts", icon: Leaf },
+  { id: "bottts", label: "Bottts", icon: Cpu },
+  { id: "botttsNeutral", label: "Bottts Neutral", icon: Cpu },
+  { id: "critters", label: "Critters", icon: PawPrint },
+  { id: "voxelBot", label: "Voxel Bot", icon: Blocks },
+  { id: "constellation", label: "Constellations", icon: Star },
+  { id: "planets", label: "Planets", icon: Orbit },
   { id: "adventurer", label: "Heroes", icon: Wand2 },
   { id: "funEmoji", label: "Emojis", icon: Smile },
 ];
