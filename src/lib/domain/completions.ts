@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ACHIEVEMENTS, COINS_PER_APPROVED_CHORE, COINS_PER_ACHIEVEMENT, COINS_PER_LEVEL, getProgress, XP_PER_APPROVED_CHORE } from "@/lib/progression";
 import { getTodayDate } from "./dates";
 import { isAssignmentDue } from "./schedule";
 
@@ -89,17 +90,42 @@ export async function approveCompletion(completionId: string) {
       throw new Error("CONCURRENCY_ERROR: Completion status already updated");
     }
 
-    await tx.child.update({
+    const updatedChild = await tx.child.update({
       where: { id: completion.childId },
-      data: { stars: { increment: completion.task.starValue } },
+      data: {
+        stars: { increment: completion.task.starValue },
+        avatarCoins: { increment: COINS_PER_APPROVED_CHORE },
+        xp: { increment: XP_PER_APPROVED_CHORE },
+      },
     });
+
+    const progress = getProgress(updatedChild.xp);
+    const levelsEarned = Math.max(0, progress.level - updatedChild.rewardedLevel);
+    let bonusCoins = levelsEarned * COINS_PER_LEVEL;
+    const approvedCount = await tx.completion.count({ where: { childId: completion.childId, status: "APPROVED" } });
+    for (const achievement of ACHIEVEMENTS) {
+      if (approvedCount < achievement.threshold) continue;
+      let badge = await tx.badge.findFirst({ where: { title: achievement.title, ruleType: "TOTAL_TASKS", threshold: achievement.threshold } });
+      if (!badge) badge = await tx.badge.create({ data: { title: achievement.title, description: achievement.description, icon: achievement.icon, ruleType: "TOTAL_TASKS", threshold: achievement.threshold } });
+      const awarded = await tx.childBadge.createMany({ data: [{ childId: completion.childId, badgeId: badge.id }], skipDuplicates: true });
+      if (awarded.count) bonusCoins += COINS_PER_ACHIEVEMENT;
+    }
+    if (bonusCoins || levelsEarned) {
+      await tx.child.update({
+        where: { id: completion.childId },
+        data: {
+          avatarCoins: { increment: bonusCoins },
+          ...(levelsEarned ? { rewardedLevel: progress.level } : {}),
+        },
+      });
+    }
 
     await tx.auditLog.create({
       data: {
         actor: "Parent",
         actorType: "PARENT",
         action: "APPROVED_TASK",
-        details: `Approved chore "${completion.task.title}" for ${completion.child.name} (+${completion.task.starValue} stars, +1 Avatar Coin).`,
+        details: `Approved chore "${completion.task.title}" for ${completion.child.name} (+${completion.task.starValue} stars, +${XP_PER_APPROVED_CHORE} XP, +${COINS_PER_APPROVED_CHORE + bonusCoins} Avatar Coins).`,
       },
     });
 
