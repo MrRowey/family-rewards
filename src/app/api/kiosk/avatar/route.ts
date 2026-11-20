@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       const updated = await tx.child.updateMany({
         where: { id: childId, avatarConfig: null },
-        data: { avatarTheme: theme, avatarConfig: JSON.stringify(theme === "bottts" ? config : {}) },
+        data: { avatarTheme: theme, avatarConfig: JSON.stringify(config) },
       });
       if (updated.count !== 1) return false;
       const child = await tx.child.findUnique({ where: { id: childId }, select: { name: true } });
