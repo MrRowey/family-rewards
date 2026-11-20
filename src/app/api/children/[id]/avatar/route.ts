@@ -8,7 +8,7 @@ import { cookies } from "next/headers";
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const child = await prisma.child.findUnique({ where: { id }, include: { badges: { include: { badge: true } } } });
+    const child = await prisma.child.findUnique({ where: { id }, include: { badges: { include: { badge: true } }, avatarUnlocks: true } });
     if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
     const completedTasksCount = await prisma.completion.count({ where: { childId: id, status: "APPROVED" } });
     return NextResponse.json({
@@ -17,6 +17,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       theme: child.avatarTheme || "bottts",
       config: child.avatarConfig ? JSON.parse(child.avatarConfig) : {},
       completedTasksCount,
+      avatarCoins: child.avatarCoins,
+      unlockedVariants: child.avatarUnlocks.map(item => ({ theme: item.theme, component: item.component, variant: item.variant })),
       badges: child.badges.map((b) => b.badge),
     });
   } catch (error) {
