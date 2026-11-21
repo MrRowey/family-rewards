@@ -62,15 +62,15 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
 
   const selected = THEMES.find(t => t.id === theme) || THEMES[1];
   const properties = styleProperties(theme);
-  const options = config.options || {};
+  const options = config.options;
   // Explicitly equip the free starter variant for every component, rather than allowing seeded random locked parts.
   const equippedConfig = useMemo<Config>(() => {
-    const next: Record<string, string[] | boolean> = { ...options };
+    const next: Record<string, string[] | boolean> = { ...config.options };
     for (const [key, descriptor] of Object.entries(properties)) {
       if (key.endsWith("Variant") && descriptor.type === "enum" && descriptor.values?.length && !Array.isArray(next[key])) next[key] = [descriptor.values[0]];
     }
     return { ...config, options: next };
-  }, [config, options, properties]);
+  }, [config, properties]);
   const setOption = (key: string, value: string[] | boolean) => {
     setConfig(previous => ({ ...previous, options: { ...previous.options, [key]: value } }));
     playSfx("click");
@@ -138,7 +138,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
         </> : <p className="text-sm text-slate-400 text-center">Your theme is locked in. Ask a parent if you want to switch themes.</p>}
       </section>
       {parentApproval && <div className="relative z-[70]"><PinPadModal onClose={() => setParentApproval(false)} onSuccess={() => { setParentApproval(false); if (previewPart) void chooseVariant(previewPart.component, previewPart.variant, previewPart.first); }}/></div>} 
-      {previewPart && <div role="dialog" aria-modal="true" aria-label="Preview locked avatar part" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+      {previewPart && <dialog open aria-label="Preview locked avatar part" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
         <div className="w-full max-w-sm rounded-3xl border border-white/20 bg-slate-900 p-6 flex flex-col items-center gap-4">
           <h2 className="text-xl font-black">Preview: {label(previewPart.variant)}</h2>
           <p className="text-sm text-slate-300 text-center">See how this {label(previewPart.component.replace(/Variant$/, ""))} looks on your avatar before buying.</p>
@@ -147,7 +147,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           <button type="button" disabled={buying || firstAvatar || coins < AVATAR_VARIANT_PRICE} onClick={() => setParentApproval(true)} className="w-full min-h-12 rounded-xl bg-indigo-600 font-bold disabled:opacity-50">{buying ? "Unlocking..." : firstAvatar ? "Save your starter avatar first" : coins < AVATAR_VARIANT_PRICE ? "Not enough coins" : "Ask Parent to Unlock"}</button>
           <button type="button" onClick={() => setPreviewPart(null)} className="w-full min-h-12 rounded-xl border border-white/20">Back to Workshop</button>
         </div>
-      </div>}
+      </dialog>}
       <section className="lg:col-span-8 rounded-3xl bg-slate-900 border border-white/10 p-5 space-y-5">
         <nav aria-label="Avatar customisation categories" className="flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain border-b border-white/10 pb-4 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
           {selected.parts.map(part => <button type="button" key={part} aria-pressed={activeTab === part} onClick={() => setActiveTab(part)}
@@ -165,13 +165,13 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           const key = Object.keys(properties).find(k => k.toLowerCase() === (part + "Variant").toLowerCase() || k.toLowerCase() === part.toLowerCase());
           if (!key) return null;
           const schema = properties[key];
-          if (schema.type === "boolean") return <div key={part} className="flex items-center justify-between"><label className="font-bold">{label(part)}</label><input type="checkbox" checked={options[key] === true} onChange={e => setOption(key, e.target.checked)} className="w-6 h-6"/></div>;
+          if (schema.type === "boolean") return <div key={part} className="flex items-center justify-between"><label className="font-bold">{label(part)}</label><input type="checkbox" checked={options?.[key] === true} onChange={e => setOption(key, e.target.checked)} className="w-6 h-6"/></div>;
           const choices = schema.values || [];
           if (!choices.length) return null;
           return <div key={part}><h3 className="font-bold text-sm mb-2">{label(part)}</h3><div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
             {choices.map(choice => {
               const locked = choice !== choices[0] && !owned.includes([theme, key, choice].join(":"));
-              const active = (Array.isArray(options[key]) ? options[key][0] : choices[0]) === choice;
+              const active = (Array.isArray(options?.[key]) ? options?.[key][0] : choices[0]) === choice;
               const thumbnailConfig: Config = {
                 ...equippedConfig,
                 options: { ...equippedConfig.options, [key]: [choice] },
@@ -192,10 +192,10 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           </div></div>;
         })}
         {activeTab === "colours" && <h2 className="font-black text-lg">Colours</h2>}
-        {selected.colors.filter(color => activeTab === "colours").map(color => {
+        {(activeTab === "colours" ? selected.colors : []).map(color => {
           const key = Object.keys(properties).find(k => k.toLowerCase() === color.toLowerCase());
           if (!key) return null;
-          const value = Array.isArray(options[key]) ? options[key][0] : "";
+          const value = Array.isArray(options?.[key]) ? options?.[key][0] : "";
           return <div key={color}><h3 className="font-bold text-sm mb-2">{label(color)}</h3><div className="flex flex-wrap gap-2">
             {PALETTE.map(hex => <button type="button" key={hex} aria-label={`${label(color)} #${hex}`} aria-pressed={value === hex} onClick={() => setOption(key, [hex])} style={{ backgroundColor: `#${hex}` }}
               className={`w-11 h-11 rounded-xl border-2 ${value === hex ? "border-white scale-110" : "border-transparent"}`}/>)}
