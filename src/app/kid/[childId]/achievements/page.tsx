@@ -61,7 +61,7 @@ export default function AchievementsPage({ params }: { params: Promise<{ childId
         <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 font-black text-amber-300">🪙 {data?.avatarCoins ?? "—"} Coins</div>
       </header>
       {error && <p role="alert" className="rounded-xl bg-rose-950 p-4">{error}</p>}
-      {!data && !error && <p role="status">Loading your achievements…</p>}
+      {!data && !error && <output>Loading your achievements…</output>}
       {data && <>
         <section className="rounded-3xl border border-indigo-400/20 bg-slate-900 p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-black">Level {data.progress.level}</h2><span className="text-sm text-indigo-200">{data.progress.current} / {data.progress.required} XP</span></div>
@@ -81,6 +81,6 @@ export default function AchievementsPage({ params }: { params: Promise<{ childId
         </section>
       </>}
     </div>
-    {celebrate && <div role="dialog" aria-modal="true" aria-label="Achievement unlocked" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5"><div className="w-full max-w-sm rounded-3xl border border-amber-400/50 bg-slate-900 p-7 text-center shadow-2xl"><Trophy className="mx-auto mb-3 h-10 w-10 text-amber-300"/><div className="text-6xl">{celebrate.icon}</div><h2 className="mt-4 text-2xl font-black">Achievement Unlocked!</h2><p className="mt-2 text-xl font-bold">{celebrate.title}</p><p className="mt-2 text-amber-300">+5 Avatar Coins earned</p><button type="button" onClick={() => setCelebrate(null)} className="mt-6 min-h-14 w-full rounded-2xl bg-indigo-600 font-black">Awesome!</button></div></div>}
+    {celebrate && <dialog open aria-label="Achievement unlocked" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5"><div className="w-full max-w-sm rounded-3xl border border-amber-400/50 bg-slate-900 p-7 text-center shadow-2xl"><Trophy className="mx-auto mb-3 h-10 w-10 text-amber-300"/><div className="text-6xl">{celebrate.icon}</div><h2 className="mt-4 text-2xl font-black">Achievement Unlocked!</h2><p className="mt-2 text-xl font-bold">{celebrate.title}</p><p className="mt-2 text-amber-300">+5 Avatar Coins earned</p><button type="button" onClick={() => setCelebrate(null)} className="mt-6 min-h-14 w-full rounded-2xl bg-indigo-600 font-black">Awesome!</button></div></dialog>}
   </main>;
 }
