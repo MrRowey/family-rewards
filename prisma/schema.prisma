@@ -31,6 +31,7 @@ model Child {
   xp                Int                @default(0)
   rewardedLevel     Int                @default(1)
   avatarUnlocks     AvatarUnlock[]
+  kioskMode         String             @default("AUTO") // AUTO, JUNIOR, EXPLORER, TEEN
   dob               DateTime
   createdAt         DateTime           @default(now())
   assignments       TaskAssignment[]
