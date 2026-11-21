@@ -65,7 +65,7 @@ export default function AchievementsPage({ params }: { params: Promise<{ childId
       {data && <>
         <section className="rounded-3xl border border-indigo-400/20 bg-slate-900 p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-black">Level {data.progress.level}</h2><span className="text-sm text-indigo-200">{data.progress.current} / {data.progress.required} XP</span></div>
-          <div role="progressbar" aria-label="XP to next level" aria-valuemin={0} aria-valuemax={data.progress.required} aria-valuenow={data.progress.current} className="h-4 overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-indigo-400" style={{ width: `${data.progress.percent}%` }}/></div>
+          <progress aria-label="XP to next level" max={data.progress.required} value={data.progress.current} className="block h-4 w-full overflow-hidden rounded-full bg-slate-700 accent-indigo-400 [&::-webkit-progress-bar]:bg-slate-700 [&::-webkit-progress-value]:bg-indigo-400 [&::-moz-progress-bar]:bg-indigo-400"/>
           <p className="mt-3 text-sm text-slate-300">{unlocked} of {data.achievements.length} achievements unlocked · +5 Avatar Coins for each new badge</p>
         </section>
         <nav aria-label="Achievement categories" className="flex gap-2 overflow-x-auto pb-2">
@@ -76,7 +76,7 @@ export default function AchievementsPage({ params }: { params: Promise<{ childId
             <div className="mb-3 flex items-start justify-between"><span className={`text-5xl ${item.unlocked ? "" : "grayscale opacity-50"}`}>{item.icon}</span>{item.unlocked ? <span className="rounded-full bg-emerald-900 px-3 py-1 text-xs font-bold text-emerald-200">Unlocked</span> : <Lock className="text-slate-400"/>}</div>
             <h2 className="text-lg font-black">{item.title}</h2><p className="mt-1 min-h-10 text-sm text-slate-300">{item.description}</p>
             <div className="mt-4 flex justify-between text-sm"><span>{item.current} / {item.threshold} {units[item.ruleType]}</span><span className="font-bold text-amber-300">+5 🪙</span></div>
-            <div role="progressbar" aria-label={`${item.title} progress`} aria-valuemin={0} aria-valuemax={item.threshold} aria-valuenow={item.current} className="mt-2 h-3 overflow-hidden rounded-full bg-slate-700"><div className={`h-full rounded-full ${item.unlocked ? "bg-amber-400" : "bg-indigo-400"}`} style={{ width: `${Math.min(100, item.current / item.threshold * 100)}%` }}/></div>
+            <progress aria-label={`${item.title} progress`} max={item.threshold} value={Math.min(item.current, item.threshold)} className={`mt-2 block h-3 w-full overflow-hidden rounded-full bg-slate-700 [&::-webkit-progress-bar]:bg-slate-700 ${item.unlocked ? "accent-amber-400 [&::-webkit-progress-value]:bg-amber-400 [&::-moz-progress-bar]:bg-amber-400" : "accent-indigo-400 [&::-webkit-progress-value]:bg-indigo-400 [&::-moz-progress-bar]:bg-indigo-400"}`}/>
           </article>)}
         </section>
       </>}
