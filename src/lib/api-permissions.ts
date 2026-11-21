@@ -1,4 +1,4 @@
-// Only explicitly permitted kiosk mutations may run without a parent session.
+// Public kiosk writes are deliberately limited by route and HTTP method.
 // Keep this method-specific: chore submission must not grant chore approval.
 const PUBLIC_POST_ENDPOINTS = new Set([
   "/api/auth/verify-pin",
