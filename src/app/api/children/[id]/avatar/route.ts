@@ -45,11 +45,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     if (!await validateAvatarUnlocks(id, { theme, config })) return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
     if (!await validateAvatarOwnership(id, theme, config)) return NextResponse.json({ error: "Unlock this avatar part with Avatar Coins first." }, { status: 403 });
+    // Compare-and-swap prevents a stale kiosk request from undoing a parent theme change.
+    // The audit event is committed only when the expected theme still matches.
     const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.child.update({ where: { id }, data: { avatarTheme: theme, avatarConfig: JSON.stringify(config) }, select: { id: true, avatarTheme: true, avatarConfig: true } });
+      const changed = await tx.child.updateMany({
+        where: { id, avatarTheme: child.avatarTheme, avatarConfig: { not: null } },
+        data: { avatarTheme: theme, avatarConfig: JSON.stringify(config) },
+      });
+      if (changed.count !== 1) return null;
       await tx.auditLog.create({ data: { actor: child.name, actorType: switching ? "PARENT" : "CHILD", action: "UPDATED_AVATAR", details: `${child.name} updated avatar (${child.avatarTheme ?? "none"} -> ${theme})` } });
-      return result;
+      return { id, avatarTheme: theme, avatarConfig: JSON.stringify(config) };
     });
+    if (!updated) return NextResponse.json({ error: "Avatar changed while editing. Reload and try again." }, { status: 409 });
     return NextResponse.json({ success: true, updated });
   } catch (error) {
     return apiError(error, "Failed to save avatar");
