@@ -202,9 +202,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           <div><p className="text-lg font-black text-indigo-200">⭐ Level {child.progress?.level ?? 1}</p><p className="text-xs text-slate-400">Keep completing chores to level up!</p></div>
           <div className="text-right"><p className="font-bold text-amber-300">🪙 {child.avatarCoins ?? 0} Avatar Coins</p><p className="text-sm text-slate-400">{child.progress?.current ?? 0} / {child.progress?.required ?? 100} XP</p></div>
         </div>
-        <div role="progressbar" aria-label="XP to next level" aria-valuenow={child.progress?.current ?? 0} aria-valuemin={0} aria-valuemax={child.progress?.required ?? 100} className="h-4 overflow-hidden rounded-full bg-slate-800">
-          <div className="h-full rounded-full bg-linear-to-r from-indigo-500 to-violet-400 transition-[width] duration-500" style={{ width: `${child.progress?.percent ?? 0}%` }}/>
-        </div>
+        <progress aria-label="XP to next level" max={child.progress?.required ?? 100} value={child.progress?.current ?? 0} className="block h-4 w-full overflow-hidden rounded-full bg-slate-800 accent-indigo-500 [&::-webkit-progress-bar]:bg-slate-800 [&::-webkit-progress-value]:bg-indigo-500 [&::-moz-progress-bar]:bg-indigo-500"/>
         <p className="mt-2 text-xs text-slate-400">+20 XP and +1 Avatar Coin per approved chore · +5 coins per level · +5 coins per achievement</p>
       </section>
       <section aria-label="Achievements" className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-500/20 bg-slate-900/70 p-5">
