@@ -25,7 +25,7 @@ export const ACHIEVEMENTS: Achievement[] = [
 ];
 
 export function longestDailyStreak(dates: Date[]): number {
-  const days = [...new Set(dates.map(date => date.toISOString().slice(0, 10)))].sort();
+  const days = [...new Set(dates.map(date => date.toISOString().slice(0, 10)))].toSorted();
   let best = 0, current = 0, previous: number | null = null;
   for (const day of days) {
     const timestamp = Date.parse(day + "T00:00:00Z");
