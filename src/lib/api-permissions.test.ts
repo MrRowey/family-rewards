@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isPublicApiMutation } from "./api-permissions";
 
-describe("kiosk API permissions (develop compatibility)", () => {
+describe("public kiosk API permissions", () => {
   it.each(["/api/completions", "/api/task-completions"])("allows submission, not approval: %s", (path) => {
     expect(isPublicApiMutation(path, "POST")).toBe(true);
     for (const method of ["PATCH", "PUT", "DELETE"]) {
