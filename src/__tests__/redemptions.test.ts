@@ -15,7 +15,11 @@ const prismaMock = {
   },
   shopPlan: { findUnique: vi.fn() },
   rewardAssignment: { findMany: vi.fn() },
+  completion: { findMany: vi.fn() },
+  badge: { findFirst: vi.fn(), create: vi.fn() },
+  childBadge: { createMany: vi.fn() },
   rewardRedemption: {
+    count: vi.fn(),
     findFirst: vi.fn(),
     create: vi.fn(),
     findUnique: vi.fn(),
@@ -40,6 +44,9 @@ describe("Redemption Domain Service", () => {
     transactionMock.mockImplementation((callback) => callback(prismaMock));
     prismaMock.rewardAssignment.findMany.mockResolvedValue([]);
     prismaMock.shopPlan.findUnique.mockResolvedValue(null);
+    prismaMock.completion.findMany.mockResolvedValue([]);
+    prismaMock.rewardRedemption.count.mockResolvedValue(0);
+    prismaMock.childBadge.createMany.mockResolvedValue({ count: 0 });
   });
 
   it("rejects prizes outside a saved month plan before charging stars", async () => {
