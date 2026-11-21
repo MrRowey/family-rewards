@@ -37,6 +37,20 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
     if (response.ok) window.location.reload();
     else setThemeError((await response.json().catch(() => ({}))).error || "Theme change failed.");
   };
+  const [modeOverrides, setModeOverrides] = useState<Record<string, string>>({});
+  const [modeSaving, setModeSaving] = useState<string | null>(null);
+  const [modeMessage, setModeMessage] = useState("");
+  async function saveKioskMode(childId: string, kioskMode: string) {
+    setModeSaving(childId);
+    setModeMessage("");
+    try {
+      const response = await fetch("/api/parent/children/kiosk-mode", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId, kioskMode }) });
+      if (!response.ok) throw new Error("Could not save display preference.");
+      setModeOverrides((old) => ({ ...old, [childId]: kioskMode }));
+      setModeMessage("Display preference saved.");
+    } catch { setModeMessage("Could not save display preference. Please try again."); }
+    finally { setModeSaving(null); }
+  }
   const selectedChild = householdChildren.find((child) => child.id === adjustChildId);
   const adjustment = Number(adjustAmount);
   return <>
@@ -86,10 +100,11 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
 
               <div className="lg:col-span-2 space-y-4">
                 {themeError && <p role="alert" className="text-amber-300">{themeError}</p>}
+                <output className="block text-sm text-slate-300">{modeMessage}</output>
                 <h3 className="font-black text-lg text-white">Registered Profiles ({householdChildren.length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {householdChildren.map((child) => (
-                    <div key={child.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex items-center justify-between shadow-xl">
+                    <div key={child.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex flex-col gap-4 shadow-xl">
                       <div className="flex items-center gap-4">
                         {child.avatarConfig ? (
                           <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={48} />
@@ -101,6 +116,14 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                       </div>
                       <div className="flex flex-col gap-2">
                         {child.avatarConfig && <button type="button" onClick={() => void changeTheme(child.id, child.avatarTheme)} className="min-h-11 rounded-lg border border-indigo-500 px-3 text-sm">Change theme</button>}
+                        <label className="text-sm text-slate-300">Kids Mode layout
+                          <select aria-label={`Kids Mode layout for ${child.name}`} value={modeOverrides[child.id] ?? child.kioskMode ?? "AUTO"} disabled={modeSaving === child.id} onChange={(e) => void saveKioskMode(child.id, e.target.value)} className="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white">
+                            <option value="AUTO">Automatic (based on age)</option>
+                            <option value="JUNIOR">Junior — big buttons</option>
+                            <option value="EXPLORER">Explorer — progress and rewards</option>
+                            <option value="TEEN">Teen — compact dashboard</option>
+                          </select>
+                        </label>
                       <button type="button" onClick={() => { setAdjustChildId(child.id); setAdjustAmount("1"); setAdjustReason(""); setAdjusting(true); }}
                         className="min-h-11 rounded-lg border border-slate-700 px-3 text-sm">
                         Adjust stars
