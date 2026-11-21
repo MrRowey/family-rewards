@@ -15,7 +15,11 @@ const prismaMock = {
     create: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
+    findMany: vi.fn(),
   },
+  rewardRedemption: { count: vi.fn() },
+  badge: { findFirst: vi.fn(), create: vi.fn() },
+  childBadge: { createMany: vi.fn() },
   auditLog: {
     create: vi.fn(),
   },
@@ -32,6 +36,10 @@ import { submitCompletion, approveCompletion, declineCompletion } from "@/lib/do
 describe("Completion Domain Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.child.update.mockResolvedValue({ xp: 20, rewardedLevel: 1 });
+    prismaMock.completion.findMany.mockResolvedValue([]);
+    prismaMock.rewardRedemption.count.mockResolvedValue(0);
+    prismaMock.childBadge.createMany.mockResolvedValue({ count: 0 });
   });
 
   it("should create a new completion for today", async () => {
@@ -62,7 +70,11 @@ describe("Completion Domain Service", () => {
 
     expect(prismaMock.child.update).toHaveBeenCalledWith({
       where: { id: "c1" },
-      data: { stars: { increment: 3 } },
+      data: {
+        stars: { increment: 3 },
+        avatarCoins: { increment: 1 },
+        xp: { increment: 20 },
+      },
     });
     expect(result).toEqual({ success: true });
   });
