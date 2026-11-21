@@ -240,7 +240,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
 
         {isJunior && <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))} className="flex w-full min-h-24 items-center justify-center gap-4 rounded-3xl bg-linear-to-r from-fuchsia-600 to-indigo-600 px-6 py-5 text-2xl font-black shadow-xl active:scale-95"><ShoppingBag size={36} /> 🛍️ Reward Shop</button>}
         <output className="block text-sm text-slate-300">{completionMessage}</output>
-        {pendingCount > 0 && <p className="text-sm text-slate-300">{pendingCount} waiting for parent approval</p>}
+
         {syncError && <p role="alert" className="text-sm text-amber-200">Could not refresh chores. Trying again automatically.</p>}
         {tasks.length === 0 ? (
           <div className="bg-slate-900/60 border border-slate-800/80 p-8 sm:p-12 rounded-3xl text-center space-y-3">

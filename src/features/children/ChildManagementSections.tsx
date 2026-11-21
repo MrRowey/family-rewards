@@ -102,6 +102,7 @@ export function ChildManagementSections({ activeMenu, householdChildren, childNa
                 {themeError && <p role="alert" className="text-amber-300">{themeError}</p>}
                 <output className="block text-sm text-slate-300">{modeMessage}</output>
                 <h3 className="font-black text-lg text-white">Registered Profiles ({householdChildren.length})</h3>
+                <output className="block text-sm text-slate-300">{modeMessage}</output>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {householdChildren.map((child) => (
                     <div key={child.id} className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex flex-col gap-4 shadow-xl">

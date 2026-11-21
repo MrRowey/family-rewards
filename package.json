@@ -14,7 +14,8 @@
     "postinstall": "prisma generate",
     "kiosk:up": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
     "kiosk:down": "docker compose down",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:integration": "vitest run --config vitest.integration.config.mts"
   },
   "dependencies": {
     "@dicebear/core": "^10.7.0",
