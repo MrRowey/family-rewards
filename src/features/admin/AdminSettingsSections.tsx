@@ -128,6 +128,7 @@ function ProgressionSettings() {
   const [xpMinMultiplier, setMin] = useState(5);
   const [xpMaxMultiplier, setMax] = useState(8);
   const [coinsPerLevel, setCoins] = useState(25);
+  const [milestoneBonusCoins, setMilestoneBonus] = useState(50);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -141,6 +142,7 @@ function ProgressionSettings() {
         setMin(data.xpMinMultiplier);
         setMax(data.xpMaxMultiplier);
         setCoins(data.coinsPerLevel);
+        setMilestoneBonus(data.milestoneBonusCoins);
       } }).catch(error => { if (active) setMessage(String(error)); });
     return () => { active = false; };
   }, []);
@@ -151,7 +153,7 @@ function ProgressionSettings() {
     try {
       const response = await fetch("/api/parent/progression-settings", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ xpMinMultiplier, xpMaxMultiplier, coinsPerLevel }),
+        body: JSON.stringify({ xpMinMultiplier, xpMaxMultiplier, coinsPerLevel, milestoneBonusCoins }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to save settings.");
@@ -171,6 +173,9 @@ function ProgressionSettings() {
       </label>
       <label className="block text-slate-300">Avatar Coins per new level
         <input className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-white" type="number" min="0" max="1000" required value={coinsPerLevel} onChange={e => setCoins(Number(e.target.value))} />
+      </label>
+      <label className="block text-slate-300">Bonus Coins at every tenth level
+        <input className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-white" type="number" min="0" max="5000" required value={milestoneBonusCoins} onChange={e => setMilestoneBonus(Number(e.target.value))} />
       </label>
       <output aria-live="polite" className="block text-slate-300">{message}</output>
       <button type="submit" disabled={busy} className="min-h-11 rounded-lg bg-indigo-600 px-5 font-semibold text-white disabled:opacity-50">{busy ? "Saving..." : "Save Progression Settings"}</button>
