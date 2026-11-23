@@ -78,6 +78,12 @@ jobs:
           mv prisma/migrations/20261123094500_ledger_baselines_and_debts "$RUNNER_TEMP/new-avatar-migrations/"
           mv prisma/migrations/20261123110000_avatar_level_milestones "$RUNNER_TEMP/new-avatar-migrations/"
           npx prisma migrate deploy
+          # Reproduce the previous db-push installation with its latest legacy columns.
+          cp prisma/schema.prisma "$RUNNER_TEMP/avatar-schema-current.prisma"
+          node scripts/ci-prepare-legacy-schema.mjs
+          npx prisma db push
+          cp "$RUNNER_TEMP/avatar-schema-current.prisma" prisma/schema.prisma
+          npx prisma generate
           npx prisma db execute --file integration/fixtures/legacy-avatar-data.sql
           mv "$RUNNER_TEMP/new-avatar-migrations"/* prisma/migrations/
           node scripts/migrate-safe.mjs
