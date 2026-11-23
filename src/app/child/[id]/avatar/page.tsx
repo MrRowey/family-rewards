@@ -6,6 +6,7 @@ import { ArrowLeft, Check, Sparkles, Lock } from "lucide-react";
 import AvatarDisplay, { styleProperties } from "@/components/AvatarDisplay";
 import PinPadModal from "@/components/ui/PinPadModal";
 import { AVATAR_VARIANT_PRICE } from "@/lib/avatar-catalog";
+import { avatarCurrencyName } from "@/lib/avatar-currency-names";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 
 const THEMES = [
@@ -85,7 +86,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
     if (variant === first || owned.includes(key)) { setOption(component, [variant]); return; }
     if (firstAvatar) { setError("Save your first avatar with the free parts before buying extras."); return; }
     if (buying) return;
-    if (coins < AVATAR_VARIANT_PRICE) { setError("Not enough Avatar Coins yet."); return; }
+    if (coins < AVATAR_VARIANT_PRICE) { setError(`Not enough ${avatarCurrencyName(theme)} yet.`); return; }
 
     setBuying(true);
     setError("");
@@ -122,7 +123,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   return <main className="min-h-screen bg-slate-950 text-white p-4 sm:p-6">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-5">
       <button type="button" onClick={() => router.back()} className="min-h-12 rounded-2xl border border-white/20 px-4 flex items-center gap-2"><ArrowLeft size={18}/> Back</button>
-      <div className="text-center"><h1 className="font-black text-xl flex items-center gap-2"><Sparkles className="text-amber-400"/> Avatar Dressing Room</h1><p className="text-slate-400 text-xs">{completedChores} chores completed · 🪙 {coins} Avatar Coins</p></div>
+      <div className="text-center"><h1 className="font-black text-xl flex items-center gap-2"><Sparkles className="text-amber-400"/> Avatar Dressing Room</h1><p className="text-slate-400 text-xs">{completedChores} chores completed · 🪙 {coins} {avatarCurrencyName(theme, coins)}</p></div>
       <button type="button" onClick={() => void save()} disabled={saving || firstAvatar === undefined} className="min-h-12 rounded-2xl bg-emerald-600 px-5 font-bold disabled:opacity-50 flex items-center gap-2"><Check size={18}/>{saving ? "Saving..." : "Equip Look"}</button>
     </header>
     {error && <p role="alert" className="my-4 text-amber-300">{error}</p>}
@@ -149,7 +150,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           <h2 className="text-xl font-black">Preview: {label(previewPart.variant)}</h2>
           <p className="text-sm text-slate-300 text-center">See how this {label(previewPart.component.replace(/Variant$/, ""))} looks on your avatar before buying.</p>
           <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(previewConfig)} size={220}/>
-          <p className="text-amber-300 font-bold">🔒 {AVATAR_VARIANT_PRICE} Avatar Coins · You have {coins}</p>
+          <p className="text-amber-300 font-bold">🔒 {AVATAR_VARIANT_PRICE} {avatarCurrencyName(theme, AVATAR_VARIANT_PRICE)} · You have {coins}</p>
           <button type="button" disabled={buying || firstAvatar || coins < AVATAR_VARIANT_PRICE} onClick={() => setParentApproval(true)} className="w-full min-h-12 rounded-xl bg-indigo-600 font-bold disabled:opacity-50">{buying ? "Unlocking..." : firstAvatar ? "Save your starter avatar first" : coins < AVATAR_VARIANT_PRICE ? "Not enough coins" : "Ask Parent to Unlock"}</button>
           <button type="button" onClick={() => setPreviewPart(null)} className="w-full min-h-12 rounded-xl border border-white/20">Back to Workshop</button>
         </div>
@@ -194,7 +195,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
                 options: { ...equippedConfig.options, [key]: [choice] },
               };
               return <button type="button" key={choice} aria-pressed={active}
-                aria-label={`${label(choice)}${locked ? `, locked, ${AVATAR_VARIANT_PRICE} Avatar Coins` : ", available"}`}
+                aria-label={`${label(choice)}${locked ? `, locked, ${AVATAR_VARIANT_PRICE} ${avatarCurrencyName(theme, AVATAR_VARIANT_PRICE)}` : ", available"}`}
                 onClick={() => { if (!locked) setOption(key, [choice]); else setPreviewPart({ component: key, variant: choice, first: choices[0] }); }}
                 disabled={buying}
                 className={`relative flex w-full min-w-0 flex-col items-center gap-2 rounded-2xl border p-2 text-center text-xs transition-colors ${active ? "border-indigo-400 bg-indigo-600/30" : "border-white/20 bg-slate-950 hover:border-indigo-400/70"}`}>
