@@ -29,7 +29,10 @@ export async function awardAchievements(tx: Transaction, childId: string): Promi
       data: { title: item.title, icon: item.icon, description: item.description, ruleType: item.ruleType, threshold: item.threshold },
     });
     const result = await tx.childBadge.createMany({ data: [{ childId, badgeId: badge.id }], skipDuplicates: true });
-    earned += result.count * COINS_PER_ACHIEVEMENT;
+    if (result.count) {
+      await tx.avatarCurrencyLedger.create({ data: { childId, sourceKey: `achievement:${item.key}:v1`, delta: COINS_PER_ACHIEVEMENT, reason: "ACHIEVEMENT" } });
+      earned += COINS_PER_ACHIEVEMENT;
+    }
   }
   if (earned) {
     await tx.child.update({ where: { id: childId }, data: { avatarCoins: { increment: earned } } });
