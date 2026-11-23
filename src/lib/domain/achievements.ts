@@ -1,3 +1,4 @@
+import { creditAvatarCoins } from "./avatar-currency";
 import type { Prisma } from "@prisma/client";
 import { ACHIEVEMENTS, COINS_PER_ACHIEVEMENT, longestDailyStreak, type AchievementRule } from "@/lib/progression";
 
@@ -30,12 +31,8 @@ export async function awardAchievements(tx: Transaction, childId: string): Promi
     });
     const result = await tx.childBadge.createMany({ data: [{ childId, badgeId: badge.id }], skipDuplicates: true });
     if (result.count) {
-      await tx.avatarCurrencyLedger.create({ data: { childId, sourceKey: `achievement:${item.key}:v1`, delta: COINS_PER_ACHIEVEMENT, reason: "ACHIEVEMENT" } });
-      earned += COINS_PER_ACHIEVEMENT;
+      earned += await creditAvatarCoins(tx, childId, `achievement:${item.key}:v1`, COINS_PER_ACHIEVEMENT, "ACHIEVEMENT");
     }
-  }
-  if (earned) {
-    await tx.child.update({ where: { id: childId }, data: { avatarCoins: { increment: earned } } });
   }
   return earned;
 }
