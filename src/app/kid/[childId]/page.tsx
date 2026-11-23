@@ -53,7 +53,6 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   const completionVersion = useRef(0);
   const [submitting, setSubmitting] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
-  const [pendingCount, setPendingCount] = useState(0);
   const [waitingTasks, setWaitingTasks] = useState<Task[]>([]);
   const [doneTasks, setDoneTasks] = useState<Task[]>([]);
   const [syncError, setSyncError] = useState(false);
@@ -83,7 +82,6 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         const scheduled = new Map(assignments.map(({ task }) => [task.id, task]));
         setChild(children.find((item) => item.id === childId) ?? null);
         void fetch(`/api/children/${encodeURIComponent(childId)}/progress`, { cache: "no-store" }).then(response => response.ok ? response.json() : null).then(data => { if (data?.achievements && latestRequest === version) setAchievements(data.achievements); }).catch(() => {});
-        setPendingCount(pending.size);
         const records = new Map(completions.flatMap((item) => item.task ? [[item.taskId, item.task] as const] : []));
         const taskDetails = (ids: Set<string>) => [...ids].flatMap((id) => {
           const task = scheduled.get(id) ?? records.get(id);
