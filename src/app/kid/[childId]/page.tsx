@@ -162,82 +162,76 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
   const isTeen = displayMode === "TEEN";
 
   return (
-    <main data-kiosk-mode={displayMode.toLowerCase()} data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 px-4 pt-5 pb-28 sm:px-8 sm:pt-8 landscape:lg:pb-8 select-none touch-manipulation">
-      <header className="mx-auto mb-6 grid max-w-6xl gap-4 rounded-3xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6 landscape:lg:flex landscape:lg:items-center landscape:lg:justify-between">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
-          <button
-            onClick={() => router.push("/")}
-            className="shrink-0 p-3 min-h-14 min-w-14 sm:min-h-16 sm:min-w-16 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-2xl transition flex items-center justify-center border border-slate-700/50 shadow-lg"
-            aria-label="Back to home"
-          >
-            <ArrowLeft className="w-7 h-7 text-slate-200" />
+    <main data-kiosk-mode={displayMode.toLowerCase()} data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 px-4 pt-4 pb-24 text-slate-100 sm:px-6 sm:pt-6 lg:pb-8 select-none touch-manipulation">
+      <header className="mx-auto mb-5 flex max-w-6xl flex-wrap items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-3 sm:px-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <button type="button" onClick={() => router.push("/")} aria-label="Back to Family Hub"
+            className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-indigo-400">
+            <ArrowLeft size={24} aria-hidden="true" />
           </button>
-
-          <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/profile`)} aria-label="Open my profile" className="relative shrink-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-indigo-400">
+          <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/profile`)} aria-label="Open my profile"
+            className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl focus-visible:outline-2 focus-visible:outline-indigo-400">
             {child.avatarConfig ? (
-              <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={64} />
+              <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={52} />
             ) : child.avatar.startsWith("/") ? (
-              <Image
-                src={child.avatar}
-                alt={child.name}
-                width={64}
-                height={64}
-                unoptimized
-                className="w-16 h-16 rounded-2xl object-cover ring-4 ring-indigo-500/30 shadow-xl"
-              />
+              <Image src={child.avatar} alt="" width={52} height={52} unoptimized className="h-13 w-13 rounded-xl object-contain" />
             ) : (
-              <span className="text-4xl sm:text-6xl filter drop-shadow-md">{child.avatar}</span>
+              <span aria-hidden="true" className="text-4xl">{child.avatar}</span>
             )}
           </button>
-
-          <div>
-            <h1 className="wrap-break-word text-2xl font-black tracking-tight sm:text-4xl">{child.name}&apos;s Dashboard</h1>
-            <p className="text-sm text-slate-400 font-medium">{isTeen ? "Manage your tasks and rewards." : isJunior ? "Do your chores and collect stars!" : "Complete your challenges and earn rewards!"}</p>
+          <div className="min-w-0">
+            <h1 className={`wrap-break-word font-black tracking-tight ${isTeen ? "text-xl sm:text-2xl" : "text-xl sm:text-3xl"}`}>
+              {child.name}&apos;s {isJunior ? "Chores" : isTeen ? "Tasks" : "Challenges"}
+            </h1>
+            <p className="text-sm text-slate-400">
+              {isJunior ? "Do your chores and collect stars!" : isTeen ? "Keep track of today's tasks." : "Complete challenges to earn rewards!"}
+            </p>
           </div>
         </div>
-
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <div className="bg-amber-500/10 border border-amber-500/30 px-4 py-3 rounded-2xl flex items-center gap-3 shadow-inner">
-            <Star className="w-8 h-8 text-amber-400 fill-amber-400 animate-pulse" />
-            <span className="text-3xl font-black text-amber-400">{child.stars}</span>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div aria-label={`${child.stars} Stars`} className="flex min-h-12 items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 font-black text-amber-300">
+            <Star size={isJunior ? 24 : 20} className="fill-amber-400" aria-hidden="true" />
+            <span className="text-xl">{child.stars}</span>
           </div>
-          <button
-            onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
-            className={`${isJunior ? "hidden" : "hidden min-h-14 landscape:lg:flex"} flex-1 justify-center whitespace-nowrap bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 font-black px-6 py-4 rounded-2xl transition flex items-center gap-3 shadow-lg active:scale-95`}
-          >
-            <ShoppingBag className="w-6 h-6" /> Reward Shop
+          <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/profile`)}
+            className="hidden min-h-12 items-center gap-2 rounded-xl border border-indigo-400/30 bg-slate-800 px-4 font-bold text-indigo-100 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-indigo-400 lg:flex">
+            <UserRound size={20} aria-hidden="true" />
+            {isJunior ? "My Avatar" : "My Profile"}
+            <span className="text-xs text-slate-400">Lv {child.progress?.level ?? 1}</span>
+          </button>
+          <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
+            className="hidden min-h-12 items-center gap-2 rounded-xl bg-indigo-600 px-4 font-black text-white hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-300 lg:flex">
+            <ShoppingBag size={20} aria-hidden="true" /> {isTeen ? "Shop" : "Reward Shop"}
           </button>
         </div>
       </header>
-
-      <div className="mx-auto mb-5 flex max-w-6xl items-center justify-end">
-        <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/profile`)}
-          className="flex min-h-12 items-center gap-2 rounded-xl border border-indigo-400/30 bg-slate-800 px-4 font-bold text-indigo-200 focus-visible:outline-2 focus-visible:outline-indigo-400">
-          <UserRound size={20} aria-hidden="true"/> My Profile <span className="text-sm text-slate-400">· Level {child.progress?.level ?? 1}</span>
-        </button>
-      </div>
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="mx-auto max-w-6xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3">
-            <ListCheck className="w-8 h-8 text-indigo-400" /> Today&apos;s Chores
+          <h2 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
+            <ListCheck className="h-6 w-6 text-indigo-400" /> {isTeen ? "Tasks for Today" : isJunior ? "My Chores" : "Today&apos;s Challenges"}
           </h2>
           <span className="text-sm font-semibold bg-indigo-950 text-indigo-300 px-4 py-1.5 rounded-full border border-indigo-800/50">
             {tasks.length} Left
           </span>
         </div>
 
-        {isJunior && <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))} className="flex w-full min-h-24 items-center justify-center gap-4 rounded-3xl bg-linear-to-r from-fuchsia-600 to-indigo-600 px-6 py-5 text-2xl font-black shadow-xl active:scale-95"><ShoppingBag size={36} /> 🛍️ Reward Shop</button>}
-        <output className="block text-sm text-slate-300">{completionMessage}</output>
+        {completionMessage && <output className="block text-sm font-semibold text-slate-200">{completionMessage}</output>}
 
         {syncError && <p role="alert" className="text-sm text-amber-200">Could not refresh chores. Trying again automatically.</p>}
         {tasks.length === 0 ? (
-          <div className="bg-slate-900/60 border border-slate-800/80 p-8 sm:p-12 rounded-3xl text-center space-y-3">
-            <div className="text-6xl">🎉</div>
-            <h3 className="text-2xl font-bold text-slate-300">All done for today!</h3>
-            <p className="text-slate-500">No pending chores left on your queue right now.</p>
-          </div>
+          <section aria-label="No chores remaining" className={`flex items-center justify-center gap-4 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 text-left sm:px-6 ${isJunior ? "min-h-28 py-6" : isTeen ? "min-h-20 py-4" : "min-h-24 py-5"}`}>
+            <span aria-hidden="true" className={isTeen ? "text-3xl text-emerald-400" : "text-4xl"}>{isTeen ? "✓" : "🎉"}</span>
+            <div className="min-w-0">
+              <h3 className={`font-bold ${isJunior ? "text-xl" : "text-lg"}`}>
+                {waitingTasks.length > 0 ? (isJunior ? "Great job! You're finished!" : isTeen ? "All tasks submitted" : "Challenges completed!") : (isTeen ? "No tasks remaining" : "All done for today!")}
+              </h3>
+              <p className="text-sm text-slate-400">
+                {waitingTasks.length > 0 ? "Your completed chores are waiting for approval." : "Check back when new chores are assigned."}
+              </p>
+            </div>
+          </section>
         ) : (
-          <div className={`grid grid-cols-1 gap-4 ${isJunior ? "lg:grid-cols-2" : "sm:grid-cols-2"} sm:gap-6`}>
+          <div className={`grid grid-cols-1 gap-4 ${isJunior ? "lg:grid-cols-2" : isTeen ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
             {tasks.map((task) => {
               const substeps = task.subSteps || [];
               const allSubstepsDone =
@@ -246,7 +240,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
               return (
                 <div
                   key={task.id}
-                  className={`bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-3xl ${isJunior ? "p-7" : "p-6"} flex flex-col justify-between shadow-2xl backdrop-blur-sm transition-all duration-300`}
+                  className={`flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg ${isJunior ? "p-6" : isTeen ? "p-4" : "p-5"}`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -260,10 +254,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                           className="w-16 h-16 rounded-2xl object-cover ring-2 ring-slate-700"
                         />
                       ) : (
-                        <span className="text-5xl">{task.icon}</span>
+                        <span className={isTeen ? "text-3xl" : "text-4xl"}>{task.icon}</span>
                       )}
                       <div>
-                        <h3 className="wrap-break-word text-xl font-bold sm:text-2xl">{task.title}</h3>
+                        <h3 className={`wrap-break-word font-bold ${isJunior ? "text-xl sm:text-2xl" : isTeen ? "text-lg" : "text-xl"}`}>{task.title}</h3>
                         <div className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 font-extrabold text-sm px-3 py-1 rounded-full border border-amber-500/20 mt-1">
                           <Star className="w-4 h-4 fill-amber-400" /> +{task.starValue} Stars
                         </div>
@@ -305,11 +299,11 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                     </div>
                   )}
 
-                  <div className="mt-6 pt-4 border-t border-slate-800/60 flex justify-end">
+                  <div className="mt-4 flex justify-end border-t border-slate-800/60 pt-3">
                     <button
                       onClick={() => handleCompleteChore(task.id)}
                       disabled={!allSubstepsDone || submitting || syncError}
-                      className={`w-full min-h-14 font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg ${
+                      className={`w-full min-h-14 font-black py-3 rounded-xl transition-all active:scale-95 ${isTeen ? "text-base" : "text-lg"} ${
                         allSubstepsDone
                           ? "bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer"
                           : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
@@ -324,10 +318,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
           </div>
         )}
       </div>
-      {isTeen && (
-      <div className="mx-auto mt-6 grid max-w-6xl gap-4 sm:grid-cols-2">
-        {[{ label: "Waiting for approval", items: waitingTasks }, { label: "Done", items: doneTasks }].map(({ label, items }) => (
-          <section key={label} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+      {isTeen && (waitingTasks.length > 0 || doneTasks.length > 0) && (
+      <div className="mx-auto mt-4 grid max-w-6xl gap-3 sm:grid-cols-2">
+        {[{ label: "Waiting for approval", items: waitingTasks }, { label: "Done", items: doneTasks }].filter(({ items }) => items.length > 0).map(({ label, items }) => (
+          <section key={label} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
             <h2 className="text-lg font-bold">{label} ({items.length})</h2>
             {items.length === 0 ? <p className="mt-2 text-sm text-slate-400">No chores here yet.</p> : (
               <ul className="mt-2 divide-y divide-slate-800">
@@ -341,12 +335,16 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         ))}
       </div>
       )}
-      <nav aria-label="Kiosk navigation" className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-3 border-t border-slate-700 bg-slate-950 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${isJunior ? "min-h-20" : ""} landscape:lg:hidden`}>
-        <span aria-current="page" className="flex min-h-12 items-center gap-2 font-bold text-indigo-300"><ListCheck size={20} /> Chores</span>
-        <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/profile`)} className="flex min-h-12 items-center gap-2 rounded-xl px-2 font-bold text-indigo-200"><UserRound size={20} aria-hidden="true"/> Profile</button>
-        <span className="whitespace-nowrap text-amber-300" aria-label={child.stars + " stars"}>★ {child.stars}</span>
+      <nav aria-label="Kiosk navigation" className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-2 border-t border-slate-700 bg-slate-950 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden">
+        <span aria-current="page" className="flex min-h-12 items-center gap-2 rounded-xl px-2 font-bold text-indigo-300"><ListCheck size={20} aria-hidden="true" /> {isJunior ? "Chores" : "Tasks"}</span>
+        <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/profile`)}
+          className="flex min-h-12 items-center gap-2 rounded-xl px-2 font-bold text-indigo-200 focus-visible:outline-2 focus-visible:outline-indigo-400">
+          <UserRound size={20} aria-hidden="true" /> {isJunior ? "Avatar" : "Profile"}
+        </button>
         <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
-          className={`flex items-center gap-2 rounded-xl px-3 font-bold ${isJunior ? "min-h-16 text-lg bg-indigo-600 text-white" : "min-h-12"}`}><ShoppingBag size={isJunior ? 28 : 20} /> {isJunior ? "🛍️ Shop!" : "Shop"}</button>
+          className={`flex min-h-12 items-center gap-2 rounded-xl bg-indigo-600 px-3 font-bold text-white focus-visible:outline-2 focus-visible:outline-indigo-300 ${isJunior ? "min-h-14 text-lg" : ""}`}>
+          <ShoppingBag size={isJunior ? 24 : 20} aria-hidden="true" /> Shop
+        </button>
       </nav>
     </main>
   );
