@@ -80,7 +80,7 @@ jobs:
           npx prisma migrate deploy
           npx prisma db execute --file integration/fixtures/legacy-avatar-data.sql
           mv "$RUNNER_TEMP/new-avatar-migrations"/* prisma/migrations/
-          npx prisma migrate deploy
+          node scripts/migrate-safe.mjs
           npx tsx integration/verify-avatar-migration.ts
           npx prisma migrate status
 
