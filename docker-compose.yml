@@ -16,7 +16,8 @@ services:
       timeout: 3s
       retries: 5
 
-  # Fresh-install schema initialization. Do not use db push as an upgrade strategy once family data exists.
+  # Upgrade existing family databases safely, including older db-push installations.
+  # Do not delete the PostgreSQL volume to deploy a new release.
   migrate:
     build:
       context: .
@@ -25,7 +26,7 @@ services:
     container_name: family_rewards_migrate
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-family_admin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-family_rewards}?schema=public
-    command: ["npx", "prisma", "db", "push"]
+    command: ["node", "scripts/migrate-safe.mjs"]
     depends_on:
       postgres:
         condition: service_healthy
