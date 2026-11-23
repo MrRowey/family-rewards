@@ -100,7 +100,7 @@ export default function ChildProfilePage({ params }: { params: Promise<{ childId
         <p>{error}</p>
         <button type="button" onClick={() => router.push("/")} className="mt-3 min-h-12 rounded-xl bg-indigo-600 px-5 font-bold">Family Hub</button>
       </div>}
-      {!child && !error && <p role="status" className="rounded-xl bg-slate-900 p-6">Opening your profile…</p>}
+      {!child && !error && <output className="block rounded-xl bg-slate-900 p-6">Opening your profile…</output>}
 
       {child && data && <>
         <div className="grid gap-4 md:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.2fr)]">
@@ -152,7 +152,7 @@ export default function ChildProfilePage({ params }: { params: Promise<{ childId
             </button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {earned.slice(-3).reverse().map(item =>
+            {earned.slice(-3).toReversed().map(item =>
               <article key={item.key} className="flex min-h-20 items-center gap-3 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4">
                 <span aria-hidden="true" className="text-4xl">{item.icon}</span>
                 <div><h3 className="font-black">{item.title}</h3><p className="text-xs text-amber-200">Unlocked</p></div>
@@ -169,7 +169,7 @@ export default function ChildProfilePage({ params }: { params: Promise<{ childId
       </>}
     </div>
 
-    {notice && <aside role="status" aria-live="polite"
+    {notice && <output aria-live="polite"
       className={`pointer-events-none fixed right-4 top-4 z-40 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-amber-400/50 bg-slate-900 p-4 shadow-2xl ${config.reducedMotion ? "" : "animate-in fade-in slide-in-from-top-4"}`}>
       <div className="flex items-center gap-3"><span aria-hidden="true" className="text-3xl">🎉</span>
         <div><strong className="text-lg text-amber-200">Achievement Unlocked!</strong>
@@ -181,6 +181,6 @@ export default function ChildProfilePage({ params }: { params: Promise<{ childId
           <p className="mt-1 text-sm font-semibold text-amber-300">+{notice.achievements.length * notice.rewardPerBadge} {avatarCurrencyName(child?.avatarTheme, notice.achievements.length * notice.rewardPerBadge)} in achievement rewards</p>
         </div>
       </div>
-    </aside>}
+    </output>}
   </main>;
 }
