@@ -24,6 +24,21 @@ export default function HomePage() {
     lastHubTap.current = now;
   };
   const [children, setChildren] = useState<Child[]>([]);
+  const [selectionError, setSelectionError] = useState("");
+  const [selectingChild, setSelectingChild] = useState<string | null>(null);
+
+  const selectChild = async (childId: string) => {
+    if (selectingChild) return;
+    setSelectingChild(childId);
+    setSelectionError("");
+    try {
+      const response = await fetch("/api/kiosk/select-child", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId }) });
+      if (!response.ok) throw new Error("Could not open the child profile.");
+      router.push(`/kid/${encodeURIComponent(childId)}`);
+    } catch (error) { setSelectionError(error instanceof Error ? error.message : "Could not select child."); }
+    finally { setSelectingChild(null); }
+  };
   const [showPinModal, setShowPinModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>("");
   const [currentDate, setCurrentDate] = useState<string>("");
@@ -172,11 +187,13 @@ export default function HomePage() {
               </p>
             </div>
 
+            {selectionError && <p role="alert" className="mb-4 text-center text-amber-300">{selectionError}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               {children.map((child) => (
                 <button
                   key={child.id}
-                  onClick={() => router.push(`/kid/${child.id}`)}
+                  onClick={() => void selectChild(child.id)}
+                  disabled={selectingChild !== null}
                   className="group relative bg-slate-900/70 hover:bg-slate-850/80 active:bg-slate-800/90 backdrop-blur-xl border border-white/10 hover:border-indigo-500/50 p-4 sm:p-5 rounded-3xl transition-all duration-300 transform hover:-translate-y-1 active:scale-[0.98] shadow-2xl flex flex-row items-center gap-3 sm:gap-4 text-left overflow-hidden min-h-[150px]"
                 >
                   {/* Subtle top edge highlight */}
