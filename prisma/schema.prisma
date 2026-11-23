@@ -71,6 +71,7 @@ model ChildBadge {
   badgeId   String
   badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
   awardedAt DateTime @default(now())
+  celebrationSeenAt DateTime?
 
   @@unique([childId, badgeId])
 }
