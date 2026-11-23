@@ -9,7 +9,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!await isAuthorisedForChild(id)) return NextResponse.json({ error: "Select this child from the Family Hub first" }, { status: 403 });
   const child = await prisma.child.findUnique({
     where: { id },
-    select: { xp: true, avatarCoins: true, badges: { include: { badge: true } } },
+    select: { xp: true, avatarCoins: true, avatarTheme: true, badges: { include: { badge: true } } },
   });
   if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
   const [stats, settings] = await Promise.all([
@@ -22,6 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return NextResponse.json({
     progress: getProgress(child.xp),
     avatarCoins: child.avatarCoins,
+    avatarTheme: child.avatarTheme,
     rules: {
       xpMinMultiplier: settings?.xpMinMultiplier ?? 5,
       xpMaxMultiplier: settings?.xpMaxMultiplier ?? 8,
