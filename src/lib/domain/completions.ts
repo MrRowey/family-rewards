@@ -92,6 +92,7 @@ export async function approveCompletion(completionId: string) {
     }
 
     const xpAwarded = rollChoreXp(completion.task.starValue);
+    await tx.xpLedger.create({ data: { childId: completion.childId, sourceKey: `completion:${completionId}:approved`, delta: xpAwarded, stars: completion.task.starValue, minFactor: 5, maxFactor: 8 } });
     const updatedChild = await tx.child.update({
       where: { id: completion.childId },
       data: {
@@ -105,6 +106,11 @@ export async function approveCompletion(completionId: string) {
     const levelsEarned = Math.max(0, progress.level - updatedChild.rewardedLevel);
     let bonusCoins = levelsEarned * COINS_PER_LEVEL;
     bonusCoins += await awardAchievements(tx, completion.childId);
+    if (levelsEarned) {
+      for (let level = updatedChild.rewardedLevel + 1; level <= progress.level; level++) {
+        await tx.avatarCurrencyLedger.create({ data: { childId: completion.childId, sourceKey: `level:${level}:v1`, delta: COINS_PER_LEVEL, reason: "LEVEL_UP" } });
+      }
+    }
     if (bonusCoins || levelsEarned) {
       await tx.child.update({
         where: { id: completion.childId },
