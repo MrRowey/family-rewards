@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       }
     }
   }
-  const summary = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value.length]));
+  const summary = Object.fromEntries(Object.entries(data).filter(([, value]) => Array.isArray(value)).map(([key, value]) => [key, (value as unknown[]).length]));
   if (!parsed.data.confirmation) return NextResponse.json({ version, summary });
 
   try {
