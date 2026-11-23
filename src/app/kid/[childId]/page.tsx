@@ -208,7 +208,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       <div className="mx-auto max-w-6xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
-            <ListCheck className="h-6 w-6 text-indigo-400" /> {isTeen ? "Tasks for Today" : isJunior ? "My Chores" : "Today\'s Challenges"}
+            <ListCheck className="h-6 w-6 text-indigo-400" /> {isTeen ? "Tasks for Today" : isJunior ? "My Chores" : "Today's Challenges"}
           </h2>
           <span className="text-sm font-semibold bg-indigo-950 text-indigo-300 px-4 py-1.5 rounded-full border border-indigo-800/50">
             {tasks.length} {isTeen ? "remaining" : "left"}
