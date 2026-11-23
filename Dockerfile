@@ -34,7 +34,10 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Copy build artifacts
-COPY --from=builder /app/public ./public
+# The distroless runner uses uid 65532. The build context can contain
+# restrictive (0700) upload-directory permissions from the installer,
+# so this directory must belong to the non-root runtime user.
+COPY --chown=65532:65532 --from=builder /app/public ./public
 COPY --chown=65532:65532 --from=builder /app/public/uploads ./uploads
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
