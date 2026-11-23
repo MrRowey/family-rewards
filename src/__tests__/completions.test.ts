@@ -18,6 +18,8 @@ const prismaMock = {
     findMany: vi.fn(),
   },
   rewardRedemption: { count: vi.fn() },
+  xpLedger: { create: vi.fn() },
+  avatarCurrencyLedger: { create: vi.fn() },
   badge: { findFirst: vi.fn(), create: vi.fn() },
   childBadge: { createMany: vi.fn() },
   auditLog: {
