@@ -39,7 +39,7 @@ const request = (theme: string) => new Request("http://localhost/api/children/ch
 describe("avatar appearance write security", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.childFind.mockResolvedValue({ name: "Child", avatarTheme: "bottts", avatarConfig: "{}" });
+    mocks.childFind.mockResolvedValue({ name: "Child", dob: new Date("2020-01-01"), avatarTheme: "bottts", avatarConfig: "{}" });
     mocks.validateUnlocks.mockResolvedValue(true);
     mocks.validateOwnership.mockResolvedValue(true);
     mocks.updateMany.mockResolvedValue({ count: 1 });
