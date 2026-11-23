@@ -227,10 +227,11 @@ model AvatarCurrencyLedger {
   id          String   @id @default(uuid())
   childId     String
   child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  sourceKey   String   @unique
+  sourceKey   String
   delta       Int
   debtDelta   Int      @default(0)
   reason      String
   createdAt   DateTime @default(now())
+  @@unique([childId, sourceKey])
   @@index([childId, createdAt])
 }
