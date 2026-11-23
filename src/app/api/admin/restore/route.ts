@@ -35,6 +35,30 @@ export async function POST(request: Request) {
   }
 
   const { data, version } = parsed.data.backup;
+  if (version === "3.0") {
+    const raw = input as { backup?: { data?: Record<string, unknown> } };
+    const required = ["avatarUnlocks", "xpLedger", "avatarCurrencyLedger", "avatarMilestones"];
+    if (required.some(field => !Array.isArray(raw.backup?.data?.[field]))) {
+      return NextResponse.json({ error: "Version 3 backups must include all avatar ledgers and owned cosmetics." }, { status: 400 });
+    }
+    // Never restore a truncated or tampered financial history as if it were
+    // a valid snapshot. Ledger totals must equal each child's saved balances.
+    const aggregate = (rows: { childId: string; delta: number; debtDelta?: number }[], field: "delta" | "debtDelta") => {
+      const totals = new Map<string, number>();
+      for (const entry of rows) totals.set(entry.childId, (totals.get(entry.childId) || 0) + (entry[field] || 0));
+      return totals;
+    };
+    const xp = aggregate(data.xpLedger, "delta");
+    const coins = aggregate(data.avatarCurrencyLedger, "delta");
+    const debt = aggregate(data.avatarCurrencyLedger, "debtDelta");
+    for (const child of data.children) {
+      if ((xp.get(child.id) || 0) !== (child.xp || 0) ||
+          (coins.get(child.id) || 0) !== (child.avatarCoins || 0) ||
+          (debt.get(child.id) || 0) !== (child.avatarCoinDebt || 0)) {
+        return NextResponse.json({ error: "Backup XP/Coin ledger totals do not match child balances." }, { status: 400 });
+      }
+    }
+  }
   const summary = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value.length]));
   if (!parsed.data.confirmation) return NextResponse.json({ version, summary });
 
@@ -43,7 +67,7 @@ export async function POST(request: Request) {
       await tx.child.deleteMany();
       await tx.task.deleteMany();
       await tx.reward.deleteMany();
-      if (version === "2.0") await tx.badge.deleteMany();
+      if (version !== "1.0") await tx.badge.deleteMany();
       await tx.auditLog.deleteMany();
 
       await tx.child.createMany({ data: data.children });
@@ -58,6 +82,24 @@ export async function POST(request: Request) {
       await tx.shopPlan.createMany({ data: data.shopPlans });
       await tx.groupRewardPledge.createMany({ data: data.groupPledges });
       await tx.childBadge.createMany({ data: data.childBadges });
+      await tx.avatarUnlock.createMany({ data: data.avatarUnlocks });
+      await tx.avatarMilestone.createMany({ data: data.avatarMilestones });
+      if (version === "3.0") {
+        await tx.xpLedger.createMany({ data: data.xpLedger });
+        await tx.avatarCurrencyLedger.createMany({ data: data.avatarCurrencyLedger });
+      } else {
+        // Legacy backups did not export event history. Treat their balances as
+        // immutable opening snapshots rather than inventing historic XP awards.
+        await tx.xpLedger.createMany({ data: data.children.map(child => ({
+          childId: child.id, sourceKey: "restore:legacy-opening:v1",
+          delta: child.xp ?? 0, stars: 0, minFactor: 0, maxFactor: 0,
+        })) });
+        await tx.avatarCurrencyLedger.createMany({ data: data.children.map(child => ({
+          childId: child.id, sourceKey: "restore:legacy-opening:v1",
+          delta: child.avatarCoins ?? 0, debtDelta: child.avatarCoinDebt ?? 0,
+          reason: "LEGACY_RESTORE_OPENING_BALANCE",
+        })) });
+      }
       await tx.auditLog.createMany({ data: data.logs });
       await tx.auditLog.create({ data: {
         actor: "Parent", actorType: "PARENT", action: "RESTORED_BACKUP",
