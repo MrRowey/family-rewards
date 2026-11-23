@@ -32,6 +32,7 @@ describe("avatar purchase security", () => {
     mocks.findChild.mockResolvedValue({ name: "Child", avatarTheme: "bottts", avatarCoins: 20, avatarConfig: "{}" });
     mocks.findUnlock.mockResolvedValue(null);
     mocks.updateMany.mockResolvedValue({ count: 1 });
+    mocks.unlockCreate.mockResolvedValue({ id: "unlock-1" });
   });
 
   it("requires a parent session", async () => {
