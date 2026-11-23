@@ -18,4 +18,5 @@ for (const model of ["XpLedger", "AvatarCurrencyLedger", "AvatarMilestone"]) {
   const pattern = new RegExp(`\\nmodel ${model} \\{[\\s\\S]*?\\n\\}\\n`, "gm");
   schema = schema.replace(pattern, "\n");
 }
+schema = schema.replace(/^\\s+@@index\\(\\[childId, celebrationSeenAt\\]\\)\\s*$/gm, "");
 writeFileSync(path, schema);
