@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   try {
     const { id } = await params;
     if (!await isAuthorisedForChild(id)) return NextResponse.json({ error: "Select this child from the Family Hub first." }, { status: 403 });
-    const child = await prisma.child.findUnique({ where: { id }, include: { badges: { include: { badge: true } }, avatarUnlocks: true } });
+    const child = await prisma.child.findUnique({ where: { id }, include: { badges: { include: { badge: true } }, avatarUnlocks: true, avatarMilestones: true } });
     if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
     const completedTasksCount = await prisma.completion.count({ where: { childId: id, status: "APPROVED" } });
     return NextResponse.json({
@@ -22,6 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       completedTasksCount,
       avatarCoins: child.avatarCoins,
       unlockedVariants: child.avatarUnlocks.map(item => ({ theme: item.theme, component: item.component, variant: item.variant })),
+      unlockedFrames: child.avatarMilestones.map(item => item.cosmeticKey),
       badges: child.badges.map((b) => b.badge),
     });
   } catch (error) {
