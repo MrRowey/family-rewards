@@ -9,6 +9,7 @@ let schema = readFileSync(path, "utf8");
 for (const field of [
   "xpMinMultiplier", "xpMaxMultiplier", "coinsPerLevel", "milestoneBonusCoins",
   "avatarCoinDebt", "starDebt", "xpLedger", "currencyLedger", "avatarMilestones",
+  "celebrationSeenAt",
 ]) {
   const pattern = new RegExp(`^\\s+${field}\\s+[^\\n]+\\n`, "gm");
   schema = schema.replace(pattern, "");
