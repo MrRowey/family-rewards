@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   cookieGet: vi.fn(), verifyToken: vi.fn(), findChild: vi.fn(), findUnlock: vi.fn(),
-  updateMany: vi.fn(), unlockCreate: vi.fn(), auditCreate: vi.fn(),
+  updateMany: vi.fn(), unlockCreate: vi.fn(), auditCreate: vi.fn(), currencyLedgerCreate: vi.fn(),
 }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.cookieGet }) }));
 vi.mock("@/lib/auth", () => ({ verifyParentToken: mocks.verifyToken }));
@@ -15,7 +15,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: { $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
     fn({ child: { findUnique: mocks.findChild, updateMany: mocks.updateMany },
       avatarUnlock: { findUnique: mocks.findUnlock, create: mocks.unlockCreate },
-      auditLog: { create: mocks.auditCreate } }) },
+      auditLog: { create: mocks.auditCreate }, avatarCurrencyLedger: { create: mocks.currencyLedgerCreate } }) },
 }));
 import { POST } from "@/app/api/kiosk/avatar/purchase/route";
 
