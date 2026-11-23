@@ -208,10 +208,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       <div className="mx-auto max-w-6xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
-            <ListCheck className="h-6 w-6 text-indigo-400" /> {isTeen ? "Tasks for Today" : isJunior ? "My Chores" : "Today&apos;s Challenges"}
+            <ListCheck className="h-6 w-6 text-indigo-400" /> {isTeen ? "Tasks for Today" : isJunior ? "My Chores" : "Today\'s Challenges"}
           </h2>
           <span className="text-sm font-semibold bg-indigo-950 text-indigo-300 px-4 py-1.5 rounded-full border border-indigo-800/50">
-            {tasks.length} Left
+            {tasks.length} {isTeen ? "remaining" : "left"}
           </span>
         </div>
 
@@ -319,18 +319,16 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         )}
       </div>
       {isTeen && (waitingTasks.length > 0 || doneTasks.length > 0) && (
-      <div className="mx-auto mt-4 grid max-w-6xl gap-3 sm:grid-cols-2">
+      <div className={`mx-auto mt-4 grid max-w-6xl gap-3 ${waitingTasks.length > 0 && doneTasks.length > 0 ? "sm:grid-cols-2" : "grid-cols-1"}`}>
         {[{ label: "Waiting for approval", items: waitingTasks }, { label: "Done", items: doneTasks }].filter(({ items }) => items.length > 0).map(({ label, items }) => (
           <section key={label} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
             <h2 className="text-lg font-bold">{label} ({items.length})</h2>
-            {items.length === 0 ? <p className="mt-2 text-sm text-slate-400">No chores here yet.</p> : (
-              <ul className="mt-2 divide-y divide-slate-800">
+            <ul className="mt-2 divide-y divide-slate-800">
                 {items.map((task) => <li key={task.id} className="flex items-center justify-between gap-3 py-2">
                   <span className="min-w-0 wrap-break-word">{task.icon} {task.title}</span>
                   <span className="shrink-0 text-sm text-amber-300">{task.starValue > 0 ? `${task.starValue} ★` : "—"}</span>
                 </li>)}
-              </ul>
-            )}
+            </ul>
           </section>
         ))}
       </div>
