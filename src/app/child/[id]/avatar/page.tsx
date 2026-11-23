@@ -21,7 +21,7 @@ const THEMES = [
 ] as const;
 
 const PALETTE = ["f8fafc", "1e293b", "4f46e5", "06b6d4", "10b981", "f59e0b", "ef4444", "ec4899", "8b5cf6", "facc15"];
-type Config = { flip?: "none" | "horizontal" | "vertical" | "both"; options?: Record<string, string[] | boolean>; baseColor?: string[]; top?: string[]; eyes?: string[] };
+type Config = { frame?: string; flip?: "none" | "horizontal" | "vertical" | "both"; options?: Record<string, string[] | boolean>; baseColor?: string[]; top?: string[]; eyes?: string[] };
 const label = (s: string) => s.replace(/Color$/, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, c => c.toUpperCase());
 
 export default function AvatarCreatorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +36,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   const [saving, setSaving] = useState(false);
   const [coins, setCoins] = useState(0);
   const [owned, setOwned] = useState<string[]>([]);
+  const [ownedFrames, setOwnedFrames] = useState<string[]>([]);
   const [buying, setBuying] = useState(false);
   const [parentApproval, setParentApproval] = useState(false);
   const [themeApproval, setThemeApproval] = useState(false);
@@ -57,6 +58,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
         setConfig(data.config || { flip: "none", options: {} });
         setCompletedChores(data.completedTasksCount || 0);
         setCoins(data.avatarCoins || 0);
+        setOwnedFrames(data.unlockedFrames || []);
         setOwned((data.unlockedVariants || []).map((item: { theme: string; component: string; variant: string }) => [item.theme, item.component, item.variant].join(":")));
       } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load avatar."); }
     })();
@@ -157,8 +159,19 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           {selected.parts.map(part => <button type="button" key={part} aria-pressed={activeTab === part} onClick={() => setActiveTab(part)}
             className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-4 text-sm font-bold ${activeTab === part ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>{label(part)}</button>)}
           <button type="button" aria-pressed={activeTab === "colours"} onClick={() => setActiveTab("colours")} className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-4 text-sm font-bold ${activeTab === "colours" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Colours</button>
+          <button type="button" aria-pressed={activeTab === "frames"} onClick={() => setActiveTab("frames")} className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-4 text-sm font-bold ${activeTab === "frames" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Milestone Frames</button>
           <button type="button" aria-pressed={activeTab === "flip"} onClick={() => setActiveTab("flip")} className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-4 text-sm font-bold ${activeTab === "flip" ? "bg-indigo-600 border-indigo-400" : "border-white/20 bg-slate-950"}`}>Flip</button>
         </nav>
+        {activeTab === "frames" && <div>
+          <h2 className="font-black mb-2">Exclusive milestone frames</h2>
+          <p className="mb-3 text-sm text-slate-400">Reach level 10, 20, 30 and beyond to unlock permanent avatar halos.</p>
+          <div className="flex flex-wrap gap-2">
+            {[{ id: "", name: "No frame" }, ...ownedFrames.map(frame => ({ id: frame, name: `Level ${frame.split("-")[1]} Halo` }))].map(frame =>
+              <button type="button" key={frame.id} aria-pressed={(config.frame || "") === frame.id} onClick={() => setConfig(previous => ({ ...previous, frame: frame.id || undefined }))}
+                className={`min-h-11 rounded-xl border px-4 text-sm ${(config.frame || "") === frame.id ? "border-amber-400 bg-amber-500/20" : "border-white/20 bg-slate-950"}`}>{frame.name}</button>
+            )}
+          </div>
+        </div>}
         {activeTab === "flip" && <div><h2 className="font-black mb-3">Flip your avatar</h2><div className="flex flex-wrap gap-2">
           {(["none", "horizontal", "vertical", "both"] as const).map(value =>
             <button type="button" key={value} aria-pressed={(config.flip || "none") === value} onClick={() => setConfig(prev => ({ ...prev, flip: value }))}
