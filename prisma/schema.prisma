@@ -14,6 +14,7 @@ model FamilyConfig {
   xpMinMultiplier Int       @default(5)
   xpMaxMultiplier Int       @default(8)
   coinsPerLevel   Int       @default(25)
+  milestoneBonusCoins Int   @default(50)
   maxDailyTasks   Int       @default(5)
   idleTimeoutSec  Int       @default(45)   // Kiosk auto-return timeout (seconds)
   largeKioskText  Boolean   @default(false)
@@ -36,6 +37,7 @@ model Child {
   xp                Int                @default(0)
   rewardedLevel     Int                @default(1)
   avatarUnlocks     AvatarUnlock[]
+  avatarMilestones  AvatarMilestone[]
   xpLedger          XpLedger[]
   currencyLedger    AvatarCurrencyLedger[]
   kioskMode         String             @default("AUTO") // AUTO, JUNIOR, EXPLORER, TEEN
@@ -234,4 +236,17 @@ model AvatarCurrencyLedger {
   createdAt   DateTime @default(now())
   @@unique([childId, sourceKey])
   @@index([childId, createdAt])
+}
+
+model AvatarMilestone {
+  id             String   @id @default(uuid())
+  childId        String
+  child          Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  level          Int
+  policyVersion  Int      @default(1)
+  bonusCoins     Int
+  cosmeticKey    String
+  createdAt      DateTime @default(now())
+  @@unique([childId, level, policyVersion])
+  @@unique([childId, cosmeticKey])
 }
