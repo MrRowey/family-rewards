@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   validateOwnership: vi.fn(),
   cookieGet: vi.fn(),
   verifyToken: vi.fn(),
+  authorised: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -27,6 +28,7 @@ vi.mock("@/lib/domain/avatar-appearance", async () => {
 });
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.cookieGet }) }));
 vi.mock("@/lib/auth", () => ({ verifyParentToken: mocks.verifyToken }));
+vi.mock("@/lib/kiosk-session", () => ({ isAuthorisedForChild: mocks.authorised }));
 
 import { PATCH } from "@/app/api/children/[id]/avatar/route";
 
@@ -40,9 +42,17 @@ describe("avatar appearance write security", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.childFind.mockResolvedValue({ name: "Child", dob: new Date("2020-01-01"), avatarTheme: "bottts", avatarConfig: "{}" });
+    mocks.authorised.mockResolvedValue(true);
     mocks.validateUnlocks.mockResolvedValue(true);
     mocks.validateOwnership.mockResolvedValue(true);
     mocks.updateMany.mockResolvedValue({ count: 1 });
+  });
+
+  it("rejects edits when the child session does not match the requested profile", async () => {
+    mocks.authorised.mockResolvedValue(false);
+    const response = await PATCH(request("bottts"), context);
+    expect(response.status).toBe(403);
+    expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejects a child changing themes without parent authorization", async () => {
