@@ -1,14 +1,46 @@
-export const XP_PER_APPROVED_CHORE = 20;
-export const COINS_PER_APPROVED_CHORE = 1;
-export const COINS_PER_LEVEL = 5;
+export const COINS_PER_APPROVED_CHORE = 0;
+export const COINS_PER_LEVEL = 25;
 export const COINS_PER_ACHIEVEMENT = 5;
-export const XP_PER_LEVEL = 100;
+import { randomInt } from "node:crypto";
+
+// Version 1 of the approved level curve. Existing earned level entitlements
+// remain tracked by Child.rewardedLevel, never by recalculating a coin balance.
+export const LEVEL_CURVE_VERSION = 1;
+const ANCHORS: [number, number][] = [[10, 200], [15, 350], [20, 550], [25, 800], [30, 1100], [40, 1850], [50, 2800]];
+
+export function xpRequiredForLevel(level: number): number {
+  if (!Number.isSafeInteger(level) || level < 1) throw new RangeError("Invalid level");
+  if (level < 10) return 50 + 15 * (level - 1);
+  for (let i = 1; i < ANCHORS.length; i++) {
+    const [upperLevel, upperXp] = ANCHORS[i];
+    const [lowerLevel, lowerXp] = ANCHORS[i - 1];
+    if (level <= upperLevel) return Math.round(lowerXp + (upperXp - lowerXp) * (level - lowerLevel) / (upperLevel - lowerLevel));
+  }
+  return 2800 + 95 * (level - 50);
+}
+
+export function rollChoreXp(starsAwarded: number, minMultiplier = 5, maxMultiplier = 8): number {
+  if (!Number.isSafeInteger(starsAwarded) || starsAwarded < 0 || starsAwarded > 100000 ||
+      !Number.isSafeInteger(minMultiplier) || !Number.isSafeInteger(maxMultiplier) ||
+      minMultiplier < 1 || maxMultiplier > 100 || minMultiplier > maxMultiplier) {
+    throw new RangeError("Invalid XP settings or Star award");
+  }
+  if (starsAwarded === 0) return 0;
+  return randomInt(starsAwarded * minMultiplier, starsAwarded * maxMultiplier + 1);
+}
 
 export function getProgress(xp: number) {
-  const safe = Math.max(0, xp);
-  const level = Math.floor(safe / XP_PER_LEVEL) + 1;
-  const current = safe % XP_PER_LEVEL;
-  return { level, xp: safe, current, required: XP_PER_LEVEL, percent: Math.round(current / XP_PER_LEVEL * 100) };
+  const safe = Number.isFinite(xp) ? Math.max(0, Math.floor(xp)) : 0;
+  let level = 1, spent = 0;
+  // The increasing curve makes this bounded for normal family XP balances.
+  while (level < 100000) {
+    const needed = xpRequiredForLevel(level);
+    if (safe - spent < needed) break;
+    spent += needed;
+    level++;
+  }
+  const current = safe - spent, required = xpRequiredForLevel(level);
+  return { level, xp: safe, current, required, percent: Math.round(current / required * 100) };
 }
 
 export type AchievementRule = "TOTAL_TASKS" | "STARS_EARNED" | "REWARDS_REDEEMED" | "STREAK_DAYS";
