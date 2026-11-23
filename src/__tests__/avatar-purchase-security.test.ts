@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  cookieGet: vi.fn(), verifyToken: vi.fn(), findChild: vi.fn(), findUnlock: vi.fn(),
+  cookieGet: vi.fn(), verifyToken: vi.fn(), kioskSession: vi.fn(), findChild: vi.fn(), findUnlock: vi.fn(),
   updateMany: vi.fn(), unlockCreate: vi.fn(), auditCreate: vi.fn(), currencyLedgerCreate: vi.fn(),
 }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.cookieGet }) }));
 vi.mock("@/lib/auth", () => ({ verifyParentToken: mocks.verifyToken }));
+vi.mock("@/lib/kiosk-session", () => ({ hasChildSession: mocks.kioskSession }));
 vi.mock("@/lib/avatar-catalog", () => ({
   AVATAR_VARIANT_PRICE: 10,
   variantExists: (_theme: string, component: string, variant: string) => component === "eyesVariant" && variant === "premium",
@@ -29,6 +30,7 @@ describe("avatar purchase security", () => {
     vi.clearAllMocks();
     mocks.cookieGet.mockReturnValue({ value: "valid-token" });
     mocks.verifyToken.mockResolvedValue({ payload: { role: "parent" } });
+    mocks.kioskSession.mockResolvedValue(true);
     mocks.findChild.mockResolvedValue({ name: "Child", avatarTheme: "bottts", avatarCoins: 20, avatarConfig: "{}" });
     mocks.findUnlock.mockResolvedValue(null);
     mocks.updateMany.mockResolvedValue({ count: 1 });
@@ -43,6 +45,12 @@ describe("avatar purchase security", () => {
 
   it("rejects a token without the parent role", async () => {
     mocks.verifyToken.mockResolvedValue({ payload: { role: "child" } });
+    expect((await POST(request())).status).toBe(403);
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects mismatched kiosk child sessions", async () => {
+    mocks.kioskSession.mockResolvedValue(false);
     expect((await POST(request())).status).toBe(403);
     expect(mocks.updateMany).not.toHaveBeenCalled();
   });
