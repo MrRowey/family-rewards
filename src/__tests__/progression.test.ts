@@ -1,20 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { ACHIEVEMENTS, getProgress, longestDailyStreak } from "@/lib/progression";
+import { ACHIEVEMENTS, getProgress, longestDailyStreak, xpRequiredForLevel, rollChoreXp } from "@/lib/progression";
 
 describe("avatar progression", () => {
-  it("starts at level one with no progress", () => {
-    expect(getProgress(0)).toEqual({ level: 1, xp: 0, current: 0, required: 100, percent: 0 });
-  });
-
-  it("awards a new level at exactly 100 XP and carries over progress", () => {
-    expect(getProgress(99)).toMatchObject({ level: 1, current: 99, percent: 99 });
-    expect(getProgress(100)).toMatchObject({ level: 2, current: 0, percent: 0 });
-    expect(getProgress(125)).toMatchObject({ level: 2, current: 25, percent: 25 });
-    expect(getProgress(300)).toMatchObject({ level: 4, current: 0 });
-  });
-
-  it("does not show negative XP", () => {
+  it("starts at level one and follows the approved curve", () => {
+    expect(getProgress(0)).toEqual({ level: 1, xp: 0, current: 0, required: 50, percent: 0 });
+    expect(getProgress(49)).toMatchObject({ level: 1, current: 49 });
+    expect(getProgress(50)).toMatchObject({ level: 2, current: 0, required: 65 });
+    expect(getProgress(115)).toMatchObject({ level: 3, current: 0, required: 80 });
     expect(getProgress(-20)).toEqual(getProgress(0));
+  });
+
+  it("uses the approved level curve anchors and secure random Star-based XP bounds", () => {
+    expect(xpRequiredForLevel(10)).toBe(200);
+    expect(xpRequiredForLevel(15)).toBe(350);
+    expect(xpRequiredForLevel(50)).toBe(2800);
+    expect(xpRequiredForLevel(51)).toBe(2895);
+    for (let i = 0; i < 50; i++) {
+      const result = rollChoreXp(3);
+      expect(result).toBeGreaterThanOrEqual(15);
+      expect(result).toBeLessThanOrEqual(24);
+    }
+    expect(rollChoreXp(0)).toBe(0);
+    expect(() => rollChoreXp(-1)).toThrow();
   });
 
   it("has 18 distinct achievements across the four progression categories", () => {
