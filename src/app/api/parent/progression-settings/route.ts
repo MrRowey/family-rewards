@@ -8,6 +8,7 @@ const settings = z.object({
   xpMinMultiplier: z.number().int().min(1).max(100),
   xpMaxMultiplier: z.number().int().min(1).max(100),
   coinsPerLevel: z.number().int().min(0).max(1000),
+  milestoneBonusCoins: z.number().int().min(0).max(5000),
 }).strict().refine(value => value.xpMinMultiplier <= value.xpMaxMultiplier, {
   message: "Minimum XP multiplier must not exceed the maximum.",
 });
@@ -21,9 +22,9 @@ async function authorised() {
 export async function GET() {
   if (!await authorised()) return NextResponse.json({ error: "Parent PIN required" }, { status: 401 });
   const config = await prisma.familyConfig.findFirst({ select: {
-    xpMinMultiplier: true, xpMaxMultiplier: true, coinsPerLevel: true,
+    xpMinMultiplier: true, xpMaxMultiplier: true, coinsPerLevel: true, milestoneBonusCoins: true,
   } });
-  return NextResponse.json(config || { xpMinMultiplier: 5, xpMaxMultiplier: 8, coinsPerLevel: 25 });
+  return NextResponse.json(config || { xpMinMultiplier: 5, xpMaxMultiplier: 8, coinsPerLevel: 25, milestoneBonusCoins: 50 });
 }
 
 export async function PATCH(request: Request) {
@@ -35,7 +36,7 @@ export async function PATCH(request: Request) {
   await prisma.familyConfig.update({ where: { id: current.id }, data: parsed.data });
   await prisma.auditLog.create({ data: {
     actor: "Parent", actorType: "PARENT", action: "CHANGED_PROGRESSION_SETTINGS",
-    details: `New chore XP multiplier range ${parsed.data.xpMinMultiplier}–${parsed.data.xpMaxMultiplier}; coins per level ${parsed.data.coinsPerLevel}. Prospective only.`,
+    details: `New chore XP multiplier range ${parsed.data.xpMinMultiplier}–${parsed.data.xpMaxMultiplier}; coins per level ${parsed.data.coinsPerLevel}; milestone bonus ${parsed.data.milestoneBonusCoins}. Prospective only.`,
   } });
   return NextResponse.json({ success: true, ...parsed.data });
 }
