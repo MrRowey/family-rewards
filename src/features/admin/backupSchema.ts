@@ -6,6 +6,18 @@ const date = z.iso.datetime().transform((value) => new Date(value));
 export const backupSchema = z.object({
   version: z.enum(["1.0", "2.0", "3.0"]),
   data: z.object({
+    config: z.object({
+      maxDailyTasks: z.number().int().min(1).max(100).optional(),
+      idleTimeoutSec: z.number().int().min(1).max(3600).optional(),
+      largeKioskText: z.boolean().optional(),
+      reducedMotion: z.boolean().optional(),
+      showPickerStars: z.boolean().optional(),
+      soundEffects: z.boolean().optional(),
+      xpMinMultiplier: z.number().int().min(1).max(100).optional(),
+      xpMaxMultiplier: z.number().int().min(1).max(100).optional(),
+      coinsPerLevel: z.number().int().min(0).max(1000).optional(),
+      milestoneBonusCoins: z.number().int().min(0).max(5000).optional(),
+    }).nullable().optional(),
     children: z.array(z.object({
       id: id,
       name: z.string().max(20000),
