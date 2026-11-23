@@ -117,7 +117,17 @@ function RecentApprovedChores() {
     if (!response.ok) throw new Error("Unable to load approved chores");
     setChores(await response.json());
   };
-  useEffect(() => { void load().catch(error => setMessage(String(error))); }, []);
+  useEffect(() => {
+    let mounted = true;
+    void fetch("/api/parent/completions/recent", { cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Unable to load approved chores");
+        return response.json();
+      })
+      .then(data => { if (mounted) setChores(data); })
+      .catch(error => { if (mounted) setMessage(String(error)); });
+    return () => { mounted = false; };
+  }, []);
   async function reverse(chore: ReversibleChore) {
     if (!window.confirm(`Reverse "${chore.taskName}" for ${chore.childName}? XP and Stars will be taken back, and spent coins become a debt. Cosmetic ownership stays intact.`)) return;
     setBusyId(chore.id);
