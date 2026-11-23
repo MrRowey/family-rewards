@@ -62,6 +62,18 @@ describe("avatar appearance write security", () => {
     expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 
+  it("allows a child aged eight or older to change themes with a matching child session", async () => {
+    mocks.childFind.mockResolvedValue({
+      name: "Older Child", dob: new Date("2010-01-01"), avatarTheme: "bottts", avatarConfig: "{}",
+    });
+    const response = await PATCH(request("sprouts"), context);
+    expect(response.status).toBe(200);
+    expect(mocks.verifyToken).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ actorType: "CHILD" }),
+    }));
+  });
+
   it("rejects unowned parts before saving", async () => {
     mocks.validateOwnership.mockResolvedValue(false);
     const response = await PATCH(request("bottts"), context);
