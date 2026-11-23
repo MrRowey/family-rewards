@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { COINS_PER_APPROVED_CHORE, COINS_PER_LEVEL, getProgress, XP_PER_APPROVED_CHORE } from "@/lib/progression";
+import { COINS_PER_APPROVED_CHORE, COINS_PER_LEVEL, getProgress, rollChoreXp } from "@/lib/progression";
 import { awardAchievements } from "./achievements";
 import { getTodayDate } from "./dates";
 import { isAssignmentDue } from "./schedule";
@@ -91,12 +91,13 @@ export async function approveCompletion(completionId: string) {
       throw new Error("CONCURRENCY_ERROR: Completion status already updated");
     }
 
+    const xpAwarded = rollChoreXp(completion.task.starValue);
     const updatedChild = await tx.child.update({
       where: { id: completion.childId },
       data: {
         stars: { increment: completion.task.starValue },
         avatarCoins: { increment: COINS_PER_APPROVED_CHORE },
-        xp: { increment: XP_PER_APPROVED_CHORE },
+        xp: { increment: xpAwarded },
       },
     });
 
@@ -119,7 +120,7 @@ export async function approveCompletion(completionId: string) {
         actor: "Parent",
         actorType: "PARENT",
         action: "APPROVED_TASK",
-        details: `Approved chore "${completion.task.title}" for ${completion.child.name} (+${completion.task.starValue} stars, +${XP_PER_APPROVED_CHORE} XP, +${COINS_PER_APPROVED_CHORE + bonusCoins} Avatar Coins).`,
+        details: `Approved chore "${completion.task.title}" for ${completion.child.name} (+${completion.task.starValue} stars, +${xpAwarded} XP, +${COINS_PER_APPROVED_CHORE + bonusCoins} Avatar Coins).`,
       },
     });
 
