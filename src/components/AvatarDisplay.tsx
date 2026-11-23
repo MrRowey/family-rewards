@@ -84,6 +84,12 @@ export default function AvatarDisplay({
   let flip = "none";
   try { const parsed = typeof config === "string" ? JSON.parse(config) : config; flip = parsed?.flip || "none"; } catch { /* legacy configuration */ }
   const vertical = flip === "vertical" || flip === "both";
+  let milestoneHalo = false;
+  try {
+    const cfg = typeof config === "string" ? JSON.parse(config) : config;
+    const match = typeof cfg?.frame === "string" ? /^level-([1-9][0-9]*)-halo$/.exec(cfg.frame) : null;
+    milestoneHalo = Boolean(match && Number(match[1]) % 10 === 0);
+  } catch { /* old config */ }
 
   if (!avatarSvg) {
     return (
@@ -99,7 +105,7 @@ export default function AvatarDisplay({
   return (
     <div
       style={{ width: size, height: size }}
-      className={`relative rounded-2xl overflow-hidden shrink-0 flex items-center justify-center select-none ${className}`}
+      className={`relative rounded-2xl overflow-hidden shrink-0 flex items-center justify-center select-none ${milestoneHalo ? "border-4 border-amber-400 shadow-lg shadow-amber-500/50" : ""} ${className}`}
     >
       <Image
         src={avatarSvg}
