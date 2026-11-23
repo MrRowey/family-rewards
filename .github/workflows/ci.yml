@@ -77,6 +77,7 @@ jobs:
           mv prisma/migrations/20261123093000_avatar_ledgers "$RUNNER_TEMP/new-avatar-migrations/"
           mv prisma/migrations/20261123094500_ledger_baselines_and_debts "$RUNNER_TEMP/new-avatar-migrations/"
           mv prisma/migrations/20261123110000_avatar_level_milestones "$RUNNER_TEMP/new-avatar-migrations/"
+          mv prisma/migrations/20261123120000_child_achievement_celebrations "$RUNNER_TEMP/new-avatar-migrations/"
           npx prisma migrate deploy
           # Reproduce the previous db-push installation with its latest legacy columns.
           cp prisma/schema.prisma "$RUNNER_TEMP/avatar-schema-current.prisma"
