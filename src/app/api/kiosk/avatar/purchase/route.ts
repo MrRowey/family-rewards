@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { apiError, parseJson } from "@/lib/api";
+import { hasChildSession } from "@/lib/kiosk-session";
 import { AVATAR_VARIANT_PRICE, variantExists, variantIsFree } from "@/lib/avatar-catalog";
 
 const requestSchema = z.object({ childId: z.uuid(), theme: z.string().min(1), component: z.string().endsWith("Variant"), variant: z.string().min(1) }).strict();
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
       if (verified.payload.role !== "parent") return NextResponse.json({ error: "Parent approval required." }, { status: 403 });
     } catch { return NextResponse.json({ error: "Parent session expired." }, { status: 401 }); }
     const { childId, theme, component, variant } = await parseJson(request, requestSchema);
+    if (!await hasChildSession(childId)) return NextResponse.json({ error: "This is not the selected child profile." }, { status: 403 });
     if (!["sprouts", "bottts", "botttsNeutral", "critters", "voxelBot", "constellation", "planets"].includes(theme)) return NextResponse.json({ error: "Invalid theme." }, { status: 400 });
     if (!variantExists(theme, component, variant)) return NextResponse.json({ error: "Invalid avatar part." }, { status: 400 });
     if (variantIsFree(theme, component, variant)) return NextResponse.json({ error: "This part is already free." }, { status: 400 });
