@@ -31,6 +31,8 @@ model Child {
   xp                Int                @default(0)
   rewardedLevel     Int                @default(1)
   avatarUnlocks     AvatarUnlock[]
+  xpLedger          XpLedger[]
+  currencyLedger    AvatarCurrencyLedger[]
   kioskMode         String             @default("AUTO") // AUTO, JUNIOR, EXPLORER, TEEN
   dob               DateTime
   createdAt         DateTime           @default(now())
@@ -200,4 +202,28 @@ model AvatarUnlock {
   createdAt DateTime @default(now())
 
   @@unique([childId, theme, component, variant])
+}
+
+model XpLedger {
+  id          String   @id @default(uuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  sourceKey   String   @unique
+  delta       Int
+  stars       Int
+  minFactor   Int
+  maxFactor   Int
+  createdAt   DateTime @default(now())
+  @@index([childId, createdAt])
+}
+
+model AvatarCurrencyLedger {
+  id          String   @id @default(uuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  sourceKey   String   @unique
+  delta       Int
+  reason      String
+  createdAt   DateTime @default(now())
+  @@index([childId, createdAt])
 }
