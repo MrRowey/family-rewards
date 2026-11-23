@@ -19,6 +19,8 @@ describe("public kiosk API permissions", () => {
   it("permits initial avatar setup but not anonymous purchases", () => {
     expect(isPublicApiMutation("/api/kiosk/avatar", "POST")).toBe(true);
     expect(isPublicApiMutation("/api/kiosk/select-child", "POST")).toBe(true);
+    expect(isPublicApiMutation("/api/kiosk/achievements/celebrations", "POST")).toBe(true);
+    expect(isPublicApiMutation("/api/kiosk/achievements/celebrations", "DELETE")).toBe(false);
     expect(isPublicApiMutation("/api/kiosk/select-child", "PATCH")).toBe(false);
     expect(isPublicApiMutation("/api/kiosk/avatar/purchase", "POST")).toBe(false);
   });
