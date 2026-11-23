@@ -12,8 +12,13 @@ ALTER TABLE "AvatarCurrencyLedger" ADD COLUMN "debtDelta" INTEGER NOT NULL DEFAU
 -- Existing family balances are opening snapshots, not newly awarded XP or coins.
 -- This retains installed users' earned items, levels and purchase history.
 INSERT INTO "XpLedger" ("id","childId","sourceKey","delta","stars","minFactor","maxFactor")
-SELECT gen_random_uuid()::text, "id", 'opening:before-ledger:v1', "xp", 0, 0, 0 FROM "Child"
+SELECT gen_random_uuid()::text, c."id", 'opening:before-ledger:v1',
+       c."xp" - COALESCE((SELECT SUM(l."delta") FROM "XpLedger" l WHERE l."childId" = c."id"), 0), 0, 0, 0
+FROM "Child" c
 ON CONFLICT ("childId","sourceKey") DO NOTHING;
 INSERT INTO "AvatarCurrencyLedger" ("id","childId","sourceKey","delta","debtDelta","reason")
-SELECT gen_random_uuid()::text, "id", 'opening:before-ledger:v1', "avatarCoins", 0, 'OPENING_BALANCE' FROM "Child"
+SELECT gen_random_uuid()::text, c."id", 'opening:before-ledger:v1',
+       c."avatarCoins" - COALESCE((SELECT SUM(l."delta") FROM "AvatarCurrencyLedger" l WHERE l."childId" = c."id"), 0),
+       c."avatarCoinDebt" - COALESCE((SELECT SUM(l."debtDelta") FROM "AvatarCurrencyLedger" l WHERE l."childId" = c."id"), 0),
+       'OPENING_BALANCE' FROM "Child" c
 ON CONFLICT ("childId","sourceKey") DO NOTHING;
