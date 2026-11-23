@@ -8,6 +8,7 @@ export const avatarAppearance = z.object({
   theme: z.enum(AVATAR_THEMES),
   config: z.object({
     flip: z.enum(["none", "horizontal", "vertical", "both"]).optional(),
+    frame: z.string().regex(/^level-[1-9][0-9]*-halo$/).max(40).optional(),
     // DiceBear options are checked against the selected style's schema at render time.
     options: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9]*$/), z.union([z.array(z.string().max(100)).max(1), z.boolean()])).optional(),
     // Retain older saved avatars without forcing a new setup.
@@ -27,7 +28,14 @@ export async function validateAvatarUnlocks(childId: string, appearance: z.outpu
   return completed >= required;
 }
 
-export async function validateAvatarOwnership(childId: string, theme: string, config: { options?: Record<string, string[] | boolean> }): Promise<boolean> {
+export async function validateAvatarOwnership(childId: string, theme: string, config: { options?: Record<string, string[] | boolean>; frame?: string }): Promise<boolean> {
+  if (config.frame) {
+    const entitlement = await prisma.avatarMilestone.findFirst({
+      where: { childId, cosmeticKey: config.frame },
+      select: { id: true },
+    });
+    if (!entitlement) return false;
+  }
   const selected = Object.entries(config.options || {}).filter(([key]) => key.endsWith("Variant"));
   for (const [component, value] of selected) {
     if (!Array.isArray(value) || value.length !== 1 || !variantExists(theme, component, value[0])) return false;
