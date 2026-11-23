@@ -9,6 +9,7 @@ const PUBLIC_POST_ENDPOINTS = new Set([
   "/api/redemptions",
   "/api/setup",
   "/api/kiosk/avatar",
+  "/api/kiosk/select-child",
 ]);
 
 export function isPublicApiMutation(pathname: string, method: string): boolean {
