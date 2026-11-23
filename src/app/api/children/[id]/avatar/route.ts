@@ -40,7 +40,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
     if (child.avatarConfig === null) return NextResponse.json({ error: "Choose your first avatar before customising." }, { status: 409 });
     const switching = child.avatarTheme !== theme;
-    if (switching && calculateAgeProfile(child.dob).ageYears < 8) {
+    const parentRequired = switching && calculateAgeProfile(child.dob).ageYears < 8;
+    if (parentRequired) {
       const token = (await cookies()).get("parent_session")?.value;
       let authorised = false;
       if (token) {
@@ -58,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         data: { avatarTheme: theme, avatarConfig: JSON.stringify(config) },
       });
       if (changed.count !== 1) return null;
-      await tx.auditLog.create({ data: { actor: child.name, actorType: switching ? "PARENT" : "CHILD", action: "UPDATED_AVATAR", details: `${child.name} updated avatar (${child.avatarTheme ?? "none"} -> ${theme})` } });
+      await tx.auditLog.create({ data: { actor: child.name, actorType: parentRequired ? "PARENT" : "CHILD", action: "UPDATED_AVATAR", details: `${child.name} updated avatar (${child.avatarTheme ?? "none"} -> ${theme})` } });
       return { id, avatarTheme: theme, avatarConfig: JSON.stringify(config) };
     });
     if (!updated) return NextResponse.json({ error: "Avatar changed while editing. Reload and try again." }, { status: 409 });
