@@ -138,6 +138,7 @@ export const backupSchema = z.object({
       childId: id,
       badgeId: id,
       awardedAt: date.optional(),
+      celebrationSeenAt: date.nullable().optional(),
     })).max(100000).default([]),
     avatarUnlocks: z.array(z.object({
       id, childId: id, theme: z.string().max(80),

@@ -15,7 +15,10 @@ async function main() {
   if (xp?.delta !== 150 || currency?.delta !== 17 || currency?.debtDelta !== 0) {
     throw new Error("Legacy opening balances were not recorded correctly in the immutable ledgers");
   }
+  const historicBadge = await prisma.childBadge.findUniqueOrThrow({ where: { id: "aabbccdd-0000-4000-8000-000000000027" } });
+  if (!historicBadge.celebrationSeenAt) throw new Error("Historic achievement should already be marked celebrated");
   await prisma.child.delete({ where: { id } });
+  await prisma.badge.delete({ where: { id: "aabbccdd-0000-4000-8000-000000000026" } });
   process.stdout.write("Legacy Avatar migration verified: XP, Stars, Coins, levels and ledger baselines preserved.\n");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; })

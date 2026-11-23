@@ -81,7 +81,12 @@ export async function POST(request: Request) {
       await tx.rewardAssignment.createMany({ data: data.rewardAssignments });
       await tx.shopPlan.createMany({ data: data.shopPlans });
       await tx.groupRewardPledge.createMany({ data: data.groupPledges });
-      await tx.childBadge.createMany({ data: data.childBadges });
+      await tx.childBadge.createMany({ data: data.childBadges.map(item => ({
+        ...item,
+        // Older backups predate one-time notices: avoid replaying historic badges.
+        celebrationSeenAt: version === "3.0" && item.celebrationSeenAt !== undefined
+          ? item.celebrationSeenAt : new Date(),
+      })) });
       await tx.avatarUnlock.createMany({ data: data.avatarUnlocks });
       await tx.avatarMilestone.createMany({ data: data.avatarMilestones });
       if (version === "3.0") {

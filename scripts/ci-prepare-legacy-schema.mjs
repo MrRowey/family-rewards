@@ -9,6 +9,7 @@ let schema = readFileSync(path, "utf8");
 for (const field of [
   "xpMinMultiplier", "xpMaxMultiplier", "coinsPerLevel", "milestoneBonusCoins",
   "avatarCoinDebt", "starDebt", "xpLedger", "currencyLedger", "avatarMilestones",
+  "celebrationSeenAt",
 ]) {
   const pattern = new RegExp(`^\\s+${field}\\s+[^\\n]+\\n`, "gm");
   schema = schema.replace(pattern, "");
@@ -17,4 +18,5 @@ for (const model of ["XpLedger", "AvatarCurrencyLedger", "AvatarMilestone"]) {
   const pattern = new RegExp(`\\nmodel ${model} \\{[\\s\\S]*?\\n\\}\\n`, "gm");
   schema = schema.replace(pattern, "\n");
 }
+schema = schema.split("\n").filter(line => !line.includes("@@index([childId, celebrationSeenAt])")).join("\n");
 writeFileSync(path, schema);
