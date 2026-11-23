@@ -4,6 +4,8 @@ export interface Child {
   id: string;
   name: string;
   avatar: string;
+  avatarTheme?: string | null;
+  avatarConfig?: string | null;
   stars: number;
   dob?: string;
   ageYears?: number;

@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { useEffect, useState } from "react";
 import type { NavigationMenu, KioskConfig } from "./types";
 
 interface AdminSettingsSectionsProps {
@@ -119,6 +120,65 @@ export function AdminSettingsSections({ activeMenu, newPin, setNewPin, confirmPi
               </form>
             </div>
 
-          
+          <ProgressionSettings />
   </div>;
+}
+
+function ProgressionSettings() {
+  const [xpMinMultiplier, setMin] = useState(5);
+  const [xpMaxMultiplier, setMax] = useState(8);
+  const [coinsPerLevel, setCoins] = useState(25);
+  const [milestoneBonusCoins, setMilestoneBonus] = useState(50);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/parent/progression-settings", { cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Could not load progression settings.");
+        return response.json();
+      })
+      .then(data => { if (active) {
+        setMin(data.xpMinMultiplier);
+        setMax(data.xpMaxMultiplier);
+        setCoins(data.coinsPerLevel);
+        setMilestoneBonus(data.milestoneBonusCoins);
+      } }).catch(error => { if (active) setMessage(String(error)); });
+    return () => { active = false; };
+  }, []);
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/parent/progression-settings", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xpMinMultiplier, xpMaxMultiplier, coinsPerLevel, milestoneBonusCoins }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to save settings.");
+      setMessage("Saved. Only future approvals and newly reached levels use these values.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Save failed"); }
+    finally { setBusy(false); }
+  }
+  return <section className="min-w-0 space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+    <h3 className="text-lg font-semibold text-white">Avatar Progression</h3>
+    <p className="text-xs text-slate-400">Every approved Star earns a random amount of XP between these multipliers. Level rewards are only paid once. Changes are prospective.</p>
+    <form onSubmit={save} className="space-y-4 text-sm">
+      <label className="block text-slate-300">Minimum XP per Star
+        <input className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-white" type="number" min="1" max="100" required value={xpMinMultiplier} onChange={e => setMin(Number(e.target.value))} />
+      </label>
+      <label className="block text-slate-300">Maximum XP per Star
+        <input className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-white" type="number" min={xpMinMultiplier} max="100" required value={xpMaxMultiplier} onChange={e => setMax(Number(e.target.value))} />
+      </label>
+      <label className="block text-slate-300">Avatar Coins per new level
+        <input className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-white" type="number" min="0" max="1000" required value={coinsPerLevel} onChange={e => setCoins(Number(e.target.value))} />
+      </label>
+      <label className="block text-slate-300">Bonus Coins at every tenth level
+        <input className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-white" type="number" min="0" max="5000" required value={milestoneBonusCoins} onChange={e => setMilestoneBonus(Number(e.target.value))} />
+      </label>
+      <output aria-live="polite" className="block text-slate-300">{message}</output>
+      <button type="submit" disabled={busy} className="min-h-11 rounded-lg bg-indigo-600 px-5 font-semibold text-white disabled:opacity-50">{busy ? "Saving..." : "Save Progression Settings"}</button>
+    </form>
+  </section>;
 }

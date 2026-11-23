@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, X, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { NavigationMenu, TaskCompletionRecord, RewardRedemptionRecord } from "@/features/admin/types";
 
 interface ApprovalSectionsProps {
@@ -101,6 +102,55 @@ export function ApprovalSections({ activeMenu, busy, message, pendingTasks, pend
             </div>
           </section>
 
-          
+          <RecentApprovedChores />
   </div>;
+}
+
+type ReversibleChore = { id: string; taskName: string; childName: string; starsAwarded: number | null; canReverse: boolean };
+
+function RecentApprovedChores() {
+  const [chores, setChores] = useState<ReversibleChore[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const load = async () => {
+    const response = await fetch("/api/parent/completions/recent", { cache: "no-store" });
+    if (!response.ok) throw new Error("Unable to load approved chores");
+    setChores(await response.json());
+  };
+  useEffect(() => {
+    let mounted = true;
+    void fetch("/api/parent/completions/recent", { cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Unable to load approved chores");
+        return response.json();
+      })
+      .then(data => { if (mounted) setChores(data); })
+      .catch(error => { if (mounted) setMessage(String(error)); });
+    return () => { mounted = false; };
+  }, []);
+  async function reverse(chore: ReversibleChore) {
+    if (!window.confirm(`Reverse "${chore.taskName}" for ${chore.childName}? XP and Stars will be taken back, and spent coins become a debt. Cosmetic ownership stays intact.`)) return;
+    setBusyId(chore.id);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/parent/completions/${encodeURIComponent(chore.id)}/reverse`, { method: "POST" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Could not reverse this chore.");
+      setMessage(`Reversed "${chore.taskName}". Balances and any debt have been reconciled.`);
+      await load();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Reversal failed"); }
+    finally { setBusyId(null); }
+  }
+  return <section className="col-span-full rounded-3xl border border-white/10 bg-slate-900/70 p-5">
+    <h3 className="mb-2 text-lg font-semibold text-white">Recently Approved Chores</h3>
+    <p className="mb-4 text-sm text-slate-400">Reverse an accidental approval. Earned Avatar purchases remain owned; insufficient coins or Stars are recorded as debt.</p>
+    <output aria-live="polite" className="block text-sm text-amber-300">{message}</output>
+    {chores.length === 0 && <p className="text-sm text-slate-400">No approved chores to review.</p>}
+    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      {chores.map(chore => <div key={chore.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-950/80 p-3">
+        <div className="min-w-0"><p className="truncate font-bold text-white">{chore.taskName}</p><p className="text-xs text-slate-400">{chore.childName} · {chore.starsAwarded ?? 0} Stars</p></div>
+        <button type="button" disabled={!chore.canReverse || busyId !== null} title={chore.canReverse ? "Reverse approval" : "Older approval has no recorded XP snapshot"} onClick={() => void reverse(chore)} className="flex min-h-11 items-center gap-1 rounded-xl border border-rose-500/50 px-3 text-xs font-bold text-rose-300 disabled:opacity-40"><RotateCcw size={14} /> Reverse</button>
+      </div>)}
+    </div>
+  </section>;
 }

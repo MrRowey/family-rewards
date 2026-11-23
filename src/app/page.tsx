@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Sparkles, Star, ChevronRight, User } from "lucide-react";
+import AvatarDisplay from "@/components/AvatarDisplay";
 import PinPadModal from "@/components/ui/PinPadModal";
 import { Child } from "@/types";
 
@@ -23,6 +24,21 @@ export default function HomePage() {
     lastHubTap.current = now;
   };
   const [children, setChildren] = useState<Child[]>([]);
+  const [selectionError, setSelectionError] = useState("");
+  const [selectingChild, setSelectingChild] = useState<string | null>(null);
+
+  const selectChild = async (childId: string) => {
+    if (selectingChild) return;
+    setSelectingChild(childId);
+    setSelectionError("");
+    try {
+      const response = await fetch("/api/kiosk/select-child", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId }) });
+      if (!response.ok) throw new Error("Could not open the child profile.");
+      router.push(`/kid/${encodeURIComponent(childId)}`);
+    } catch (error) { setSelectionError(error instanceof Error ? error.message : "Could not select child."); }
+    finally { setSelectingChild(null); }
+  };
   const [showPinModal, setShowPinModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>("");
   const [currentDate, setCurrentDate] = useState<string>("");
@@ -171,42 +187,47 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {selectionError && <p role="alert" className="mb-4 text-center text-amber-300">{selectionError}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               {children.map((child) => (
                 <button
                   key={child.id}
-                  onClick={() => router.push(`/kid/${child.id}`)}
-                  className="group relative bg-slate-900/70 hover:bg-slate-850/80 active:bg-slate-800/90 backdrop-blur-xl border border-white/10 hover:border-indigo-500/50 p-7 rounded-3xl transition-all duration-300 transform hover:-translate-y-1.5 active:scale-[0.98] shadow-2xl flex flex-col items-center text-center overflow-hidden min-h-[220px]"
+                  onClick={() => void selectChild(child.id)}
+                  disabled={selectingChild !== null}
+                  className="group relative bg-slate-900/70 hover:bg-slate-850/80 active:bg-slate-800/90 backdrop-blur-xl border border-white/10 hover:border-indigo-500/50 p-4 sm:p-5 rounded-3xl transition-all duration-300 transform hover:-translate-y-1 active:scale-[0.98] shadow-2xl flex flex-row items-center gap-3 sm:gap-4 text-left overflow-hidden min-h-[150px]"
                 >
                   {/* Subtle top edge highlight */}
                   <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-indigo-500/40 to-transparent group-hover:via-indigo-400 transition-opacity" />
 
                   {/* Avatar rendering */}
-                  <div className="relative mb-4 mt-2">
-                    {child.avatar && child.avatar.startsWith("/") ? (
-                      <div className="w-24 h-24 rounded-3xl overflow-hidden ring-4 ring-indigo-500/20 group-hover:ring-indigo-500/50 shadow-xl transition-all">
+                  <div className="relative shrink-0">
+                    {child.avatarConfig ? (
+                      <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={112} />
+                    ) : child.avatar && child.avatar.startsWith("/") ? (
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden ring-4 ring-indigo-500/20 group-hover:ring-indigo-500/50 shadow-xl transition-all">
                         <Image
                           src={child.avatar}
                           alt={child.name}
-                          width={96}
-                          height={96}
+                          width={112}
+                          height={112}
                           unoptimized
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                     ) : child.avatar ? (
-                      <div className="w-24 h-24 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center text-6xl shadow-xl group-hover:scale-105 transition-transform duration-300">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center text-6xl shadow-xl group-hover:scale-105 transition-transform duration-300">
                         {child.avatar}
                       </div>
                     ) : (
-                      <div className="w-24 h-24 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center shadow-xl">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-800/70 border border-white/10 flex items-center justify-center shadow-xl">
                         <User className="w-12 h-12 text-slate-400" />
                       </div>
                     )}
                   </div>
 
+                  <div className="min-w-0 flex-1 flex flex-col items-start justify-center">
                   {/* Name */}
-                  <h3 className="text-2xl font-black text-white tracking-tight group-hover:text-indigo-200 transition-colors">
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight group-hover:text-indigo-200 transition-colors">
                     {child.name}
                   </h3>
 
@@ -217,6 +238,7 @@ export default function HomePage() {
                       {child.stars} {child.stars === 1 ? "Star" : "Stars"}
                     </span>
                   </div>)}
+                  </div>
                 </button>
               ))}
             </div>

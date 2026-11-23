@@ -11,6 +11,10 @@ model FamilyConfig {
   parentPinLength Int?
   parentPin       String?   
   isConfigured    Boolean   @default(false)
+  xpMinMultiplier Int       @default(5)
+  xpMaxMultiplier Int       @default(8)
+  coinsPerLevel   Int       @default(25)
+  milestoneBonusCoins Int   @default(50)
   maxDailyTasks   Int       @default(5)
   idleTimeoutSec  Int       @default(45)   // Kiosk auto-return timeout (seconds)
   largeKioskText  Boolean   @default(false)
@@ -27,6 +31,15 @@ model Child {
   avatarTheme       String?            @default("bottts")
   avatarConfig      String?            // Json String for DiceBear Options
   stars             Int                @default(0)
+  avatarCoins       Int                @default(0)
+  avatarCoinDebt    Int                @default(0)
+  starDebt          Int                @default(0)
+  xp                Int                @default(0)
+  rewardedLevel     Int                @default(1)
+  avatarUnlocks     AvatarUnlock[]
+  avatarMilestones  AvatarMilestone[]
+  xpLedger          XpLedger[]
+  currencyLedger    AvatarCurrencyLedger[]
   kioskMode         String             @default("AUTO") // AUTO, JUNIOR, EXPLORER, TEEN
   dob               DateTime
   createdAt         DateTime           @default(now())
@@ -182,4 +195,58 @@ model ShopPlan {
   child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@id([childId, year, month])
+}
+
+// A purchased cosmetic is permanently owned for its particular theme and component.
+model AvatarUnlock {
+  id        String   @id @default(uuid())
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  theme     String
+  component String
+  variant   String
+  cost      Int
+  createdAt DateTime @default(now())
+
+  @@unique([childId, theme, component, variant])
+}
+
+model XpLedger {
+  id          String   @id @default(uuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  sourceKey   String
+  delta       Int
+  stars       Int
+  minFactor   Int
+  maxFactor   Int
+  createdAt   DateTime @default(now())
+  @@unique([childId, sourceKey])
+  @@index([childId, createdAt])
+}
+
+model AvatarCurrencyLedger {
+  id          String   @id @default(uuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  sourceKey   String
+  delta       Int
+  debtDelta   Int      @default(0)
+  reason      String
+  createdAt   DateTime @default(now())
+  @@unique([childId, sourceKey])
+  @@index([childId, createdAt])
+}
+
+model AvatarMilestone {
+  id             String   @id @default(uuid())
+  childId        String
+  child          Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  level          Int
+  policyVersion  Int      @default(1)
+  bonusCoins     Int
+  cosmeticKey    String
+  createdAt      DateTime @default(now())
+  @@unique([childId, level, policyVersion])
+  @@unique([childId, cosmeticKey])
 }

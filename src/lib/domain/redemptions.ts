@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { awardAchievements } from "./achievements";
 import { calculateAgeProfile } from "@/lib/ageRules";
 
 const MAX_TRANSACTION_ATTEMPTS = 3;
@@ -125,6 +126,7 @@ export async function approveReward(redemptionId: string) {
       });
       if (stockUpdate.count !== 1) throw new Error("OUT_OF_STOCK: Reward stock exhausted");
     }
+    await awardAchievements(tx, redemption.childId);
     await tx.auditLog.create({
       data: {
         actor: "Parent",

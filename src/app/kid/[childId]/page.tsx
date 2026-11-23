@@ -2,6 +2,7 @@
 
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 import { useState, useEffect, useRef, use } from "react";
+import AvatarDisplay from "@/components/AvatarDisplay";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, ListCheck, Check } from "lucide-react";
@@ -23,11 +24,17 @@ interface Task {
   subSteps?: SubStep[];
 }
 
+interface Achievement { key: string; title: string; icon: string; description: string; ruleType: "TOTAL_TASKS" | "STARS_EARNED" | "REWARDS_REDEEMED" | "STREAK_DAYS"; threshold: number; current: number; unlocked: boolean; }
+
 interface Child {
   id: string;
   name: string;
   avatar: string;
+  avatarTheme?: string | null;
+  avatarConfig?: string | null;
   stars: number;
+  avatarCoins: number;
+  progress: { level: number; current: number; required: number; percent: number };
   ageYears?: number;
   kioskMode?: "AUTO" | "JUNIOR" | "EXPLORER" | "TEEN";
 }
@@ -40,6 +47,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
 
   const [child, setChild] = useState<Child | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [checkedSubsteps, setCheckedSubsteps] = useState<Record<string, boolean>>({});
   const submission = useRef(false);
   const completionVersion = useRef(0);
@@ -58,7 +66,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
       const completionAtStart = completionVersion.current;
       try {
         const [childRes, taskRes, compRes] = await Promise.all([
-          fetch("/api/children"),
+          fetch("/api/children", { cache: "no-store" }),
           fetch(`/api/task-assignments?childId=${childId}&day=today`, { cache: "no-store" }),
           fetch(`/api/task-completions?childId=${childId}&date=today`, { cache: "no-store" }),
         ]);
@@ -73,6 +81,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         const approved = new Set(completions.filter((item) => item.status === "APPROVED").map((item) => item.taskId));
         const scheduled = new Map(assignments.map(({ task }) => [task.id, task]));
         setChild(children.find((item) => item.id === childId) ?? null);
+        void fetch(`/api/children/${encodeURIComponent(childId)}/progress`, { cache: "no-store" }).then(response => response.ok ? response.json() : null).then(data => { if (data?.achievements && latestRequest === version) setAchievements(data.achievements); }).catch(() => {});
         const records = new Map(completions.flatMap((item) => item.task ? [[item.taskId, item.task] as const] : []));
         const taskDetails = (ids: Set<string>) => [...ids].flatMap((id) => {
           const task = scheduled.get(id) ?? records.get(id);
@@ -80,7 +89,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         });
         setWaitingTasks(taskDetails(pending));
         setDoneTasks(taskDetails(approved));
-        // A declined completion should return to the actionable list when still assigned today.
+
         setTasks([...scheduled.values()].filter((task) => !pending.has(task.id) && !approved.has(task.id)));
         setSyncError(false);
       } catch (err) {
@@ -168,8 +177,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             <ArrowLeft className="w-7 h-7 text-slate-200" />
           </button>
 
-          <div className="relative shrink-0">
-            {child.avatar.startsWith("/") ? (
+          <button type="button" onClick={() => router.push(`/child/${encodeURIComponent(childId)}/avatar`)} aria-label="Customise avatar" className="relative shrink-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-indigo-400">
+            {child.avatarConfig ? (
+              <AvatarDisplay theme={child.avatarTheme} config={child.avatarConfig} seed={child.id} fallbackEmoji={child.avatar} size={64} />
+            ) : child.avatar.startsWith("/") ? (
               <Image
                 src={child.avatar}
                 alt={child.name}
@@ -181,7 +192,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             ) : (
               <span className="text-4xl sm:text-6xl filter drop-shadow-md">{child.avatar}</span>
             )}
-          </div>
+          </button>
 
           <div>
             <h1 className="wrap-break-word text-2xl font-black tracking-tight sm:text-4xl">{child.name}&apos;s Dashboard</h1>
@@ -203,6 +214,18 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
         </div>
       </header>
 
+      <section aria-label="Avatar level progress" className="max-w-6xl mx-auto mb-6 rounded-3xl border border-indigo-500/20 bg-slate-900/70 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div><p className="text-lg font-black text-indigo-200">⭐ Level {child.progress?.level ?? 1}</p><p className="text-xs text-slate-400">Keep completing chores to level up!</p></div>
+          <div className="text-right"><p className="font-bold text-amber-300">🪙 {child.avatarCoins ?? 0} Avatar Coins</p><p className="text-sm text-slate-400">{child.progress?.current ?? 0} / {child.progress?.required ?? 100} XP</p></div>
+        </div>
+        <progress aria-label="XP to next level" max={child.progress?.required ?? 100} value={child.progress?.current ?? 0} className="block h-4 w-full overflow-hidden rounded-full bg-slate-800 accent-indigo-500 [&::-webkit-progress-bar]:bg-slate-800 [&::-webkit-progress-value]:bg-indigo-500 [&::-moz-progress-bar]:bg-indigo-500"/>
+        <p className="mt-2 text-xs text-slate-400">+20 XP and +1 Avatar Coin per approved chore · +5 coins per level · +5 coins per achievement</p>
+      </section>
+      <section aria-label="Achievements" className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-500/20 bg-slate-900/70 p-5">
+        <div><h2 className="text-xl font-black">🏆 Achievements</h2><p className="text-sm text-slate-300">{achievements.filter(item => item.unlocked).length} / {achievements.length} badges unlocked · Earn coins as you progress!</p></div>
+        <button type="button" onClick={() => router.push(`/kid/${encodeURIComponent(childId)}/achievements`)} className="min-h-14 rounded-2xl bg-indigo-600 px-6 font-black hover:bg-indigo-500">View Achievements</button>
+      </section>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3">

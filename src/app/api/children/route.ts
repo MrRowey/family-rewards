@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateAgeProfile } from "@/lib/ageRules";
+import { getProgress } from "@/lib/progression";
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 
 export async function GET() {
   try {
     const children = await prisma.child.findMany({
       orderBy: { name: "asc" },
     });
-    return NextResponse.json(children.map(({ id, name, avatar, stars, dob, kioskMode }) => ({
-      id, name, avatar, stars, kioskMode, ageYears: calculateAgeProfile(dob).ageYears,
+    return NextResponse.json(await Promise.all(children.map(async ({ id, name, avatar, stars, dob, avatarTheme, avatarConfig, avatarCoins, xp, kioskMode }) => {
+      const authorised = await isAuthorisedForChild(id);
+      return {
+        id, name, avatar, stars, avatarTheme, avatarConfig,
+        ...(authorised ? { avatarCoins, progress: getProgress(xp) } : {}),
+        kioskMode, ageYears: calculateAgeProfile(dob).ageYears,
+      };
     })));
   } catch {
     return NextResponse.json({ error: "Failed to fetch children" }, { status: 500 });

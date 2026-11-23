@@ -1,25 +1,38 @@
 import { describe, expect, it } from "vitest";
 import { isPublicApiMutation } from "./api-permissions";
 
-describe("public API mutation permissions", () => {
-  it.each(["/api/completions", "/api/task-completions"])("allows chore submission but not approval at %s", (path) => {
+describe("public kiosk API permissions", () => {
+  it.each(["/api/completions", "/api/task-completions"])("allows submission, not approval: %s", (path) => {
     expect(isPublicApiMutation(path, "POST")).toBe(true);
-    expect(isPublicApiMutation(path, "PATCH")).toBe(false);
-    expect(isPublicApiMutation(path, "DELETE")).toBe(false);
-    expect(isPublicApiMutation(path, "PUT")).toBe(false);
+    for (const method of ["PATCH", "PUT", "DELETE"]) {
+      expect(isPublicApiMutation(path, method)).toBe(false);
+    }
   });
 
-  it("allows only POST for public claim and refund request routes", () => {
+  it("keeps public reward claims POST-only", () => {
     for (const path of ["/api/rewards/claim", "/api/redemptions", "/api/kiosk/refund-requests"]) {
       expect(isPublicApiMutation(path, "POST")).toBe(true);
       expect(isPublicApiMutation(path, "PATCH")).toBe(false);
     }
   });
 
-  it("never permits parent or approval mutations without authentication", () => {
+  it("permits initial avatar setup but not anonymous purchases", () => {
+    expect(isPublicApiMutation("/api/kiosk/avatar", "POST")).toBe(true);
+    expect(isPublicApiMutation("/api/kiosk/select-child", "POST")).toBe(true);
+    expect(isPublicApiMutation("/api/kiosk/select-child", "PATCH")).toBe(false);
+    expect(isPublicApiMutation("/api/kiosk/avatar/purchase", "POST")).toBe(false);
+  });
+
+  it("keeps existing-avatar edits public while requiring route-level theme and ownership checks", () => {
+    expect(isPublicApiMutation("/api/children/11111111-1111-4111-8111-111111111111/avatar", "PATCH")).toBe(true);
+    expect(isPublicApiMutation("/api/children/11111111-1111-4111-8111-111111111111/avatar", "DELETE")).toBe(false);
+  });
+
+  it("never permits anonymous parent administration or approvals", () => {
     for (const path of ["/api/approvals", "/api/parent/rewards", "/api/children", "/api/admin/restore"]) {
-      expect(isPublicApiMutation(path, "POST")).toBe(false);
-      expect(isPublicApiMutation(path, "PATCH")).toBe(false);
+      for (const method of ["POST", "PATCH", "PUT", "DELETE"]) {
+        expect(isPublicApiMutation(path, method)).toBe(false);
+      }
     }
   });
 });
