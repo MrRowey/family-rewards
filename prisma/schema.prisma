@@ -74,6 +74,7 @@ model ChildBadge {
   celebrationSeenAt DateTime?
 
   @@unique([childId, badgeId])
+  @@index([childId, celebrationSeenAt])
 }
 
 model Task {
