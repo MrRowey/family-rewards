@@ -5,16 +5,18 @@ import { apiError, parseJson } from "@/lib/api";
 import { verifyParentToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { calculateAgeProfile } from "@/lib/ageRules";
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!await isAuthorisedForChild(id)) return NextResponse.json({ error: "Select this child from the Family Hub first." }, { status: 403 });
     const child = await prisma.child.findUnique({ where: { id }, include: { badges: { include: { badge: true } }, avatarUnlocks: true } });
     if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
     const completedTasksCount = await prisma.completion.count({ where: { childId: id, status: "APPROVED" } });
     return NextResponse.json({
       hasAvatar: child.avatarConfig !== null,
-      canSwitchTheme: false,
+      canSwitchTheme: calculateAgeProfile(child.dob).ageYears >= 8,
       theme: child.avatarTheme || "bottts",
       config: child.avatarConfig ? JSON.parse(child.avatarConfig) : {},
       completedTasksCount,
@@ -31,6 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!await isAuthorisedForChild(id)) return NextResponse.json({ error: "Select this child from the Family Hub first." }, { status: 403 });
     const { theme, config } = await parseJson(req, avatarAppearance);
     const child = await prisma.child.findUnique({ where: { id }, select: { name: true, dob: true, avatarTheme: true, avatarConfig: true } });
     if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
