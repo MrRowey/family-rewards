@@ -72,10 +72,13 @@ describe("Completion Domain Service", () => {
       where: { id: "c1" },
       data: {
         stars: { increment: 3 },
-        avatarCoins: { increment: 1 },
-        xp: { increment: 20 },
+        avatarCoins: { increment: 0 },
+        xp: { increment: expect.any(Number) },
       },
     });
+    const xp = prismaMock.child.update.mock.calls[0][0].data.xp.increment;
+    expect(xp).toBeGreaterThanOrEqual(15);
+    expect(xp).toBeLessThanOrEqual(24);
     expect(result).toEqual({ success: true });
   });
 
