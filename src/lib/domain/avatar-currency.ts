@@ -35,5 +35,8 @@ export async function grantedLevelCoins(tx: Prisma.TransactionClient, childId: s
     where: { childId_sourceKey: { childId, sourceKey: `level:${level}:v1` } },
   });
   // Level payouts can be partly assigned to debt instead of spendable currency.
-  return entry ? entry.delta - entry.debtDelta : 0;
+  const milestone = level % 10 === 0 ? await tx.avatarCurrencyLedger.findUnique({
+    where: { childId_sourceKey: { childId, sourceKey: `milestone:${level}:v1` } },
+  }) : null;
+  return (entry ? entry.delta - entry.debtDelta : 0) + (milestone ? milestone.delta - milestone.debtDelta : 0);
 }
