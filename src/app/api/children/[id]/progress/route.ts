@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { achievementStats } from "@/lib/domain/achievements";
 import { ACHIEVEMENTS, getProgress } from "@/lib/progression";
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!await isAuthorisedForChild(id)) return NextResponse.json({ error: "Select this child from the Family Hub first" }, { status: 403 });
   const child = await prisma.child.findUnique({
     where: { id },
     select: { xp: true, avatarCoins: true, badges: { include: { badge: true } } },
