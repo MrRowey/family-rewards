@@ -5,7 +5,9 @@ const prismaMock = {
   child: {
     findUnique: vi.fn(),
     update: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
   },
+  familyConfig: { findFirst: vi.fn() },
   task: {
     findUnique: vi.fn(),
   },
@@ -19,7 +21,7 @@ const prismaMock = {
   },
   rewardRedemption: { count: vi.fn() },
   xpLedger: { create: vi.fn() },
-  avatarCurrencyLedger: { create: vi.fn() },
+  avatarCurrencyLedger: { create: vi.fn(), findUnique: vi.fn() },
   badge: { findFirst: vi.fn(), create: vi.fn() },
   childBadge: { createMany: vi.fn() },
   auditLog: {
@@ -39,6 +41,9 @@ describe("Completion Domain Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.child.update.mockResolvedValue({ xp: 20, rewardedLevel: 1 });
+    prismaMock.familyConfig.findFirst.mockResolvedValue(null);
+    prismaMock.child.findUniqueOrThrow.mockResolvedValue({ avatarCoinDebt: 0, avatarCoins: 0 });
+    prismaMock.avatarCurrencyLedger.findUnique.mockResolvedValue(null);
     prismaMock.completion.findMany.mockResolvedValue([]);
     prismaMock.rewardRedemption.count.mockResolvedValue(0);
     prismaMock.childBadge.createMany.mockResolvedValue({ count: 0 });
@@ -74,7 +79,7 @@ describe("Completion Domain Service", () => {
       where: { id: "c1" },
       data: {
         stars: { increment: 3 },
-        avatarCoins: { increment: 0 },
+        starDebt: { decrement: 0 },
         xp: { increment: expect.any(Number) },
       },
     });
