@@ -3,12 +3,14 @@ import { z } from "zod";
 import { avatarAppearance, validateAvatarUnlocks, validateAvatarOwnership } from "@/lib/domain/avatar-appearance";
 import { prisma } from "@/lib/prisma";
 import { apiError, parseJson } from "@/lib/api";
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 
 const appearance = avatarAppearance.extend({ childId: z.uuid() });
 
 export async function POST(request: Request) {
   try {
     const { childId, theme, config } = await parseJson(request, appearance);
+    if (!await isAuthorisedForChild(childId)) return NextResponse.json({ error: "Select this child from the Family Hub first." }, { status: 403 });
     if (!await validateAvatarUnlocks(childId, { theme, config })) return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
     if (!await validateAvatarOwnership(childId, theme, config)) return NextResponse.json({ error: "Unlock this avatar part with Avatar Coins first." }, { status: 403 });
     const result = await prisma.$transaction(async (tx) => {
