@@ -2,6 +2,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { approveCompletion, reverseApprovedCompletion } from "@/lib/domain/completions";
+import { xpRequiredForLevel } from "@/lib/progression";
+import { validateAvatarOwnership } from "@/lib/domain/avatar-appearance";
 
 const children: string[] = [];
 const tasks: string[] = [];
@@ -57,6 +59,29 @@ describe("PostgreSQL avatar progression and reversal integrity", () => {
         where: { childId: id, sourceKey: "achievement:FIRST_CHORE:v1" },
       })).toBe(1);
     }
+  });
+
+  it("awards each tenth-level milestone once and keeps its exclusive halo after an XP reversal", async () => {
+    const [child, task] = await Promise.all([createChild(), createTask(10)]);
+    const threshold = Array.from({ length: 9 }, (_, i) => xpRequiredForLevel(i + 1)).reduce((a, b) => a + b, 0);
+    await prisma.child.update({ where: { id: child.id }, data: { xp: threshold - 25, rewardedLevel: 9 } });
+    await prisma.xpLedger.create({ data: {
+      childId: child.id, sourceKey: "test:preexisting-xp", delta: threshold - 25, stars: 0, minFactor: 0, maxFactor: 0,
+    } });
+    const first = await pending(child.id, task.id, "2026-11-20");
+    await approveCompletion(first.id);
+    const earned = await prisma.child.findUniqueOrThrow({ where: { id: child.id } });
+    expect(earned.rewardedLevel).toBe(10);
+    expect(await prisma.avatarMilestone.count({ where: { childId: child.id, level: 10, policyVersion: 1 } })).toBe(1);
+    expect(await prisma.avatarCurrencyLedger.count({ where: { childId: child.id, sourceKey: "milestone:10:v1" } })).toBe(1);
+    expect(await validateAvatarOwnership(child.id, "bottts", { frame: "level-10-halo" })).toBe(true);
+    await reverseApprovedCompletion(first.id);
+    expect(await prisma.avatarMilestone.count({ where: { childId: child.id, level: 10 } })).toBe(1);
+    expect(await validateAvatarOwnership(child.id, "bottts", { frame: "level-10-halo" })).toBe(true);
+    const second = await pending(child.id, task.id, "2026-11-21");
+    await approveCompletion(second.id);
+    expect(await prisma.avatarMilestone.count({ where: { childId: child.id, level: 10 } })).toBe(1);
+    expect(await prisma.avatarCurrencyLedger.count({ where: { childId: child.id, sourceKey: "milestone:10:v1" } })).toBe(1);
   });
 
   it("reverses XP and level coins, records debt and restores old levels without double payout", async () => {
