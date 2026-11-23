@@ -89,11 +89,12 @@ export async function approveCompletion(completionId: string) {
     if (completion.status !== "PENDING") throw new Error("INVALID_STATE: Only PENDING completions can be approved");
 
     const config = await tx.familyConfig.findFirst({
-      select: { xpMinMultiplier: true, xpMaxMultiplier: true, coinsPerLevel: true },
+      select: { xpMinMultiplier: true, xpMaxMultiplier: true, coinsPerLevel: true, milestoneBonusCoins: true },
     });
     const minFactor = config?.xpMinMultiplier ?? 5;
     const maxFactor = config?.xpMaxMultiplier ?? 8;
     const perLevel = config?.coinsPerLevel ?? COINS_PER_LEVEL;
+    const milestoneBonus = config?.milestoneBonusCoins ?? 50;
     const starsAwarded = completion.task.starValue;
     const xpAwarded = rollChoreXp(starsAwarded, minFactor, maxFactor);
 
@@ -130,6 +131,12 @@ export async function approveCompletion(completionId: string) {
     for (let level = Math.max(rewardedLevel + 1, 2); level <= progress.level; level++) {
       credited += await creditAvatarCoins(tx, completion.childId,
         `level:${level}:v1`, perLevel, "LEVEL_UP");
+      if (level % 10 === 0) {
+        await tx.avatarMilestone.create({ data: { childId: completion.childId, level, policyVersion: 1,
+          bonusCoins: milestoneBonus, cosmeticKey: `level-${level}-halo` } });
+        credited += await creditAvatarCoins(tx, completion.childId,
+          `milestone:${level}:v1`, milestoneBonus, "MILESTONE_BONUS");
+      }
     }
     if (progress.level > rewardedLevel) {
       await tx.child.update({ where: { id: completion.childId }, data: { rewardedLevel: progress.level } });
