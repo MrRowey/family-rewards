@@ -4,6 +4,7 @@ import { avatarAppearance, validateAvatarUnlocks, validateAvatarOwnership } from
 import { apiError, parseJson } from "@/lib/api";
 import { verifyParentToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { calculateAgeProfile } from "@/lib/ageRules";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -31,11 +32,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const { theme, config } = await parseJson(req, avatarAppearance);
-    const child = await prisma.child.findUnique({ where: { id }, select: { name: true, avatarTheme: true, avatarConfig: true } });
+    const child = await prisma.child.findUnique({ where: { id }, select: { name: true, dob: true, avatarTheme: true, avatarConfig: true } });
     if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
     if (child.avatarConfig === null) return NextResponse.json({ error: "Choose your first avatar before customising." }, { status: 409 });
     const switching = child.avatarTheme !== theme;
-    if (switching) {
+    if (switching && calculateAgeProfile(child.dob).ageYears < 8) {
       const token = (await cookies()).get("parent_session")?.value;
       let authorised = false;
       if (token) {
