@@ -101,6 +101,20 @@ export async function POST(request: Request) {
         })) });
       }
       await tx.auditLog.createMany({ data: data.logs });
+      if (data.config) {
+        const current = await tx.familyConfig.findFirst({ select: { id: true } });
+        if (current) {
+          await tx.familyConfig.update({
+            where: { id: current.id },
+            data: {
+              ...(data.config.xpMinMultiplier !== undefined ? { xpMinMultiplier: data.config.xpMinMultiplier } : {}),
+              ...(data.config.xpMaxMultiplier !== undefined ? { xpMaxMultiplier: data.config.xpMaxMultiplier } : {}),
+              ...(data.config.coinsPerLevel !== undefined ? { coinsPerLevel: data.config.coinsPerLevel } : {}),
+              ...(data.config.milestoneBonusCoins !== undefined ? { milestoneBonusCoins: data.config.milestoneBonusCoins } : {}),
+            },
+          });
+        }
+      }
       await tx.auditLog.create({ data: {
         actor: "Parent", actorType: "PARENT", action: "RESTORED_BACKUP",
         details: "Restored family data from a version " + version + " backup.",
