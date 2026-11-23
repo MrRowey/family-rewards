@@ -38,6 +38,8 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   const [owned, setOwned] = useState<string[]>([]);
   const [buying, setBuying] = useState(false);
   const [parentApproval, setParentApproval] = useState(false);
+  const [themeApproval, setThemeApproval] = useState(false);
+  const [canSwitchTheme, setCanSwitchTheme] = useState(false);
   const [activeTab, setActiveTab] = useState("eyes");
   const [previewPart, setPreviewPart] = useState<{ component: string; variant: string; first: string } | null>(null);
 
@@ -50,6 +52,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
         const data = await response.json();
         if (!active) return;
         setFirstAvatar(!data.hasAvatar);
+        setCanSwitchTheme(Boolean(data.canSwitchTheme));
         setTheme(data.theme || "bottts");
         setConfig(data.config || { flip: "none", options: {} });
         setCompletedChores(data.completedTasksCount || 0);
@@ -127,15 +130,16 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
           <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(equippedConfig)} size={200}/>
         </div>
         <h2 className="text-lg font-black">{selected.name}</h2>
-        {firstAvatar ? <>
-          <p className="text-sm text-slate-300 text-center">Choose your avatar theme. After saving, only a parent can change the theme.</p>
+        {(firstAvatar || canSwitchTheme) ? <>
+          <p className="text-sm text-slate-300 text-center">Choose an avatar theme. Children under 8 need parent approval to change it after first setup.</p>
           <div className="flex flex-wrap justify-center gap-2">
             {THEMES.filter(t => !["adventurer", "funEmoji"].includes(t.id)).map(t =>
               <button type="button" key={t.id} aria-pressed={theme === t.id} onClick={() => { setTheme(t.id); setConfig({ flip: "none", options: {} }); setActiveTab(t.parts[0] || "colours"); playSfx("click"); }}
                 className={`min-h-12 rounded-xl px-4 text-sm font-bold border ${theme === t.id ? "bg-indigo-600 border-indigo-400" : "bg-slate-950 border-white/20"}`}>{t.name}</button>
             )}
           </div>
-        </> : <p className="text-sm text-slate-400 text-center">Your theme is locked in. Ask a parent if you want to switch themes.</p>}
+        </> : <button type="button" onClick={() => setThemeApproval(true)} className="min-h-11 rounded-xl border border-amber-500/50 px-4 text-sm font-bold text-amber-300">Ask Parent to Switch Theme</button>}
+        {themeApproval && <div className="relative z-[70]"><PinPadModal onClose={() => setThemeApproval(false)} onSuccess={() => { setThemeApproval(false); setCanSwitchTheme(true); }}/></div>}
       </section>
       {parentApproval && <div className="relative z-[70]"><PinPadModal onClose={() => setParentApproval(false)} onSuccess={() => { setParentApproval(false); if (previewPart) void chooseVariant(previewPart.component, previewPart.variant, previewPart.first); }}/></div>} 
       {previewPart && <dialog open aria-label="Preview locked avatar part" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
