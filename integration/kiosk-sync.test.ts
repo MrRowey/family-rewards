@@ -1,11 +1,22 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, expect, it } from "vitest";
+import { afterAll, expect, it, vi } from "vitest";
 import { GET as readAssignments, POST as assignChore } from "@/app/api/task-assignments/route";
 import { GET as readRewards } from "@/app/api/rewards/route";
 import { PUT as saveShopPlan } from "@/app/api/parent/shop-plans/route";
 import { getTodayDate } from "@/lib/domain/dates";
 import { claimReward } from "@/lib/domain/redemptions";
 import { prisma } from "@/lib/prisma";
+
+import { signKioskChildSession } from "@/lib/kiosk-session";
+
+const session = vi.hoisted(() => ({ token: undefined as string | undefined }));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: (name: string) => name === "kiosk_child_session" && session.token ? { value: session.token } : undefined }),
+}));
+
+async function selectChild(childId: string) {
+  session.token = await signKioskChildSession(childId);
+}
 
 const label = "Kiosk sync " + randomUUID();
 const childIds: string[] = [];
@@ -49,8 +60,15 @@ it("shows a parent-scheduled one-off chore only to the selected child on its dat
   }));
   expect(response.ok).toBe(true);
 
+  session.token = undefined;
+  expect((await readAssignments(new Request("http://localhost/api/task-assignments?day=today&childId=" + first.id))).status).toBe(403);
+  await selectChild(first.id);
+  expect((await readAssignments(new Request("http://localhost/api/task-assignments?day=today&childId=" + second.id))).status).toBe(403);
   const firstSchedule = await readAssignments(new Request("http://localhost/api/task-assignments?day=today&childId=" + first.id));
+  await selectChild(second.id);
   const secondSchedule = await readAssignments(new Request("http://localhost/api/task-assignments?day=today&childId=" + second.id));
+  expect(firstSchedule.status).toBe(200);
+  expect(secondSchedule.status).toBe(200);
   expect(await firstSchedule.json()).toMatchObject([{ task: { id: chore.id, starValue: 7 } }]);
   expect(await secondSchedule.json()).toEqual([]);
 });
@@ -68,8 +86,15 @@ it("enforces the same monthly plan in the child shop list and when claiming", as
   }));
   expect(response.ok).toBe(true);
 
+  session.token = undefined;
+  expect((await readRewards(new Request("http://localhost/api/rewards?childId=" + first.id))).status).toBe(403);
+  await selectChild(first.id);
+  expect((await readRewards(new Request("http://localhost/api/rewards?childId=" + second.id))).status).toBe(403);
   const firstShop = await readRewards(new Request("http://localhost/api/rewards?childId=" + first.id));
+  await selectChild(second.id);
   const secondShop = await readRewards(new Request("http://localhost/api/rewards?childId=" + second.id));
+  expect(firstShop.status).toBe(200);
+  expect(secondShop.status).toBe(200);
   expect(await firstShop.json()).toMatchObject([{ id: prize.id }]);
   expect(await secondShop.json()).not.toContainEqual(expect.objectContaining({ id: prize.id }));
   await expect(claimReward(second.id, prize.id)).rejects.toThrow("NOT_ELIGIBLE");
