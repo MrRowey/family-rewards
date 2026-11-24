@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       if (updated.count !== 1) return NextResponse.json({ error: "PIN changed. Try again." }, { status: 409 });
       if (!valid) return NextResponse.json({ error: "Invalid PIN" }, { status: 401 });
       const response = NextResponse.json({ success: true });
-      response.cookies.set("parent_session", await signParentToken(), getParentCookieOptions());
+      response.cookies.set("parent_session", await signParentToken(config.parentPin), getParentCookieOptions());
       return response;
     }, { timeout: 10000 });
   } catch {

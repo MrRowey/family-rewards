@@ -8,6 +8,8 @@ vi.mock("next/headers", () => ({
   } }),
 }));
 
+vi.mock("@/lib/prisma", () => ({ prisma: { familyConfig: { findFirst: async () => ({ parentPin: "test-hash", isConfigured: true }) } } }));
+
 import { signKioskChildSession, hasChildSession, isAuthorisedForChild, KIOSK_CHILD_COOKIE } from "@/lib/kiosk-session";
 import { signParentToken } from "@/lib/auth";
 
@@ -31,7 +33,7 @@ describe("signed child kiosk sessions", () => {
   });
 
   it("allows a verified parent session to edit a child's avatar", async () => {
-    cookieMock.cookies.set("parent_session", await signParentToken());
+    cookieMock.cookies.set("parent_session", await signParentToken("test-hash"));
     expect(await isAuthorisedForChild("child-two")).toBe(true);
   });
 });

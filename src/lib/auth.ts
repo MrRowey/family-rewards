@@ -1,4 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function credentialBinding(pinHash: string): string {
+  return createHmac("sha256", getJwtSecret()).update("parent-session-v1:").update(pinHash).digest("hex");
+}
 
 export function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -13,8 +18,8 @@ export function getJwtSecret(): Uint8Array {
 // Session duration: 4 hours
 export const SESSION_MAX_AGE = 4 * 60 * 60;
 
-export async function signParentToken(): Promise<string> {
-  return new SignJWT({ role: "parent" })
+export async function signParentToken(pinHash: string): Promise<string> {
+  return new SignJWT({ role: "parent", credential: credentialBinding(pinHash) })
     .setProtectedHeader({ alg: "HS256" })
     .setAudience("family-rewards-parent")
     .setIssuedAt()
@@ -30,6 +35,13 @@ export async function verifyParentToken(token: string) {
     maxTokenAge: SESSION_MAX_AGE,
   });
   if (result.payload.role !== "parent") throw new Error("Invalid parent role");
+  const binding = result.payload.credential;
+  if (typeof binding !== "string" || !/^[a-f0-9]{64}$/.test(binding)) throw new Error("Missing credential binding");
+  const { prisma } = await import("@/lib/prisma");
+  const config = await prisma.familyConfig.findFirst({ select: { parentPin: true, isConfigured: true } });
+  if (!config?.isConfigured || !config.parentPin || !timingSafeEqual(Buffer.from(binding, "hex"), Buffer.from(credentialBinding(config.parentPin), "hex"))) {
+    throw new Error("Parent session revoked");
+  }
   return result;
 }
 

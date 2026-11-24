@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { acquirePinVerification, checkPinRateLimit, recordPinAttempt, signParentToken, verifyParentToken, getJwtSecret } from "@/lib/auth";
 
+const credential = vi.hoisted(() => ({ parentPin: "test-hash", isConfigured: true }));
+vi.mock("@/lib/prisma", () => ({ prisma: { familyConfig: { findFirst: async () => ({ ...credential }) } } }));
+
 describe("PIN Rate Limiting Logic", () => {
   beforeEach(() => {
     // Reset by recording success
@@ -33,11 +36,20 @@ describe("PIN Rate Limiting Logic", () => {
 import { SignJWT } from "jose";
 
 describe("Parent JWT isolation", () => {
-  beforeEach(() => vi.stubEnv("JWT_SECRET", "test-only-secret-at-least-32-characters-long"));
+  beforeEach(() => { credential.parentPin = "test-hash"; credential.isConfigured = true; vi.stubEnv("JWT_SECRET", "test-only-secret-at-least-32-characters-long"); });
   afterEach(() => vi.unstubAllEnvs());
 
   it("accepts a valid parent session", async () => {
-    expect((await verifyParentToken(await signParentToken())).payload.role).toBe("parent");
+    expect((await verifyParentToken(await signParentToken("test-hash"))).payload.role).toBe("parent");
+  });
+
+  it("revokes every old session when the credential changes", async () => {
+    const first = await signParentToken("test-hash");
+    const second = await signParentToken("test-hash");
+    credential.parentPin = "new-hash";
+    await expect(verifyParentToken(first)).rejects.toThrow();
+    await expect(verifyParentToken(second)).rejects.toThrow();
+    await expect(verifyParentToken(await signParentToken("new-hash"))).resolves.toBeDefined();
   });
 
   it.each([
