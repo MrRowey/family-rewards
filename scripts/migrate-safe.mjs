@@ -79,7 +79,7 @@ async function main() {
     // Historical migrations omit parts of the original schema. Only a truly
     // empty database may be bootstrapped from the complete current schema.
     prisma("db", "push");
-    for (const entry of readdirSync(new URL("../prisma/migrations/", import.meta.url), { withFileTypes: true }).filter(e => e.isDirectory()).sort((a,b) => a.name.localeCompare(b.name))) {
+    for (const entry of readdirSync(new URL("../prisma/migrations/", import.meta.url), { withFileTypes: true }).filter(e => e.isDirectory()).toSorted((a,b) => a.name.localeCompare(b.name))) {
       prisma("migrate", "resolve", "--applied", entry.name);
     }
     await reconcileOpeningBalances(client);
@@ -103,7 +103,7 @@ async function main() {
       `${hasColumnSql("Child","avatarCoinDebt")} AND ${hasColumnSql("AvatarCurrencyLedger","debtDelta")}
       AND ${hasColumnSql("FamilyConfig","coinsPerLevel")}`],
     ["20261123120000_child_achievement_celebrations",
-      `${hasColumnSql("ChildBadge","celebrationSeenAt")} AND EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname=\'public\' AND indexname=\'ChildBadge_childId_celebrationSeenAt_idx\')`],
+      `${hasColumnSql("ChildBadge","celebrationSeenAt")} AND EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='ChildBadge_childId_celebrationSeenAt_idx')`],
     ["20261123110000_avatar_level_milestones",
       `${hasTableSql("AvatarMilestone")} AND ${hasColumnSql("FamilyConfig","milestoneBonusCoins")}`],
   ];
