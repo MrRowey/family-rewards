@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { variantExists, variantIsFree } from "@/lib/avatar-catalog";
@@ -28,9 +29,9 @@ export async function validateAvatarUnlocks(childId: string, appearance: z.outpu
   return completed >= required;
 }
 
-export async function validateAvatarOwnership(childId: string, theme: string, config: { options?: Record<string, string[] | boolean>; frame?: string }): Promise<boolean> {
+export async function validateAvatarOwnership(childId: string, theme: string, config: { options?: Record<string, string[] | boolean>; frame?: string }, db: Prisma.TransactionClient = prisma): Promise<boolean> {
   if (config.frame) {
-    const entitlement = await prisma.avatarMilestone.findFirst({
+    const entitlement = await db.avatarMilestone.findFirst({
       where: { childId, cosmeticKey: config.frame },
       select: { id: true },
     });
@@ -40,7 +41,7 @@ export async function validateAvatarOwnership(childId: string, theme: string, co
   for (const [component, value] of selected) {
     if (!Array.isArray(value) || value.length !== 1 || !variantExists(theme, component, value[0])) return false;
     if (variantIsFree(theme, component, value[0])) continue;
-    const owned = await prisma.avatarUnlock.findUnique({
+    const owned = await db.avatarUnlock.findUnique({
       where: { childId_theme_component_variant: { childId, theme, component, variant: value[0] } },
     });
     if (!owned) return false;

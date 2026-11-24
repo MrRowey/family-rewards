@@ -50,10 +50,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!authorised) return NextResponse.json({ error: "Only a parent can change an avatar theme." }, { status: 403 });
     }
     if (!await validateAvatarUnlocks(id, { theme, config })) return NextResponse.json({ error: "Complete more chores to unlock that part." }, { status: 400 });
-    if (!await validateAvatarOwnership(id, theme, config)) return NextResponse.json({ error: "Unlock this avatar part with Avatar Coins first." }, { status: 403 });
     // Compare-and-swap prevents a stale kiosk request from undoing a parent theme change.
     // The audit event is committed only when the expected theme still matches.
     const updated = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Child" WHERE id = ${id} FOR UPDATE`;
+      if (!await validateAvatarOwnership(id, theme, config, tx)) return "UNOWNED" as const;
       const changed = await tx.child.updateMany({
         where: { id, avatarTheme: child.avatarTheme, avatarConfig: { not: null } },
         data: { avatarTheme: theme, avatarConfig: JSON.stringify(config) },
@@ -62,6 +63,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       await tx.auditLog.create({ data: { actor: child.name, actorType: parentRequired ? "PARENT" : "CHILD", action: "UPDATED_AVATAR", details: `${child.name} updated avatar (${child.avatarTheme ?? "none"} -> ${theme})` } });
       return { id, avatarTheme: theme, avatarConfig: JSON.stringify(config) };
     });
+    if (updated === "UNOWNED") return NextResponse.json({ error: "Unlock this avatar part with Avatar Coins first." }, { status: 403 });
     if (!updated) return NextResponse.json({ error: "Avatar changed while editing. Reload and try again." }, { status: 409 });
     return NextResponse.json({ success: true, updated });
   } catch (error) {
