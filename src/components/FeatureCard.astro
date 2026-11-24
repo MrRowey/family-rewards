@@ -1,0 +1,5 @@
+---
+interface Props {title:string;description:string;symbol:string;tone:'teal'|'apricot'|'rose'|'lime'}
+const {title,description,symbol,tone}=Astro.props;
+---
+<article class="panel"><span class:list={['symbol',tone]} aria-hidden="true">{symbol}</span><h2 class="mt-4">{title}</h2><p>{description}</p><slot/></article>

@@ -1,13 +1,13 @@
 ---
-const base=import.meta.env.BASE_URL.replace(/\/$/,'');
-const links=[["features","Features"],["screenshots","Screenshots"],["documentation","Documentation"],["installation","Installation"],["roadmap","Roadmap"],["changelog","Changelog"]];
-const current=Astro.url.pathname.replace(/\/$/,'');
+import Brand from './Brand.astro';
+import NavLinks from './NavLinks.astro';
+import ThemeToggle from './ThemeToggle.astro';
 ---
-<header class="site-header"><div class="shell nav"><a class="brand" href={base+'/'}><img src={base+'/branding/logo.svg'} alt="" width="38" height="38"/>Little Heroes Village</a><nav class="links desktop-links" aria-label="Main navigation">{links.map(([path,label])=><a href={base+'/'+path+'/'} aria-current={current===base+'/'+path?'page':undefined}>{label}</a>)}</nav><details class="mobile-nav"><summary>Menu</summary><nav class="links" aria-label="Mobile navigation">{links.map(([path,label])=><a href={base+'/'+path+'/'} aria-current={current===base+'/'+path?'page':undefined}>{label}</a>)}</nav></details><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode" aria-pressed="false">Theme</button></div></header>
+<header class="site-header"><div class="shell nav"><Brand/><NavLinks label="Main navigation" class="desktop-links"/><div class="nav-actions"><ThemeToggle/><details class="mobile-nav" id="mobile-menu"><summary>Menu <span aria-hidden="true">☰</span></summary><NavLinks label="Mobile navigation"/></details></div></div></header>
 <script>
-const button=document.querySelector('#theme-toggle');
-const root=document.documentElement;
-function update(){const dark=root.dataset.theme==='dark';button?.setAttribute('aria-pressed',String(dark));if(button)button.textContent=dark?'Light':'Dark';}
-update();
-button?.addEventListener('click',()=>{const theme=root.dataset.theme==='dark'?'light':'dark';root.dataset.theme=theme;try{localStorage.setItem('fr-theme',theme)}catch{}update();});
+const menu = document.querySelector<HTMLDetailsElement>('#mobile-menu');
+document.addEventListener('keydown', event => { if(event.key === 'Escape' && menu?.open){ menu.open = false; menu.querySelector('summary')?.focus(); } });
+document.addEventListener('click', event => { if(menu?.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false; });
+menu?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { menu.open = false; }));
+matchMedia('(min-width: 1101px)').addEventListener('change', event => { if(event.matches && menu) menu.open = false; });
 </script>

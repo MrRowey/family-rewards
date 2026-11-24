@@ -1,0 +1,6 @@
+---
+import { navigation, sitePath, activePath } from '../lib/site';
+interface Props { label: string; class?: string }
+const {label, class: className = ''} = Astro.props;
+---
+<nav class:list={['links',className]} aria-label={label}>{navigation.map(item=><a href={sitePath(item.path)} aria-current={activePath(Astro.url.pathname,item.path)?'page':undefined}>{item.label}</a>)}</nav>

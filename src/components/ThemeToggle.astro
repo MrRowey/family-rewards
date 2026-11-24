@@ -1,0 +1,25 @@
+<button class="theme-toggle" id="theme-toggle" type="button" aria-label="Dark mode" aria-pressed="false"><span aria-hidden="true" id="theme-icon">☾</span> <span id="theme-label">Dark</span></button>
+<script>
+const button = document.querySelector<HTMLButtonElement>('#theme-toggle');
+const root = document.documentElement;
+const preference = matchMedia('(prefers-color-scheme: dark)');
+function update() {
+  const dark = root.dataset.theme === 'dark';
+  button?.setAttribute('aria-pressed', String(dark));
+  const label = document.querySelector('#theme-label');
+  const icon = document.querySelector('#theme-icon');
+  if(label) label.textContent = dark ? 'Light' : 'Dark';
+  if(icon) icon.textContent = dark ? '☀' : '☾';
+}
+update();
+button?.addEventListener('click', () => {
+  const theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  root.dataset.theme = theme;
+  try { localStorage.setItem('fr-theme', theme); } catch {}
+  update();
+});
+preference.addEventListener('change', event => {
+  try { if(localStorage.getItem('fr-theme')) return; } catch {}
+  root.dataset.theme = event.matches ? 'dark' : 'light'; update();
+});
+</script>

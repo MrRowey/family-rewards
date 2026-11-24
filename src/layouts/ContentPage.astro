@@ -1,0 +1,7 @@
+---
+import Base from './Base.astro';
+import {sitePath} from '../lib/site';
+interface Props {title:string;description:string}
+const {title,description}=Astro.props;
+---
+<Base title={title} description={description}><nav class="breadcrumbs" aria-label="Breadcrumb"><a href={sitePath()}>Home</a><span aria-hidden="true">/</span><span aria-current="page">{title}</span></nav><section class="hero content-hero"><span class="eyebrow">Website preview</span><h1>{title}</h1><p>{description}</p></section><slot/></Base>

@@ -1,0 +1,5 @@
+---
+interface Props { href: string; variant?: 'primary'|'secondary' }
+const {href,variant='primary'}=Astro.props;
+---
+<a class:list={['cta',variant==='secondary'&&'cta-secondary']} href={href}><slot/></a>
