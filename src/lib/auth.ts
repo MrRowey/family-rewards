@@ -27,7 +27,7 @@ export async function signParentToken(pinHash: string): Promise<string> {
     .sign(getJwtSecret());
 }
 
-export async function verifyParentToken(token: string) {
+export async function verifyParentToken(token: string, lockedConfig?: { parentPin: string | null; isConfigured: boolean }) {
   const result = await jwtVerify(token, getJwtSecret(), {
     algorithms: ["HS256"],
     audience: "family-rewards-parent",
@@ -37,8 +37,7 @@ export async function verifyParentToken(token: string) {
   if (result.payload.role !== "parent") throw new Error("Invalid parent role");
   const binding = result.payload.credential;
   if (typeof binding !== "string" || !/^[a-f0-9]{64}$/.test(binding)) throw new Error("Missing credential binding");
-  const { prisma } = await import("@/lib/prisma");
-  const config = await prisma.familyConfig.findFirst({ select: { parentPin: true, isConfigured: true } });
+  const config = lockedConfig ?? await (await import("@/lib/prisma")).prisma.familyConfig.findFirst({ select: { parentPin: true, isConfigured: true } });
   if (!config?.isConfigured || !config.parentPin || !timingSafeEqual(Buffer.from(binding, "hex"), Buffer.from(credentialBinding(config.parentPin), "hex"))) {
     throw new Error("Parent session revoked");
   }
