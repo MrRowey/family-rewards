@@ -1,3 +1,4 @@
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,7 @@ export async function GET(request: Request) {
   try {
     const child = id.safeParse(new URL(request.url).searchParams.get("childId"));
     if (!child.success) return NextResponse.json({ error: "Select a child." }, { status: 400 });
+    if (!(await isAuthorisedForChild(child.data))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     const items = await prisma.rewardRedemption.findMany({
       where: { childId: child.data, status: { in: ["APPROVED", "REFUNDED"] } },
       select: { id: true, status: true, refundState: true, reward: { select: { title: true } } },
@@ -24,6 +26,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { childId, redemptionId } = await parseJson(request, z.object({ childId: id, redemptionId: id }));
+    if (!(await isAuthorisedForChild(childId))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     const result = await prisma.rewardRedemption.updateMany({
       where: { id: redemptionId, childId, status: "APPROVED", refundState: null },
       data: { refundState: "PENDING" },

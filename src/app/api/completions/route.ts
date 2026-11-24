@@ -1,3 +1,4 @@
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { submitCompletion, approveCompletion, declineCompletion } from "@/lib/domain/completions";
@@ -10,6 +11,10 @@ export async function GET(request: Request) {
     const childId = searchParams.get("childId");
     const status = searchParams.get("status");
     const dateParam = searchParams.get("date");
+
+    if (childId) {
+      if (!(await isAuthorisedForChild(childId))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+    }
 
     const forDate = dateParam === "today" ? getTodayDate() : undefined;
 
@@ -38,10 +43,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { childId, taskId } = body;
 
-    if (!childId || !taskId) {
+    if (typeof childId !== "string" || !childId || typeof taskId !== "string" || !taskId) {
       return NextResponse.json({ error: "childId and taskId are required" }, { status: 400 });
     }
 
+    if (!(await isAuthorisedForChild(childId))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     const completion = await submitCompletion(childId, taskId);
     return NextResponse.json(completion, { status: 201 });
   } catch (error: unknown) {

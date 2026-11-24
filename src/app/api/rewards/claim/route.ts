@@ -1,3 +1,4 @@
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, parseJson } from "@/lib/api";
@@ -11,6 +12,7 @@ const ClaimSchema = z.object({
 export async function POST(request: Request) {
   try {
     const { childId, rewardId } = await parseJson(request, ClaimSchema);
+    if (!(await isAuthorisedForChild(childId))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     return NextResponse.json(await claimReward(childId, rewardId), { status: 201 });
   } catch (error) {
     return apiError(error, "Failed to submit reward claim");
