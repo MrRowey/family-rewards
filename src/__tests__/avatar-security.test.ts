@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   childFind: vi.fn(),
+  queryRaw: vi.fn(),
   updateMany: vi.fn(),
   auditCreate: vi.fn(),
   validateUnlocks: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     child: { findUnique: mocks.childFind },
     $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
-      callback({ child: { updateMany: mocks.updateMany }, auditLog: { create: mocks.auditCreate } }),
+      callback({ $queryRaw: mocks.queryRaw, child: { updateMany: mocks.updateMany }, auditLog: { create: mocks.auditCreate } }),
   },
 }));
 vi.mock("@/lib/domain/avatar-appearance", async () => {
@@ -42,6 +43,7 @@ describe("avatar appearance write security", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.childFind.mockResolvedValue({ name: "Child", dob: new Date("2020-01-01"), avatarTheme: "bottts", avatarConfig: "{}" });
+    mocks.queryRaw.mockResolvedValue([{ id: "child-1" }]);
     mocks.authorised.mockResolvedValue(true);
     mocks.validateUnlocks.mockResolvedValue(true);
     mocks.validateOwnership.mockResolvedValue(true);
@@ -95,5 +97,9 @@ describe("avatar appearance write security", () => {
     const response = await PATCH(request("bottts"), context);
     expect(response.status).toBe(200);
     expect(mocks.auditCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.queryRaw).toHaveBeenCalledTimes(1);
+    expect(mocks.validateOwnership).toHaveBeenCalledWith("child-1", "bottts", { options: {} }, expect.objectContaining({ $queryRaw: mocks.queryRaw }));
+    expect(mocks.queryRaw.mock.invocationCallOrder[0]).toBeLessThan(mocks.validateOwnership.mock.invocationCallOrder[0]);
+    expect(mocks.validateOwnership.mock.invocationCallOrder[0]).toBeLessThan(mocks.updateMany.mock.invocationCallOrder[0]);
   });
 });
