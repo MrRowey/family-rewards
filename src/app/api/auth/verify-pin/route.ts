@@ -6,18 +6,21 @@ import {
   getParentCookieOptions,
   checkPinRateLimit,
   recordPinAttempt,
+  acquirePinVerification,
 } from "@/lib/auth";
 
 export async function POST(req: Request) {
+  const release = acquirePinVerification();
+  if (!release) return NextResponse.json({ error: "PIN verification in progress. Try again." }, { status: 429, headers: { "Retry-After": "1" } });
   try {
-    // Key rate limiter by IP header or global fallback key
+    // Global household failure budget.
     const clientIp = "parent-pin-global"; // Do not trust caller-controlled forwarded headers.
 
     const rateLimit = checkPinRateLimit(clientIp);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: `Too many failed attempts. Try again in ${rateLimit.retryAfterSec} seconds.` },
-        { status: 429 }
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSec ?? 1) } }
       );
     }
 
@@ -62,5 +65,7 @@ export async function POST(req: Request) {
     return response;
   } catch {
     return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
+  } finally {
+    release();
   }
 }

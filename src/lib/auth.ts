@@ -91,3 +91,17 @@ export function recordPinAttempt(ipKey: string, success: boolean): void {
   }
   pinAttemptsMap.set(ipKey, record);
 }
+
+// Single-flight PIN verification prevents concurrent requests from bypassing
+// the global failure budget in the supported single-process deployment.
+let pinVerificationActive = false;
+export function acquirePinVerification(): (() => void) | null {
+  if (pinVerificationActive) return null;
+  pinVerificationActive = true;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    pinVerificationActive = false;
+  };
+}

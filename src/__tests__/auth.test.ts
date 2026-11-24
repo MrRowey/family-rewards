@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { checkPinRateLimit, recordPinAttempt, signParentToken, verifyParentToken, getJwtSecret } from "@/lib/auth";
+import { acquirePinVerification, checkPinRateLimit, recordPinAttempt, signParentToken, verifyParentToken, getJwtSecret } from "@/lib/auth";
 
 describe("PIN Rate Limiting Logic", () => {
   beforeEach(() => {
@@ -59,5 +59,26 @@ describe("Parent JWT isolation", () => {
     const jwt = () => new SignJWT({ role: "parent" }).setProtectedHeader({ alg: "HS256" }).setAudience("family-rewards-parent").setIssuedAt();
     await expect(verifyParentToken(await jwt().sign(getJwtSecret()))).rejects.toThrow();
     await expect(verifyParentToken(await jwt().setExpirationTime("1s ago").sign(getJwtSecret()))).rejects.toThrow();
+  });
+});
+
+
+describe("Concurrent PIN verification", () => {
+  it("allows only one verification until released", () => {
+    const release = acquirePinVerification();
+    expect(release).not.toBeNull();
+    try {
+      expect(acquirePinVerification()).toBeNull();
+    } finally {
+      release?.();
+    }
+    const next = acquirePinVerification();
+    try {
+      expect(next).not.toBeNull();
+      release?.();
+      expect(acquirePinVerification()).toBeNull();
+    } finally {
+      next?.();
+    }
   });
 });
