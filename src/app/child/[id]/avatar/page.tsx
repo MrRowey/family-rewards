@@ -39,7 +39,6 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
   const [owned, setOwned] = useState<string[]>([]);
   const [ownedFrames, setOwnedFrames] = useState<string[]>([]);
   const [buying, setBuying] = useState(false);
-  const [parentApproval, setParentApproval] = useState(false);
   const [themeApproval, setThemeApproval] = useState(false);
   const [canSwitchTheme, setCanSwitchTheme] = useState(false);
   const [activeTab, setActiveTab] = useState("eyes");
@@ -124,7 +123,7 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-5">
       <button type="button" onClick={() => router.back()} className="min-h-12 rounded-2xl border border-white/20 px-4 flex items-center gap-2"><ArrowLeft size={18}/> Back</button>
       <div className="text-center"><h1 className="font-black text-xl flex items-center gap-2"><Sparkles className="text-amber-400"/> Avatar Dressing Room</h1><p className="text-slate-400 text-xs">{completedChores} chores completed · 🪙 {coins} {avatarCurrencyName(theme, coins)}</p></div>
-      <button type="button" onClick={() => void save()} disabled={saving || firstAvatar === undefined} className="min-h-12 rounded-2xl bg-emerald-600 px-5 font-bold disabled:opacity-50 flex items-center gap-2"><Check size={18}/>{saving ? "Saving..." : "Equip Look"}</button>
+      <button type="button" onClick={() => void save()} disabled={saving || buying || firstAvatar === undefined} className="min-h-12 rounded-2xl bg-emerald-600 px-5 font-bold disabled:opacity-50 flex items-center gap-2"><Check size={18}/>{saving ? "Saving..." : "Equip Look"}</button>
     </header>
     {error && <p role="alert" className="my-4 text-amber-300">{error}</p>}
     <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 pt-5">
@@ -144,15 +143,16 @@ export default function AvatarCreatorPage({ params }: { params: Promise<{ id: st
         </> : <button type="button" onClick={() => setThemeApproval(true)} className="min-h-11 rounded-xl border border-amber-500/50 px-4 text-sm font-bold text-amber-300">Ask Parent to Switch Theme</button>}
         {themeApproval && <div className="relative z-[70]"><PinPadModal onClose={() => setThemeApproval(false)} onSuccess={() => { setThemeApproval(false); setCanSwitchTheme(true); }}/></div>}
       </section>
-      {parentApproval && <div className="relative z-[70]"><PinPadModal onClose={() => setParentApproval(false)} onSuccess={() => { setParentApproval(false); if (previewPart) void chooseVariant(previewPart.component, previewPart.variant, previewPart.first); }}/></div>} 
       {previewPart && <dialog open aria-label="Preview locked avatar part" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
         <div className="w-full max-w-sm rounded-3xl border border-white/20 bg-slate-900 p-6 flex flex-col items-center gap-4">
           <h2 className="text-xl font-black">Preview: {label(previewPart.variant)}</h2>
           <p className="text-sm text-slate-300 text-center">See how this {label(previewPart.component.replace(/Variant$/, ""))} looks on your avatar before buying.</p>
           <AvatarDisplay theme={theme} seed={id} config={JSON.stringify(previewConfig)} size={220}/>
           <p className="text-amber-300 font-bold">🔒 {AVATAR_VARIANT_PRICE} {avatarCurrencyName(theme, AVATAR_VARIANT_PRICE)} · You have {coins}</p>
-          <button type="button" disabled={buying || firstAvatar || coins < AVATAR_VARIANT_PRICE} onClick={() => setParentApproval(true)} className="w-full min-h-12 rounded-xl bg-indigo-600 font-bold disabled:opacity-50">{buying ? "Unlocking..." : firstAvatar ? "Save your starter avatar first" : coins < AVATAR_VARIANT_PRICE ? "Not enough coins" : "Ask Parent to Unlock"}</button>
-          <button type="button" onClick={() => setPreviewPart(null)} className="w-full min-h-12 rounded-xl border border-white/20">Back to Workshop</button>
+          {coins >= AVATAR_VARIANT_PRICE && <p className="text-sm">After buying: {coins - AVATAR_VARIANT_PRICE} {avatarCurrencyName(theme, coins - AVATAR_VARIANT_PRICE)}</p>}
+          {error && <p role="alert" className="text-amber-300 text-sm">{error}</p>}
+          <button type="button" disabled={buying || firstAvatar || coins < AVATAR_VARIANT_PRICE} onClick={() => void chooseVariant(previewPart.component, previewPart.variant, previewPart.first)} className="w-full min-h-12 rounded-xl bg-indigo-600 font-bold disabled:opacity-50">{buying ? "Unlocking..." : firstAvatar ? "Save your starter avatar first" : coins < AVATAR_VARIANT_PRICE ? "Not enough coins" : "Buy"}</button>
+          <button type="button" disabled={buying} onClick={() => setPreviewPart(null)} className="w-full min-h-12 rounded-xl border border-white/20">Cancel</button>
         </div>
       </dialog>}
       <section className="lg:col-span-8 rounded-3xl bg-slate-900 border border-white/10 p-5 space-y-5">

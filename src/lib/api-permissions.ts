@@ -9,6 +9,7 @@ const PUBLIC_POST_ENDPOINTS = new Set([
   "/api/redemptions",
   "/api/setup",
   "/api/kiosk/avatar",
+  "/api/kiosk/avatar/purchase",
   "/api/kiosk/select-child",
   "/api/kiosk/achievements/celebrations",
 ]);

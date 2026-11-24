@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  cookieGet: vi.fn(), verifyToken: vi.fn(), kioskSession: vi.fn(), findChild: vi.fn(), findUnlock: vi.fn(),
+  kioskSession: vi.fn(), findChild: vi.fn(), findUnlock: vi.fn(),
   updateMany: vi.fn(), unlockCreate: vi.fn(), auditCreate: vi.fn(), currencyLedgerCreate: vi.fn(),
 }));
-vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.cookieGet }) }));
-vi.mock("@/lib/auth", () => ({ verifyParentToken: mocks.verifyToken }));
 vi.mock("@/lib/kiosk-session", () => ({ hasChildSession: mocks.kioskSession }));
 vi.mock("@/lib/avatar-catalog", () => ({
   AVATAR_VARIANT_PRICE: 10,
@@ -28,8 +26,6 @@ const request = (overrides = {}) => new Request("http://localhost/api/kiosk/avat
 describe("avatar purchase security", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.cookieGet.mockReturnValue({ value: "valid-token" });
-    mocks.verifyToken.mockResolvedValue({ payload: { role: "parent" } });
     mocks.kioskSession.mockResolvedValue(true);
     mocks.findChild.mockResolvedValue({ name: "Child", avatarTheme: "bottts", avatarCoins: 20, avatarConfig: "{}" });
     mocks.findUnlock.mockResolvedValue(null);
@@ -37,16 +33,9 @@ describe("avatar purchase security", () => {
     mocks.unlockCreate.mockResolvedValue({ id: "unlock-1" });
   });
 
-  it("requires a parent session", async () => {
-    mocks.cookieGet.mockReturnValue(undefined);
-    expect((await POST(request())).status).toBe(401);
-    expect(mocks.updateMany).not.toHaveBeenCalled();
-  });
-
-  it("rejects a token without the parent role", async () => {
-    mocks.verifyToken.mockResolvedValue({ payload: { role: "child" } });
-    expect((await POST(request())).status).toBe(403);
-    expect(mocks.updateMany).not.toHaveBeenCalled();
+  it("allows a selected child to purchase without a parent session", async () => {
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.unlockCreate).toHaveBeenCalledTimes(1);
   });
 
   it("rejects mismatched kiosk child sessions", async () => {

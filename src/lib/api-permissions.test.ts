@@ -22,7 +22,7 @@ describe("public kiosk API permissions", () => {
     expect(isPublicApiMutation("/api/kiosk/achievements/celebrations", "POST")).toBe(true);
     expect(isPublicApiMutation("/api/kiosk/achievements/celebrations", "DELETE")).toBe(false);
     expect(isPublicApiMutation("/api/kiosk/select-child", "PATCH")).toBe(false);
-    expect(isPublicApiMutation("/api/kiosk/avatar/purchase", "POST")).toBe(false);
+    expect(isPublicApiMutation("/api/kiosk/avatar/purchase", "POST")).toBe(true);
   });
 
   it("keeps existing-avatar edits public while requiring route-level theme and ownership checks", () => {
