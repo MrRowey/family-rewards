@@ -119,6 +119,7 @@ jobs:
           mv prisma/migrations/20261123110000_avatar_level_milestones "$RUNNER_TEMP/new-avatar-migrations/"
           mv prisma/migrations/20261123120000_child_achievement_celebrations "$RUNNER_TEMP/new-avatar-migrations/"
           mv prisma/migrations/20261124210000_persistent_pin_lockout "$RUNNER_TEMP/new-avatar-migrations/"
+          mv prisma/migrations/20261124223000_avatar_purchase_history "$RUNNER_TEMP/new-avatar-migrations/"
           npx prisma migrate deploy
           # Reproduce the previous db-push installation with its latest legacy columns.
           cp prisma/schema.prisma "$RUNNER_TEMP/avatar-schema-current.prisma"

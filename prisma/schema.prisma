@@ -39,6 +39,7 @@ model Child {
   xp                Int                @default(0)
   rewardedLevel     Int                @default(1)
   avatarUnlocks     AvatarUnlock[]
+  avatarPurchases   AvatarPurchase[]
   avatarMilestones  AvatarMilestone[]
   xpLedger          XpLedger[]
   currencyLedger    AvatarCurrencyLedger[]
@@ -253,4 +254,17 @@ model AvatarMilestone {
   createdAt      DateTime @default(now())
   @@unique([childId, level, policyVersion])
   @@unique([childId, cosmeticKey])
+}
+
+model AvatarPurchase {
+  id          String   @id
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  theme       String
+  component   String
+  variant     String
+  cost        Int
+  purchasedAt DateTime
+  refundedAt  DateTime?
+  @@index([childId, purchasedAt])
 }

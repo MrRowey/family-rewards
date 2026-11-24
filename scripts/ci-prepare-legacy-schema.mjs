@@ -8,13 +8,13 @@ const path = "prisma/schema.prisma";
 let schema = readFileSync(path, "utf8");
 for (const field of [
   "xpMinMultiplier", "xpMaxMultiplier", "coinsPerLevel", "milestoneBonusCoins",
-  "avatarCoinDebt", "starDebt", "xpLedger", "currencyLedger", "avatarMilestones",
+  "avatarPurchases", "avatarCoinDebt", "starDebt", "xpLedger", "currencyLedger", "avatarMilestones",
   "celebrationSeenAt", "parentPinFailures", "parentPinLockedUntil",
 ]) {
   const pattern = new RegExp(`^\\s+${field}\\s+[^\\n]+\\n`, "gm");
   schema = schema.replace(pattern, "");
 }
-for (const model of ["XpLedger", "AvatarCurrencyLedger", "AvatarMilestone"]) {
+for (const model of ["XpLedger", "AvatarCurrencyLedger", "AvatarMilestone", "AvatarPurchase"]) {
   const pattern = new RegExp(`\\nmodel ${model} \\{[\\s\\S]*?\\n\\}\\n`, "gm");
   schema = schema.replace(pattern, "\n");
 }

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   kioskSession: vi.fn(), findChild: vi.fn(), findUnlock: vi.fn(),
-  updateMany: vi.fn(), unlockCreate: vi.fn(), auditCreate: vi.fn(), currencyLedgerCreate: vi.fn(),
+  updateMany: vi.fn(), unlockCreate: vi.fn(), auditCreate: vi.fn(), currencyLedgerCreate: vi.fn(), purchaseCreate: vi.fn(),
 }));
 vi.mock("@/lib/kiosk-session", () => ({ hasChildSession: mocks.kioskSession }));
 vi.mock("@/lib/avatar-catalog", () => ({
@@ -14,7 +14,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: { $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
     fn({ child: { findUnique: mocks.findChild, updateMany: mocks.updateMany },
       avatarUnlock: { findUnique: mocks.findUnlock, create: mocks.unlockCreate },
-      auditLog: { create: mocks.auditCreate }, avatarCurrencyLedger: { create: mocks.currencyLedgerCreate } }) },
+      avatarPurchase: { create: mocks.purchaseCreate }, auditLog: { create: mocks.auditCreate }, avatarCurrencyLedger: { create: mocks.currencyLedgerCreate } }) },
 }));
 import { POST } from "@/app/api/kiosk/avatar/purchase/route";
 
@@ -30,7 +30,7 @@ describe("avatar purchase security", () => {
     mocks.findChild.mockResolvedValue({ name: "Child", avatarTheme: "bottts", avatarCoins: 20, avatarConfig: "{}" });
     mocks.findUnlock.mockResolvedValue(null);
     mocks.updateMany.mockResolvedValue({ count: 1 });
-    mocks.unlockCreate.mockResolvedValue({ id: "unlock-1" });
+    mocks.unlockCreate.mockResolvedValue({ id: "unlock-1", cost: 10, createdAt: new Date() });
   });
 
   it("allows a selected child to purchase without a parent session", async () => {
@@ -76,6 +76,7 @@ describe("avatar purchase security", () => {
       data: { avatarCoins: { decrement: 10 } },
     }));
     expect(mocks.unlockCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.purchaseCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ id: "unlock-1", cost: 10, variant: "premium" }) });
     expect(mocks.auditCreate).toHaveBeenCalledTimes(1);
   });
 });

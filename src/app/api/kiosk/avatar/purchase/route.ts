@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       const charged = await tx.child.updateMany({ where: { id: childId, avatarTheme: theme, avatarConfig: { not: null }, avatarCoins: { gte: AVATAR_VARIANT_PRICE }, avatarCoinDebt: 0 }, data: { avatarCoins: { decrement: AVATAR_VARIANT_PRICE } } });
       if (charged.count !== 1) return { status: 400, error: "Not enough Avatar Coins." };
       const unlock = await tx.avatarUnlock.create({ data: { childId, theme, component, variant, cost: AVATAR_VARIANT_PRICE } });
+      await tx.avatarPurchase.create({ data: { id: unlock.id, childId, theme, component, variant, cost: unlock.cost, purchasedAt: unlock.createdAt } });
       await tx.avatarCurrencyLedger.create({ data: { childId, sourceKey: `purchase:${unlock.id}`, delta: -AVATAR_VARIANT_PRICE, reason: "PURCHASE" } });
       await tx.auditLog.create({ data: { actor: child.name, actorType: "CHILD", action: "PURCHASED_AVATAR_PART", details: `${theme} / ${component} / ${variant} for ${AVATAR_VARIANT_PRICE} Avatar Coins` } });
       return { status: 200, coins: child.avatarCoins - AVATAR_VARIANT_PRICE };
