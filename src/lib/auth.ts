@@ -16,12 +16,21 @@ export const SESSION_MAX_AGE = 4 * 60 * 60;
 export async function signParentToken(): Promise<string> {
   return new SignJWT({ role: "parent" })
     .setProtectedHeader({ alg: "HS256" })
+    .setAudience("family-rewards-parent")
+    .setIssuedAt()
     .setExpirationTime(`${SESSION_MAX_AGE}s`)
     .sign(getJwtSecret());
 }
 
 export async function verifyParentToken(token: string) {
-  return await jwtVerify(token, getJwtSecret());
+  const result = await jwtVerify(token, getJwtSecret(), {
+    algorithms: ["HS256"],
+    audience: "family-rewards-parent",
+    requiredClaims: ["exp", "iat"],
+    maxTokenAge: SESSION_MAX_AGE,
+  });
+  if (result.payload.role !== "parent") throw new Error("Invalid parent role");
+  return result;
 }
 
 export function getParentCookieOptions() {

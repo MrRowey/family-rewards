@@ -30,7 +30,7 @@ export async function hasChildSession(childId: string): Promise<boolean> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return false;
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret(), { audience: "family-rewards-kiosk" });
+    const { payload } = await jwtVerify(token, getJwtSecret(), { audience: "family-rewards-kiosk", algorithms: ["HS256"], requiredClaims: ["exp", "iat"], maxTokenAge: SESSION_SECONDS });
     return payload.role === "kiosk-child" && payload.childId === childId;
   } catch { return false; }
 }
