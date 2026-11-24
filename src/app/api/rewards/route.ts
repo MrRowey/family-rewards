@@ -1,3 +1,4 @@
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -7,6 +8,7 @@ export async function GET(req: Request) {
     const { searchParams, pathname } = new URL(req.url);
     const parentView = pathname === "/api/parent/rewards";
     const childId = searchParams.get("childId");
+    if (!parentView && childId && !(await isAuthorisedForChild(childId))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     const month = searchParams.get("month");
     const parsedMonth = month === null ? null : Number(month);
     if (parsedMonth !== null && (!Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12)) {

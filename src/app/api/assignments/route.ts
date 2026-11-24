@@ -1,3 +1,4 @@
+import { isAuthorisedForChild } from "@/lib/kiosk-session";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTodayDate } from "@/lib/domain/dates";
@@ -7,6 +8,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const childId = searchParams.get("childId");
+    if (childId && !(await isAuthorisedForChild(childId))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     const todayOnly = searchParams.get("day") === "today";
 
     const assignments = await prisma.taskAssignment.findMany({

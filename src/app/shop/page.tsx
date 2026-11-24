@@ -36,10 +36,18 @@ export default function RewardShop() {
   const loadShopData = useCallback(async () => {
     const version = ++requestVersion.current;
     try {
+      if (selectedChildId) {
+        const session = await fetch("/api/kiosk/select-child", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ childId: selectedChildId }),
+        });
+        if (!session.ok) throw new Error("Could not select shopper");
+        if (version !== requestVersion.current) return;
+      }
       const [rwRes, chRes, appRes] = await Promise.all([
         fetch(selectedChildId ? `/api/rewards?childId=${encodeURIComponent(selectedChildId)}` : "/api/rewards", { cache: "no-store" }),
         fetch("/api/children"),
-        fetch("/api/kiosk/pending-rewards"),
+        selectedChildId ? fetch(`/api/kiosk/pending-rewards?childId=${encodeURIComponent(selectedChildId)}`) : Promise.resolve(new Response("[]")),
       ]);
 
       const [nextRewards, chData, appData] = await Promise.all([
@@ -210,9 +218,12 @@ export default function RewardShop() {
                 <button
                   key={c.id}
                   type="button"
+                  disabled={submittingId !== null || rewardChildId !== selectedChildId || isActive}
                   onClick={() => {
                     if (kioskConfig.soundEffects) sounds.playPop();
-                   setSelectedChildId(c.id)
+                    setRewardChildId(null);
+                    setPendingRedemptions([]);
+                    setSelectedChildId(c.id)
                   }}
                   className={`p-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 min-h-[48px] active:scale-95 ${
                     isActive
@@ -232,7 +243,7 @@ export default function RewardShop() {
       {/* Right Area: Storefront Shelves */}
       <section className="relative z-10 flex-1 overflow-y-auto space-y-8 pr-1">
         {shopError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-sm text-amber-200">Could not refresh the shop. Trying again automatically.</p>}
-        {activeChild && <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />}
+        {activeChild && rewardChildId === selectedChildId && !shopError && <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />}
         {rewardChildId !== selectedChildId || (shopError && visibleRewards.length === 0) ? (
           !shopError && <output className="block text-sm text-slate-300">Loading shop…</output>
         ) : visibleRewards.length === 0 ? (

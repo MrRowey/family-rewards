@@ -11,6 +11,8 @@ const { findRewards, findShopPlan, setRewardVisibility, createReward, findChild,
   transaction: vi.fn(),
 }));
 
+vi.mock("@/lib/kiosk-session", () => ({ isAuthorisedForChild: vi.fn().mockResolvedValue(true) }));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shopPlan: { findUnique: findShopPlan },
