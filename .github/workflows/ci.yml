@@ -81,6 +81,32 @@ jobs:
           node scripts/migrate-safe.mjs
           npx prisma migrate status
 
+      - name: Reject interrupted migration and unknown database
+        run: |
+          set -euo pipefail
+          export DATABASE_URL="postgresql://family_admin:ci_only@localhost:5432/family_rewards_fresh?schema=public"
+          npx prisma db execute --stdin <<'SQL'
+          INSERT INTO "_prisma_migrations" (id, checksum, migration_name, started_at, applied_steps_count)
+          VALUES ('ci-interrupted', 'ci-only', 'ci_interrupted_migration', CURRENT_TIMESTAMP, 0);
+          SQL
+          if node scripts/migrate-safe.mjs > "$RUNNER_TEMP/interrupted.log" 2>&1; then
+            echo "Unexpected success on interrupted migration"; exit 1
+          fi
+          cat "$RUNNER_TEMP/interrupted.log"
+          grep -F "Unfinished migration detected" "$RUNNER_TEMP/interrupted.log"
+          node --input-type=module -e 'import {Client} from "pg"; const c=new Client({connectionString:process.env.DATABASE_URL}); await c.connect(); await c.query("CREATE DATABASE family_rewards_unknown"); await c.end();'
+          export DATABASE_URL="postgresql://family_admin:ci_only@localhost:5432/family_rewards_unknown?schema=public"
+          npx prisma db execute --stdin <<'SQL'
+          CREATE TABLE unrelated_data (id integer PRIMARY KEY);
+          INSERT INTO unrelated_data VALUES (42);
+          SQL
+          if node scripts/migrate-safe.mjs > "$RUNNER_TEMP/unknown.log" 2>&1; then
+            echo "Unexpected success on unknown database"; exit 1
+          fi
+          cat "$RUNNER_TEMP/unknown.log"
+          grep -F "Unrecognised non-empty database" "$RUNNER_TEMP/unknown.log"
+          node --input-type=module -e 'import {Client} from "pg"; const c=new Client({connectionString:process.env.DATABASE_URL}); await c.connect(); const r=await c.query("SELECT id FROM unrelated_data"); if(r.rows.length!==1 || r.rows[0].id!==42) throw Error("Existing data changed"); await c.end();'
+
       - name: Exercise legacy-to-ledger PostgreSQL migrations
         shell: bash
         run: |
