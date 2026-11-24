@@ -124,3 +124,32 @@ jobs:
 
       - name: Build production Docker image (no push)
         run: docker build --target runner -t family-rewards:ci .
+
+      - name: Fresh Docker Compose startup and restart
+        env:
+          POSTGRES_PASSWORD: ci-only-database-password
+          JWT_SECRET: ci-only-not-for-production-32-character-key
+          COMPOSE_PROJECT_NAME: family-rewards-ci
+        run: |
+          set -euo pipefail
+          docker compose up -d --build --wait --wait-timeout 180
+          curl --fail --silent --show-error http://localhost:3000/api/health
+          docker compose restart app
+          docker compose up -d --wait --wait-timeout 180
+          curl --fail --silent --show-error http://localhost:3000/api/health
+
+      - name: Collect Compose logs
+        if: failure()
+        run: docker compose logs --no-color
+        env:
+          POSTGRES_PASSWORD: ci-only-database-password
+          JWT_SECRET: ci-only-not-for-production-32-character-key
+          COMPOSE_PROJECT_NAME: family-rewards-ci
+
+      - name: Clean disposable CI deployment
+        if: always()
+        run: docker compose down -v
+        env:
+          POSTGRES_PASSWORD: ci-only-database-password
+          JWT_SECRET: ci-only-not-for-production-32-character-key
+          COMPOSE_PROJECT_NAME: family-rewards-ci
