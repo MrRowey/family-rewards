@@ -1,4 +1,4 @@
-# Family Rewards Website
+# Little Heroes Village Website
 
 Independent public website and documentation. Never merge application branches into gh-pages.
 

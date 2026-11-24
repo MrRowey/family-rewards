@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Introduction to the Family Rewards documentation.
+description: Introduction to the Little Heroes Village documentation.
 status: draft
 order: 1
 ---
