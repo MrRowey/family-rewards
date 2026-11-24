@@ -8,6 +8,8 @@ generator client {
 
 model FamilyConfig {
   id              String    @id @default(uuid())
+  parentPinFailures Int @default(0)
+  parentPinLockedUntil DateTime?
   parentPinLength Int?
   parentPin       String?   
   isConfigured    Boolean   @default(false)
