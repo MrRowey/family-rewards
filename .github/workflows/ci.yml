@@ -78,8 +78,10 @@ jobs:
           export DATABASE_URL="postgresql://family_admin:ci_only@localhost:5432/family_rewards_fresh?schema=public"
           node scripts/migrate-safe.mjs
           npx prisma migrate status
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
           node scripts/migrate-safe.mjs
           npx prisma migrate status
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 
       - name: Reject interrupted migration and unknown database
         run: |
@@ -128,6 +130,7 @@ jobs:
           node scripts/migrate-safe.mjs
           npx tsx integration/verify-avatar-migration.ts
           npx prisma migrate status
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 
       - name: PostgreSQL integration tests
         run: npm run test:integration
