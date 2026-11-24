@@ -1,9 +1,13 @@
 ---
 const base=import.meta.env.BASE_URL.replace(/\/$/,'');
 const links=[["features","Features"],["screenshots","Screenshots"],["documentation","Documentation"],["installation","Installation"],["roadmap","Roadmap"],["changelog","Changelog"]];
+const current=Astro.url.pathname.replace(/\/$/,'');
 ---
-<header class="shell nav"><a class="brand" href={base+'/'}>★ Family Rewards</a><nav class="links" aria-label="Main navigation">{links.map(([path,label])=><a href={base+'/'+path+'/'}>{label}</a>)}</nav><button id="theme-toggle" type="button" aria-label="Toggle colour theme">Theme</button></header>
+<header class="site-header"><div class="shell nav"><a class="brand" href={base+'/'}><img src={base+'/branding/logo.svg'} alt="" width="38" height="38"/>Family Rewards</a><nav class="links desktop-links" aria-label="Main navigation">{links.map(([path,label])=><a href={base+'/'+path+'/'} aria-current={current===base+'/'+path?'page':undefined}>{label}</a>)}</nav><details class="mobile-nav"><summary>Menu</summary><nav class="links" aria-label="Mobile navigation">{links.map(([path,label])=><a href={base+'/'+path+'/'} aria-current={current===base+'/'+path?'page':undefined}>{label}</a>)}</nav></details><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode" aria-pressed="false">Theme</button></div></header>
 <script>
 const button=document.querySelector('#theme-toggle');
-button?.addEventListener('click',()=>{const root=document.documentElement;const theme=root.dataset.theme==='dark'?'light':'dark';root.dataset.theme=theme;try{localStorage.setItem('fr-theme',theme)}catch{}});
+const root=document.documentElement;
+function update(){const dark=root.dataset.theme==='dark';button?.setAttribute('aria-pressed',String(dark));if(button)button.textContent=dark?'Light':'Dark';}
+update();
+button?.addEventListener('click',()=>{const theme=root.dataset.theme==='dark'?'light':'dark';root.dataset.theme=theme;try{localStorage.setItem('fr-theme',theme)}catch{}update();});
 </script>

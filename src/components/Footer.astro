@@ -1,1 +1,4 @@
-<footer><div class="shell"><strong>Family Rewards</strong><p>Independent website • Pre-release documentation</p><a href="https://github.com/MrRowey/family-rewards">GitHub repository</a></div></footer>
+---
+const base=import.meta.env.BASE_URL.replace(/\/$/,'');
+---
+<footer><div class="shell footer-grid"><div><a class="brand" href={base+'/'}><img src={base+'/branding/logo.svg'} alt="" width="38" height="38"/>Family Rewards</a><p>Growing together, every day.</p><p>Website preview · Pre-release documentation</p></div><nav class="footer-links" aria-label="Footer navigation"><a href={base+'/documentation/'}>Documentation</a><a href={base+'/roadmap/'}>Roadmap</a><a href="https://github.com/MrRowey/family-rewards">GitHub</a></nav></div></footer>
