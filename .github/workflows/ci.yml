@@ -71,6 +71,16 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Exercise fresh database bootstrap and restart
+        run: |
+          set -euo pipefail
+          node --input-type=module -e 'import {Client} from "pg"; const c=new Client({connectionString:process.env.DATABASE_URL}); await c.connect(); await c.query("CREATE DATABASE family_rewards_fresh"); await c.end();'
+          export DATABASE_URL="postgresql://family_admin:ci_only@localhost:5432/family_rewards_fresh?schema=public"
+          node scripts/migrate-safe.mjs
+          npx prisma migrate status
+          node scripts/migrate-safe.mjs
+          npx prisma migrate status
+
       - name: Exercise legacy-to-ledger PostgreSQL migrations
         shell: bash
         run: |
