@@ -8,5 +8,5 @@ export async function GET() {
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try { await verifyParentToken(token); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
   const purchases = await prisma.avatarPurchase.findMany({ orderBy: { purchasedAt: "desc" }, take: 200, include: { child: { select: { name: true } } } });
-  return NextResponse.json(purchases.map(p => ({ ...p, refundDeadline: new Date(p.purchasedAt.getTime() + 14 * 86400000), status: p.refundedAt ? "REFUNDED" : Date.now() >= p.purchasedAt.getTime() + 14 * 86400000 ? "PERMANENT" : "WITHIN_WINDOW" })), { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(purchases.map(p => ({ ...p, refundDeadline: null, status: p.refundedAt ? "REFUNDED" : "REFUNDS_UNAVAILABLE" })), { headers: { "Cache-Control": "no-store" } });
 }

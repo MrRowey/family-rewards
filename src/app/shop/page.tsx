@@ -1,6 +1,5 @@
 "use client";
 
-import { ChildRefundRequests } from "@/features/rewards/ChildRefundRequests";
 import { useKioskSettings } from "@/hooks/useKioskSettings";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
@@ -243,7 +242,6 @@ export default function RewardShop() {
       {/* Right Area: Storefront Shelves */}
       <section className="relative z-10 flex-1 overflow-y-auto space-y-8 pr-1">
         {shopError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-sm text-amber-200">Could not refresh the shop. Trying again automatically.</p>}
-        {activeChild && rewardChildId === selectedChildId && !shopError && <ChildRefundRequests key={selectedChildId} childId={selectedChildId} />}
         {rewardChildId !== selectedChildId || (shopError && visibleRewards.length === 0) ? (
           !shopError && <output className="block text-sm text-slate-300">Loading shop…</output>
         ) : visibleRewards.length === 0 ? (

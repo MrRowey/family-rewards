@@ -2,7 +2,7 @@ import { isAuthorisedForChild } from "@/lib/kiosk-session";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { apiError, parseJson } from "@/lib/api";
+import { apiError } from "@/lib/api";
 
 const id = z.string().uuid();
 
@@ -23,17 +23,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const { childId, redemptionId } = await parseJson(request, z.object({ childId: id, redemptionId: id }));
-    if (!(await isAuthorisedForChild(childId))) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
-    const result = await prisma.rewardRedemption.updateMany({
-      where: { id: redemptionId, childId, status: "APPROVED", refundState: null },
-      data: { refundState: "PENDING" },
-    });
-    if (!result.count) return NextResponse.json({ error: "This prize cannot be requested for refund." }, { status: 409 });
-    return NextResponse.json({ refundState: "PENDING" });
-  } catch (error) {
-    return apiError(error, "Could not request a refund.");
-  }
+// Refund execution is deferred to 27.01.0. Do not enable without regression tests.
+export async function POST() {
+  return NextResponse.json({ error: "Refunds are not available in this release." }, { status: 403 });
 }
