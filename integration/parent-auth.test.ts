@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { hash, compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { POST as setup } from "@/app/api/setup/route";
 import { POST as login } from "@/app/api/auth/verify-pin/route";
 import { POST as reset } from "@/app/api/parent/pin-reset/route";
 import { signParentToken, verifyParentToken } from "@/lib/auth";
@@ -54,6 +55,22 @@ afterAll(async () => {
 });
 
 describe("PostgreSQL parent authentication", () => {
+  it("allows only one concurrent first-time setup on an empty configuration", async () => {
+    const saved = await state();
+    await prisma.familyConfig.delete({ where: { id } });
+    try {
+      const responses = await Promise.all([setup(request({ pin: "1234" })), setup(request({ pin: "5678" }))]);
+      expect(responses.filter(r => r.status === 200)).toHaveLength(1);
+      expect(responses.filter(r => r.status === 403 || r.status === 409)).toHaveLength(1);
+      expect(await prisma.familyConfig.count()).toBe(1);
+      const config = await prisma.familyConfig.findFirstOrThrow();
+      expect(await compare(responses[0].status === 200 ? "1234" : "5678", config.parentPin!)).toBe(true);
+    } finally {
+      await prisma.familyConfig.deleteMany();
+      await prisma.familyConfig.create({ data: saved });
+    }
+  });
+
   it("persists five failures, blocks even the correct PIN, and resets after expiry", async () => {
     for (let i = 0; i < 5; i++) expect((await login(request({ pin: wrong }))).status).toBe(401);
     const locked = await state();

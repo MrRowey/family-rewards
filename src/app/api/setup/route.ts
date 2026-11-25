@@ -25,14 +25,18 @@ export async function POST(req: Request) {
 
     const hashedPin = await hash(pin, 10);
 
-    if (existingConfig) {
-      const result = await prisma.familyConfig.updateMany({
-        where: { id: existingConfig.id, isConfigured: false, parentPin: null },
+    return await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(7261201)::text`;
+      const current = await tx.familyConfig.findFirst();
+      if (current?.isConfigured || current?.parentPin) return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
+      if (current) {
+      const result = await tx.familyConfig.updateMany({
+        where: { id: current.id, isConfigured: false, parentPin: null },
         data: { parentPin: hashedPin, parentPinLength: pin.length, isConfigured: true },
       });
       if (result.count !== 1) return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
     } else {
-      await prisma.familyConfig.create({
+      await tx.familyConfig.create({
         data: {
           parentPin: hashedPin, parentPinLength: pin.length,
           isConfigured: true,
@@ -40,7 +44,8 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true });
+    });
   } catch (error) {
     console.error("Setup API Error:", error);
     return NextResponse.json(
