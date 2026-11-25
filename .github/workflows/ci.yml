@@ -48,16 +48,21 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Audit locked dependencies (diagnostic)
+        run: |
+          npm audit --audit-level=high || echo '::warning::Full dependency audit requires review'
+          npm audit --omit=dev --audit-level=high || echo '::warning::Production dependency audit requires review'
 
       - name: Generate Prisma client
         run: npx prisma generate
@@ -151,7 +156,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build production Docker image (no push)
         run: docker build --target runner -t family-rewards:ci .

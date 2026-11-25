@@ -3,7 +3,7 @@ FROM node:24-bookworm-slim AS base
 
 # Step 1: Install dependencies
 FROM base AS deps
-RUN apt-get update && apt-get install -y openssl
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -24,7 +24,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
 RUN npm run build
 
-# Step 3: Zero-CVE Distroless Production Runner (Non-Root)
+# Step 3: Distroless Production Runner (Non-Root)
 FROM gcr.io/distroless/nodejs24-debian12:nonroot AS runner
 WORKDIR /app
 
