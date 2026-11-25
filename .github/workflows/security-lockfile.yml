@@ -1,0 +1,30 @@
+name: Generate security lockfile
+on:
+  push:
+    branches: [fix/effect-security-26.12.0]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Generate and verify patched lockfile
+        run: |
+          npm pkg set overrides.effect=3.22.1
+          npm install --package-lock-only --ignore-scripts
+          npm ci --ignore-scripts
+          npm ls effect
+          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
+      - name: Commit generated dependency files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          git diff --cached --quiet || git commit -m "fix(security): patch Effect dependency"
+          git push origin HEAD:fix/effect-security-26.12.0
