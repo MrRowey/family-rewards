@@ -59,10 +59,10 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Audit locked dependencies (diagnostic)
+      - name: Audit locked dependencies
         run: |
-          npm audit --audit-level=high || echo '::warning::Full dependency audit requires review'
-          npm audit --omit=dev --audit-level=high || echo '::warning::Production dependency audit requires review'
+          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
 
       - name: Generate Prisma client
         run: npx prisma generate
