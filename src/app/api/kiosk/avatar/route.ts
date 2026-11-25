@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { apiError, parseJson } from "@/lib/api";
 import { isAuthorisedForChild } from "@/lib/kiosk-session";
 
-const appearance = avatarAppearance.extend({ childId: z.uuid() });
+const appearance = avatarAppearance.safeExtend({ childId: z.uuid() });
 
 export async function POST(request: Request) {
   try {

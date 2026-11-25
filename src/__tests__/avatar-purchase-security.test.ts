@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/kiosk-session", () => ({ hasChildSession: mocks.kioskSession }));
 vi.mock("@/lib/avatar-catalog", () => ({
   AVATAR_VARIANT_PRICE: 10,
-  variantExists: (_theme: string, component: string, variant: string) => component === "eyesVariant" && variant === "premium",
+  variantExists: (_theme: string, component: string, variant: string) => component === "eyesVariant" && ["premium", "free"].includes(variant),
   variantIsFree: (_theme: string, _component: string, variant: string) => variant === "free",
 }));
 vi.mock("@/lib/prisma", () => ({
@@ -44,6 +44,16 @@ describe("avatar purchase security", () => {
     expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 
+  it("rejects forged client prices and balances", async () => {
+    expect((await POST(request({ price: 0, avatarCoins: 9999 }))).status).toBe(400);
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects free cosmetics without charging", async () => {
+    expect((await POST(request({ variant: "free" }))).status).toBe(400);
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+  });
+
   it("rejects an invalid cosmetic", async () => {
     expect((await POST(request({ variant: "made-up" }))).status).toBe(400);
     expect(mocks.updateMany).not.toHaveBeenCalled();
@@ -72,11 +82,12 @@ describe("avatar purchase security", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, avatarCoins: 10 });
     expect(mocks.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ avatarCoins: { gte: 10 } }),
+      where: expect.objectContaining({ avatarCoins: { gte: 10 }, avatarCoinDebt: 0 }),
       data: { avatarCoins: { decrement: 10 } },
     }));
     expect(mocks.unlockCreate).toHaveBeenCalledTimes(1);
     expect(mocks.purchaseCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ id: "unlock-1", cost: 10, variant: "premium" }) });
+    expect(mocks.currencyLedgerCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ sourceKey: "purchase:unlock-1", delta: -10, reason: "PURCHASE" }) });
     expect(mocks.auditCreate).toHaveBeenCalledTimes(1);
   });
 });
