@@ -9,6 +9,8 @@ vi.mock("@/lib/prisma", () => ({ prisma: { completion: { findMany: findCompletio
 import * as completions from "@/app/api/completions/route";
 import * as rewards from "@/app/api/rewards/claim/route";
 import * as refunds from "@/app/api/kiosk/refund-requests/route";
+import { POST as avatarRefund } from "@/app/api/parent/avatar-purchases/refund/route";
+import { POST as rewardRefund } from "@/app/api/redemptions/refund/route";
 const childId = "123e4567-e89b-42d3-a456-426614174000";
 const post = (body: unknown) => new Request("http://localhost/api", { method: "POST", body: JSON.stringify(body) });
 beforeEach(() => { vi.clearAllMocks(); authorised.mockResolvedValue(false); });
@@ -22,9 +24,16 @@ describe("Child-scoped routes", () => {
   it("rejects unauthorised reward claims and refund requests", async () => {
     expect((await rewards.POST(post({ childId, rewardId: "reward" }))).status).toBe(403);
     expect((await refunds.GET(new Request("http://localhost/api?childId=" + childId))).status).toBe(403);
-    expect((await refunds.POST(post({ childId, redemptionId: childId }))).status).toBe(403);
+    expect((await refunds.POST()).status).toBe(403);
     expect(claim).not.toHaveBeenCalled();
     expect(findRefunds).not.toHaveBeenCalled();
+    expect(updateRefund).not.toHaveBeenCalled();
+  });
+  it("blocks all refund mutations even with a valid child session", async () => {
+    authorised.mockResolvedValue(true);
+    expect((await refunds.POST()).status).toBe(403);
+    expect((await avatarRefund()).status).toBe(403);
+    expect((await rewardRefund()).status).toBe(403);
     expect(updateRefund).not.toHaveBeenCalled();
   });
   it("allows authorised completion submissions and reward claims", async () => {

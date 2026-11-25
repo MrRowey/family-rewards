@@ -4,7 +4,6 @@ import { avatarAppearance, validateAvatarUnlocks, validateAvatarOwnership } from
 import { apiError, parseJson } from "@/lib/api";
 import { verifyParentToken } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { calculateAgeProfile } from "@/lib/ageRules";
 import { isAuthorisedForChild } from "@/lib/kiosk-session";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -16,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const completedTasksCount = await prisma.completion.count({ where: { childId: id, status: "APPROVED" } });
     return NextResponse.json({
       hasAvatar: child.avatarConfig !== null,
-      canSwitchTheme: calculateAgeProfile(child.dob).ageYears >= 8,
+      canSwitchTheme: false,
       theme: child.avatarTheme || "bottts",
       config: child.avatarConfig ? JSON.parse(child.avatarConfig) : {},
       completedTasksCount,
@@ -40,7 +39,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!child) return NextResponse.json({ error: "Child not found" }, { status: 404 });
     if (child.avatarConfig === null) return NextResponse.json({ error: "Choose your first avatar before customising." }, { status: 409 });
     const switching = child.avatarTheme !== theme;
-    const parentRequired = switching && calculateAgeProfile(child.dob).ageYears < 8;
+    const parentRequired = switching;
     if (parentRequired) {
       const token = (await cookies()).get("parent_session")?.value;
       let authorised = false;
@@ -56,7 +55,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       await tx.$queryRaw`SELECT id FROM "Child" WHERE id = ${id} FOR UPDATE`;
       if (!await validateAvatarOwnership(id, theme, config, tx)) return "UNOWNED" as const;
       const changed = await tx.child.updateMany({
-        where: { id, avatarTheme: child.avatarTheme, avatarConfig: { not: null } },
+        where: { id, avatarTheme: child.avatarTheme, avatarConfig: child.avatarConfig },
         data: { avatarTheme: theme, avatarConfig: JSON.stringify(config) },
       });
       if (changed.count !== 1) return null;

@@ -44,6 +44,7 @@ describe("avatar appearance write security", () => {
     vi.clearAllMocks();
     mocks.childFind.mockResolvedValue({ name: "Child", dob: new Date("2020-01-01"), avatarTheme: "bottts", avatarConfig: "{}" });
     mocks.queryRaw.mockResolvedValue([{ id: "child-1" }]);
+    mocks.cookieGet.mockReturnValue(undefined);
     mocks.authorised.mockResolvedValue(true);
     mocks.validateUnlocks.mockResolvedValue(true);
     mocks.validateOwnership.mockResolvedValue(true);
@@ -64,16 +65,21 @@ describe("avatar appearance write security", () => {
     expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 
-  it("allows a child aged eight or older to change themes with a matching child session", async () => {
+  it("rejects older children changing themes without parent authorization", async () => {
     mocks.childFind.mockResolvedValue({
       name: "Older Child", dob: new Date("2010-01-01"), avatarTheme: "bottts", avatarConfig: "{}",
     });
     const response = await PATCH(request("sprouts"), context);
+    expect(response.status).toBe(403);
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("allows authenticated parents to change themes", async () => {
+    mocks.cookieGet.mockReturnValue({ value: "parent-token" });
+    mocks.verifyToken.mockResolvedValue({ payload: { role: "parent" } });
+    const response = await PATCH(request("sprouts"), context);
     expect(response.status).toBe(200);
-    expect(mocks.verifyToken).not.toHaveBeenCalled();
-    expect(mocks.auditCreate).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ actorType: "CHILD" }),
-    }));
+    expect(mocks.auditCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ actorType: "PARENT" }) }));
   });
 
   it("rejects unowned parts before saving", async () => {
@@ -89,7 +95,7 @@ describe("avatar appearance write security", () => {
     expect(response.status).toBe(409);
     expect(mocks.auditCreate).not.toHaveBeenCalled();
     expect(mocks.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ avatarTheme: "bottts" }),
+      where: expect.objectContaining({ avatarTheme: "bottts", avatarConfig: "{}" }),
     }));
   });
 
