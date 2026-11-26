@@ -163,7 +163,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
 
   return (
     <main data-kiosk-mode={displayMode.toLowerCase()} data-large-kiosk-text={kioskConfig.largeKioskText} data-reduced-motion={kioskConfig.reducedMotion} className="min-h-screen bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 px-4 pt-4 pb-24 text-slate-100 sm:px-6 sm:pt-6 lg:pb-8 select-none touch-manipulation">
-      <header className="mx-auto mb-5 flex max-w-6xl flex-wrap items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-3 sm:px-4">
+      <header className={`mx-auto mb-5 flex max-w-6xl flex-wrap items-center gap-3 border ${isJunior ? "rounded-3xl border-indigo-500/40 bg-indigo-950/60 p-5" : isTeen ? "rounded-xl border-slate-800 bg-slate-900 px-3 py-2" : "rounded-2xl border-violet-500/30 bg-violet-950/30 p-4"}`}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button type="button" onClick={() => router.push("/")} aria-label="Back to Family Hub"
             className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-indigo-400">
@@ -200,12 +200,31 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             <span className="text-xs text-slate-400">Lv {child.progress?.level ?? 1}</span>
           </button>
           <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))}
-            className="hidden min-h-12 items-center gap-2 rounded-xl bg-indigo-600 px-4 font-black text-white hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-300 lg:flex">
+            className={`${isJunior ? "hidden" : "hidden lg:flex"} min-h-12 items-center gap-2 rounded-xl bg-indigo-600 px-4 font-black text-white hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-300`}>
             <ShoppingBag size={20} aria-hidden="true" /> {isTeen ? "Shop" : "Reward Shop"}
           </button>
         </div>
       </header>
       <div className="mx-auto max-w-6xl space-y-4">
+        {isJunior ? (
+          <button type="button" onClick={() => router.push("/shop?childId=" + encodeURIComponent(childId))} className="flex min-h-20 w-full items-center justify-center gap-4 rounded-3xl bg-linear-to-r from-fuchsia-700 to-indigo-600 p-4 text-2xl font-black text-white focus-visible:outline-2 focus-visible:outline-indigo-300">
+            <ShoppingBag size={32} aria-hidden="true" /> Reward Shop
+          </button>
+        ) : isTeen ? (
+          <section aria-label="Task summary" className="grid grid-cols-3 divide-x divide-slate-700 rounded-xl border border-slate-800 bg-slate-900 py-3 text-center">
+            {[["Remaining", tasks.length], ["Pending", waitingTasks.length], ["Done", doneTasks.length]].map(([label, count]) => (
+              <div key={label}><p className="text-xl font-bold">{count}</p><p className="text-sm text-slate-400">{label}</p></div>
+            ))}
+          </section>
+        ) : (
+          <section aria-label="Challenge progress" className="rounded-2xl border border-violet-500/30 bg-violet-950/30 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-bold text-violet-200">Level {child.progress?.level ?? 1}</h2>
+              <span className="text-sm text-violet-200">{doneTasks.length} challenges approved today</span>
+            </div>
+            <progress aria-label="Level progress" className="mt-2 h-3 w-full accent-violet-400" max={100} value={Math.max(0, Math.min(100, child.progress?.percent ?? 0))} />
+          </section>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
             <ListCheck className="h-6 w-6 text-indigo-400" /> {isTeen ? "Tasks for Today" : isJunior ? "My Chores" : "Today's Challenges"}
@@ -231,7 +250,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
             </div>
           </section>
         ) : (
-          <div className={`grid grid-cols-1 gap-4 ${isJunior ? "lg:grid-cols-2" : isTeen ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+          <div className={`grid grid-cols-1 gap-4 ${isJunior ? "lg:grid-cols-2" : isTeen ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
             {tasks.map((task) => {
               const substeps = task.subSteps || [];
               const allSubstepsDone =
@@ -240,10 +259,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
               return (
                 <div
                   key={task.id}
-                  className={`flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg ${isJunior ? "p-6" : isTeen ? "p-4" : "p-5"}`}
+                  className={`flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg ${isJunior ? "p-6 border-indigo-500/30" : isTeen ? "p-3 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-3" : "p-5 border-violet-500/30"}`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                    <div className={`flex min-w-0 gap-4 ${isJunior ? "flex-col items-start" : "items-center"}`}>
                       {task.imageUrl ? (
                         <Image
                           src={task.imageUrl}
@@ -251,10 +270,10 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                           width={64}
                           height={64}
                           unoptimized
-                          className="w-16 h-16 rounded-2xl object-cover ring-2 ring-slate-700"
+                          className={`rounded-2xl object-cover ring-2 ring-slate-700 ${isJunior ? "h-28 w-28" : isTeen ? "h-10 w-10" : "h-16 w-16"}`}
                         />
                       ) : (
-                        <span className={isTeen ? "text-3xl" : "text-4xl"}>{task.icon}</span>
+                        <span className={isTeen ? "text-2xl" : isJunior ? "text-6xl" : "text-4xl"}>{task.icon}</span>
                       )}
                       <div>
                         <h3 className={`wrap-break-word font-bold ${isJunior ? "text-xl sm:text-2xl" : isTeen ? "text-lg" : "text-xl"}`}>{task.title}</h3>
@@ -266,7 +285,7 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                   </div>
 
                   {substeps.length > 0 && (
-                    <div className="mt-5 pt-4 border-t border-slate-800/80 space-y-2">
+                    <div className="mt-5 pt-4 border-t border-slate-800/80 space-y-2 sm:col-span-full">
                       <p className="text-xs font-extrabold tracking-wider text-slate-400 uppercase">
                         Steps to complete:
                       </p>
@@ -299,11 +318,11 @@ export default function KidKioskPage({ params }: { params: Promise<{ childId: st
                     </div>
                   )}
 
-                  <div className="mt-4 flex justify-end border-t border-slate-800/60 pt-3">
+                  <div className={`flex justify-end ${isTeen && substeps.length === 0 ? "mt-3 sm:mt-0" : "mt-4 border-t border-slate-800/60 pt-3 sm:col-span-full"}`}>
                     <button
                       onClick={() => handleCompleteChore(task.id)}
                       disabled={!allSubstepsDone || submitting || syncError}
-                      className={`w-full min-h-14 font-black py-3 rounded-xl transition-all active:scale-95 ${isTeen ? "text-base" : "text-lg"} ${
+                      className={`w-full min-h-14 font-black py-3 rounded-xl transition-all active:scale-95 ${isTeen ? "text-base" : isJunior ? "min-h-20 text-2xl" : "text-lg"} ${
                         allSubstepsDone
                           ? "bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white cursor-pointer"
                           : "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
