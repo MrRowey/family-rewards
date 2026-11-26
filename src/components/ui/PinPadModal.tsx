@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { X, Delete, Lock } from "lucide-react";
 
 interface PinPadModalProps {
@@ -32,21 +32,25 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const canSubmit = pinLength !== undefined && (pinLength === null ? pin.length >= 4 : pin.length === pinLength);
 
-  const handleDigit = (digit: string) => {
-    if (loading || pinLength === undefined) return;
+  const handleDigit = useCallback((digit: string) => {
+    if (submitting.current || pinLength === undefined) return;
     setPin((prev) => prev.length < (pinLength ?? 8) ? prev + digit : prev);
     setError(null);
-  };
+  }, [pinLength]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
+    if (submitting.current) return;
     setPin((prev) => prev.slice(0, -1));
     setError(null);
-  };
+  }, []);
 
-  const handleSubmit = async () => {
-    if (loading || !canSubmit) return;
+  const handleSubmit = useCallback(async () => {
+    if (submitting.current || !canSubmit) return;
+    submitting.current = true;
     setLoading(true);
     setError(null);
 
@@ -68,13 +72,38 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
     } catch {
       setError("Network error. Try again.");
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
-  };
+  }, [canSubmit, pin, onSuccess]);
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    dialogRef.current?.focus();
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+      const key = event.key;
+      if (!/^[0-9]$/.test(key) && !["Backspace", "Delete", "Enter", "Escape"].includes(key)) return;
+      event.preventDefault();
+      if (event.repeat || submitting.current) return;
+      if (key === "Escape") onClose();
+      else if (key === "Enter") void handleSubmit();
+      else if (key === "Backspace" || key === "Delete") handleDelete();
+      else handleDigit(key);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [handleDigit, handleDelete, handleSubmit, onClose]);
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 select-none">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Parent Verification" className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-indigo-400" />
@@ -82,6 +111,8 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
           </div>
           <button
             onClick={onClose}
+            disabled={loading}
+            aria-label="Close parent verification"
             className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800 transition min-h-12 min-w-12 flex items-center justify-center"
           >
             <X className="w-5 h-5" />
@@ -110,6 +141,7 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
             <button
               key={digit}
               onClick={() => handleDigit(digit)}
+              disabled={loading || pinLength === undefined}
               className="h-16 bg-slate-800 hover:bg-slate-700 text-white font-bold text-2xl rounded-2xl transition active:scale-95 flex items-center justify-center"
             >
               {digit}
@@ -117,12 +149,15 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
           ))}
           <button
             onClick={handleDelete}
+            disabled={loading}
+            aria-label="Delete last digit"
             className="h-16 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xl rounded-2xl transition active:scale-95 flex items-center justify-center"
           >
             <Delete className="w-6 h-6" />
           </button>
           <button
             onClick={() => handleDigit("0")}
+            disabled={loading || pinLength === undefined}
             className="h-16 bg-slate-800 hover:bg-slate-700 text-white font-bold text-2xl rounded-2xl transition active:scale-95 flex items-center justify-center"
           >
             0
