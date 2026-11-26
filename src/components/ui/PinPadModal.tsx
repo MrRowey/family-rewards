@@ -33,7 +33,7 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const submitting = useRef(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const canSubmit = pinLength !== undefined && (pinLength === null ? pin.length >= 4 : pin.length === pinLength);
 
   const handleDigit = useCallback((digit: string) => {
@@ -79,8 +79,10 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
 
   useEffect(() => {
     const previous = document.activeElement;
-    dialogRef.current?.focus();
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
     return () => {
+      if (dialog?.open) dialog.close();
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, []);
@@ -102,8 +104,7 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
   }, [handleDigit, handleDelete, handleSubmit, onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 select-none">
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Parent Verification" className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+    <dialog ref={dialogRef} aria-label="Parent Verification" onCancel={(event) => { event.preventDefault(); if (!submitting.current) onClose(); }} className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-3xl border border-slate-800 bg-slate-900 p-6 text-slate-100 shadow-2xl select-none backdrop:bg-black/80 backdrop:backdrop-blur-md">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-indigo-400" />
@@ -170,7 +171,6 @@ export default function PinPadModal({ onSuccess, onClose }: PinPadModalProps) {
             OK
           </button>
         </div>
-      </div>
-    </div>
+    </dialog>
   );
 }
