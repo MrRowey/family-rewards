@@ -1,5 +1,6 @@
 "use client";
 
+import { RewardPhotoPicker } from "./RewardPhotoPicker";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { CreateDialog } from "@/features/admin/CreateDialog";
@@ -73,7 +74,7 @@ export function EditReward({ reward, refresh }: { reward: RewardItem; refresh: (
             <input required type="number" name={name} min={min} max={1000000} defaultValue={value} className={inputClass + " w-full"} />
           </label>)}
         </div>
-        <label className="grid gap-1">Replace photo<input name="photo" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+        <RewardPhotoPicker currentImage={reward.imageURL} disabled={busy} />
         {reward.imageURL && <label className="flex items-center gap-2"><input type="checkbox" name="removePhoto" /> Remove current photo</label>}
         <div className="flex flex-wrap gap-2">
           <button type="submit" disabled={busy} className="min-h-11 rounded-lg bg-slate-100 px-4 font-semibold text-slate-900">Save changes</button>

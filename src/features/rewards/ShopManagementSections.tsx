@@ -2,6 +2,7 @@
 
 import { CreateDialog } from "@/features/admin/CreateDialog";
 import { groupByCategory } from "@/features/admin/groupByCategory";
+import { RewardPhotoPicker } from "./RewardPhotoPicker";
 import { EditReward } from "./EditReward";
 import { ShopMonthPlanner } from "./ShopMonthPlanner";
 import Image from "next/image";
@@ -121,12 +122,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   <span>Category (optional)</span>
                   <input name="category" maxLength={60} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2" />
                 </label>
-                <label className="block space-y-1 text-sm text-slate-300">
-                  <span>Photo (optional)</span>
-                  <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
-                    className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
-                  <span className="block text-xs text-slate-400">PNG, JPEG or WebP, up to 2 MB.</span>
-                </label>
+                <RewardPhotoPicker disabled={rewardSaving} />
                 <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
                 <button
                   type="submit"
@@ -227,12 +223,7 @@ export function ShopManagementSections({ activeMenu, householdChildren, rewards,
                   <span>Category (optional)</span>
                   <input name="category" maxLength={60} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2" />
                 </label>
-                <label className="block space-y-1 text-sm text-slate-300">
-                  <span>Photo (optional)</span>
-                  <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"
-                    className="block w-full rounded-lg border border-slate-700 p-2 text-sm" />
-                  <span className="block text-xs text-slate-400">PNG, JPEG or WebP, up to 2 MB.</span>
-                </label>
+                <RewardPhotoPicker disabled={rewardSaving} />
                 <output className="block text-sm text-amber-200">{rewardSaveMessage}</output>
 
                 <button
