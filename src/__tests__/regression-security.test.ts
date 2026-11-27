@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findRewards, findShopPlan, setRewardVisibility, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
+const { findRewards, findShopPlan, findReward, setRewardVisibility, createReward, findChild, updateChild, createAudit, transaction } = vi.hoisted(() => ({
   findRewards: vi.fn(),
   findShopPlan: vi.fn(),
   createReward: vi.fn(),
+  findReward: vi.fn(),
   setRewardVisibility: vi.fn(),
   findChild: vi.fn(),
   updateChild: vi.fn(),
@@ -32,6 +33,7 @@ beforeEach(() => {
   transaction.mockImplementation(async (callback: (tx: unknown) => unknown) =>
     callback({
       child: { findUnique: findChild, update: updateChild },
+      reward: { findUnique: findReward, update: setRewardVisibility },
       auditLog: { create: createAudit },
     }),
   );
@@ -135,17 +137,36 @@ describe("parent reward creation", () => {
   });
 });
 
-it("updates visibility only for an individual prize", async () => {
-  setRewardVisibility.mockResolvedValue({ count: 1 });
-  const response = await patchParentReward(new Request("http://localhost/api/parent/rewards", {
+const prizeId = "123e4567-e89b-42d3-a456-426614174000";
+function patchPrize(id: string) {
+  return patchParentReward(new Request("http://localhost/api/parent/rewards", {
     method: "PATCH",
-    body: JSON.stringify({ id: "prize", isVisible: false }),
+    body: JSON.stringify({ id, isVisible: false }),
   }));
-  expect(response.status).toBe(200);
+}
+
+it("updates visibility only for an individual prize", async () => {
+  findReward.mockResolvedValue({ id: prizeId, title: "Prize", isGroup: false });
+  setRewardVisibility.mockResolvedValue({ id: prizeId, isVisible: false });
+  expect((await patchPrize(prizeId)).status).toBe(200);
+  expect(findReward).toHaveBeenCalledWith({ where: { id: prizeId } });
   expect(setRewardVisibility).toHaveBeenCalledWith({
-    where: { id: "prize", isGroup: false },
+    where: { id: prizeId },
     data: { isVisible: false },
   });
+  expect(createAudit).toHaveBeenCalledTimes(1);
+});
+
+it("rejects group reward visibility edits without writing", async () => {
+  findReward.mockResolvedValue({ id: prizeId, isGroup: true });
+  expect((await patchPrize(prizeId)).status).toBe(404);
+  expect(setRewardVisibility).not.toHaveBeenCalled();
+  expect(createAudit).not.toHaveBeenCalled();
+});
+
+it("rejects invalid reward IDs before starting a transaction", async () => {
+  expect((await patchPrize("prize")).status).toBe(400);
+  expect(transaction).not.toHaveBeenCalled();
 });
 
 it("uses a saved empty month plan instead of global rewards", async () => {
