@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
+import { PATCH } from "@/app/api/parent/rewards/route";
 import { prisma } from "@/lib/prisma";
 import { approveReward, claimReward, declineReward, refundReward } from "@/lib/domain/redemptions";
 
@@ -89,5 +90,30 @@ describe("PostgreSQL reward integrity", () => {
     expect((await prisma.reward.findUniqueOrThrow({ where: { id: item.id } })).currentStock).toBe(0);
     await refundReward(legacy.id);
     expect((await prisma.reward.findUniqueOrThrow({ where: { id: item.id } })).currentStock).toBe(1);
+  });
+});
+
+function editReward(id: string, changes: Record<string, unknown>) {
+  return PATCH(new Request("http://localhost/api/parent/rewards", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...changes }) }));
+}
+
+describe("Reward editing integrity", () => {
+  it("rejects stale stock edits after a claim and preserves the reservation", async () => {
+    const [a, item] = await Promise.all([child(), reward(2)]);
+    const claim = await claimReward(a.id, item.id);
+    expect((await editReward(item.id, { currentStock: 3, expectedCurrentStock: 2 })).status).toBe(409);
+    expect((await prisma.reward.findUniqueOrThrow({ where: { id: item.id } })).currentStock).toBe(1);
+    expect((await editReward(item.id, { title: "Edited reward", starCost: 12 })).status).toBe(200);
+    expect((await prisma.rewardRedemption.findUniqueOrThrow({ where: { id: claim.id } })).starCostAtClaim).toBe(5);
+    await declineReward(claim.id);
+    expect((await prisma.child.findUniqueOrThrow({ where: { id: a.id } })).stars).toBe(20);
+    expect((await prisma.reward.findUniqueOrThrow({ where: { id: item.id } })).currentStock).toBe(2);
+  });
+  it("preserves the effective cost of legacy pending claims before a price edit", async () => {
+    const [a, item] = await Promise.all([child(15), reward()]);
+    const legacy = await prisma.rewardRedemption.create({ data: { childId: a.id, rewardId: item.id, status: "PENDING", stockReserved: false } });
+    expect((await editReward(item.id, { starCost: 12 })).status).toBe(200);
+    await declineReward(legacy.id);
+    expect((await prisma.child.findUniqueOrThrow({ where: { id: a.id } })).stars).toBe(20);
   });
 });

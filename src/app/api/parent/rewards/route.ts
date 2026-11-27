@@ -3,6 +3,7 @@ export { GET } from "../../rewards/route";
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
@@ -44,7 +45,9 @@ export async function POST(req: Request) {
 }
 
 const updatePrize = z.object({
-  id: z.string().min(1),
+  id: z.string().uuid(),
+  icon: z.string().trim().min(1).max(20).optional(),
+  expectedCurrentStock: z.number().int().min(0).max(1000000).optional(),
   isVisible: z.boolean().optional(),
   isArchived: z.boolean().optional(),
   title: z.string().trim().min(1).max(150).optional(),
@@ -61,15 +64,23 @@ export async function PATCH(req: Request) {
   if (!input.success) return NextResponse.json({ error: "Enter valid prize details." }, { status: 400 });
 
   try {
-    const { id, ...data } = input.data;
+    const { id, expectedCurrentStock, ...data } = input.data;
     if (Object.keys(data).length === 0) return NextResponse.json({ error: "Choose a change to save." }, { status: 400 });
-    const result = await prisma.reward.updateMany({
-      where: { id, ...(data.isVisible !== undefined && { isGroup: false }) },
-      data,
-    });
-    if (result.count === 0) return NextResponse.json({ error: "Prize not found." }, { status: 404 });
-    return NextResponse.json({ ...data });
-  } catch {
+    if (data.currentStock !== undefined && expectedCurrentStock === undefined) return NextResponse.json({ error: "Refresh inventory before adjusting available stock." }, { status: 400 });
+    return await prisma.$transaction(async tx => {
+      const existing = await tx.reward.findUnique({ where: { id } });
+      if (!existing || (data.isVisible !== undefined && existing.isGroup)) return NextResponse.json({ error: "Prize not found." }, { status: 404 });
+      if (data.currentStock !== undefined && existing.currentStock !== expectedCurrentStock) return NextResponse.json({ error: "Stock changed since you opened the editor. Refresh and try again." }, { status: 409 });
+      if (data.starCost !== undefined && data.starCost !== existing.starCost) {
+        // Preserve the effective original price of legacy claims before changing it.
+        await tx.rewardRedemption.updateMany({ where: { rewardId: id, starCostAtClaim: null }, data: { starCostAtClaim: existing.starCost } });
+      }
+      const reward = await tx.reward.update({ where: { id }, data });
+      await tx.auditLog.create({ data: { actor: "Parent", actorType: "PARENT", action: "UPDATED_REWARD", details: `Updated reward "${existing.title}": ${Object.keys(data).join(", ")}.` } });
+      return NextResponse.json(reward);
+    }, { isolationLevel: "Serializable" });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return NextResponse.json({ error: "Inventory changed. Refresh and try again." }, { status: 409 });
     return NextResponse.json({ error: "Unable to update prize." }, { status: 500 });
   }
 }
