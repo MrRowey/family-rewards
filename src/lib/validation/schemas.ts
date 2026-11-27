@@ -39,3 +39,11 @@ export const SubmitCompletionSchema = z.object({
   childId: z.string().uuid("Invalid child ID"),
   taskId: z.string().uuid("Invalid task ID"),
 });
+export const UpdateTaskSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().trim().min(1).max(100),
+  category: z.string().trim().max(60),
+  icon: z.string().trim().min(1).max(64),
+  starValue: z.number().int().min(1).max(100000),
+  subSteps: z.array(z.string().trim().min(1).max(200)).max(50),
+}).strict();

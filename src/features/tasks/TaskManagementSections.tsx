@@ -2,12 +2,14 @@
 
 import { groupByCategory } from "@/features/admin/groupByCategory";
 import { CreateDialog } from "@/features/admin/CreateDialog";
+import { EditChore } from "./EditChore";
 import { ChoreScheduler } from "./ChoreScheduler";
 import type React from "react";
 import { X } from "lucide-react";
 import type { NavigationMenu, ChildProfile, TaskItem, TaskAssignmentItem } from "@/features/admin/types";
 
 interface TaskManagementSectionsProps {
+  onTaskUpdated: () => Promise<void>;
   activeMenu: NavigationMenu;
   tasks: TaskItem[];
   taskSaveError: string;
@@ -28,7 +30,7 @@ interface TaskManagementSectionsProps {
   handleDeleteAssignment: (id: string) => Promise<void>;
 }
 
-export function TaskManagementSections({ activeMenu, tasks, taskSaveError, householdChildren, assignments, taskTitle, setTaskTitle, taskIcon, setTaskIcon, taskStarValue, setTaskStarValue, taskSubSteps, setTaskSubSteps, schedChildId, setSchedChildId, handleCreateTask, handleScheduleTask, handleDeleteAssignment }: TaskManagementSectionsProps) {
+export function TaskManagementSections({ onTaskUpdated, activeMenu, tasks, taskSaveError, householdChildren, assignments, taskTitle, setTaskTitle, taskIcon, setTaskIcon, taskStarValue, setTaskStarValue, taskSubSteps, setTaskSubSteps, schedChildId, setSchedChildId, handleCreateTask, handleScheduleTask, handleDeleteAssignment }: TaskManagementSectionsProps) {
   return <>
 {/* 3. TASK VAULT CREATION */}
           {activeMenu === "task_vault" && (
@@ -129,6 +131,7 @@ export function TaskManagementSections({ activeMenu, tasks, taskSaveError, house
                         </span>
                       </div>
                       <h4 className="font-black text-base text-white">{task.title}</h4>
+                      <EditChore task={task} onUpdated={onTaskUpdated} />
                       {task.subSteps && task.subSteps.length > 0 && (
                         <div className="text-xs text-slate-400 space-y-1 pt-2 border-t border-white/5">
                           {task.subSteps.map((st) => (

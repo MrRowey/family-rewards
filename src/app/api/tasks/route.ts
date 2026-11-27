@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiError, parseJson } from "@/lib/api";
-import { CreateTaskSchema } from "@/lib/validation/schemas";
-import { createTask, listTasks } from "@/features/tasks/service";
+import { CreateTaskSchema, UpdateTaskSchema } from "@/lib/validation/schemas";
+import { createTask, listTasks, updateTask } from "@/features/tasks/service";
 
 export async function GET() {
   try { return NextResponse.json(await listTasks()); }
@@ -15,4 +15,9 @@ export async function POST(request: Request) {
   } catch (error) {
     return apiError(error, "Failed to create task");
   }
+}
+
+export async function PATCH(request: Request) {
+  try { return NextResponse.json(await updateTask(await parseJson(request, UpdateTaskSchema))); }
+  catch (error) { return apiError(error, "Failed to update chore"); }
 }
